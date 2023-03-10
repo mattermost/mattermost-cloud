@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"strings"
@@ -21,7 +21,7 @@ type fluentbit struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func NewFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*fluentbit, error) {
+func newFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*fluentbit, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Fluentbit handle with nil logger")
 	}
@@ -40,7 +40,7 @@ func NewFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilit
 }
 
 func (f *fluentbit) Destroy() error {
-	helm := f.NewHelmDeployment()
+	helm := f.newHelmDeployment()
 	return helm.Delete()
 }
 
@@ -49,7 +49,7 @@ func (f *fluentbit) Migrate() error {
 }
 
 func (f *fluentbit) CreateOrUpgrade() error {
-	h := f.NewHelmDeployment()
+	h := f.newHelmDeployment()
 
 	err := h.Update()
 	if err != nil {
@@ -78,7 +78,7 @@ func (f *fluentbit) Name() string {
 	return model.FluentbitCanonicalName
 }
 
-func (f *fluentbit) NewHelmDeployment() *helmDeployment {
+func (f *fluentbit) newHelmDeployment() *helmDeployment {
 	return newHelmDeployment(
 		"fluent/fluent-bit",
 		"fluent-bit",

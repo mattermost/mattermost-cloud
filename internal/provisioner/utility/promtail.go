@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ type promtail struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func NewPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*promtail, error) {
+func newPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*promtail, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Promtail handle with nil logger")
 	}
@@ -60,7 +60,7 @@ func (p *promtail) ValuesPath() string {
 }
 
 func (p *promtail) CreateOrUpgrade() error {
-	h := p.NewHelmDeployment()
+	h := p.newHelmDeployment()
 
 	err := h.Update()
 	if err != nil {
@@ -86,7 +86,7 @@ func (p *promtail) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (p *promtail) Destroy() error {
-	helm := p.NewHelmDeployment()
+	helm := p.newHelmDeployment()
 	return helm.Delete()
 }
 
@@ -94,7 +94,7 @@ func (p *promtail) Migrate() error {
 	return nil
 }
 
-func (p *promtail) NewHelmDeployment() *helmDeployment {
+func (p *promtail) newHelmDeployment() *helmDeployment {
 	return newHelmDeployment(
 		"grafana/promtail",
 		"promtail",

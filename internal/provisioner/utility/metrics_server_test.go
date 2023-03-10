@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ func TestNewHelmDeploymentWithDefaultConfigurationMetricsServer(t *testing.T) {
 	defer ctrl.Finish()
 
 	logger := log.New()
-	metricsServer, err := NewMetricsServerHandle(&model.HelmUtilityVersion{Chart: "3.8.3"}, &model.Cluster{
+	metricsServer, err := newMetricsServerHandle(&model.HelmUtilityVersion{Chart: "3.8.3"}, &model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
@@ -27,6 +27,6 @@ func TestNewHelmDeploymentWithDefaultConfigurationMetricsServer(t *testing.T) {
 	require.NoError(t, err, "should not error when creating new metrics server handler")
 	require.NotNil(t, metricsServer, "metrics server should not be nil")
 
-	helmDeployment := metricsServer.NewHelmDeployment(logger)
+	helmDeployment := metricsServer.newHelmDeployment(logger)
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
 }

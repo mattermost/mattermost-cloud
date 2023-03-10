@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"strings"
@@ -20,7 +20,7 @@ type metricsServer struct {
 	provisioner    string
 }
 
-func NewMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*metricsServer, error) {
+func newMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*metricsServer, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate MetricsServer handle with nil logger")
 	}
@@ -38,7 +38,7 @@ func NewMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *m
 }
 
 func (m *metricsServer) Destroy() error {
-	helm := m.NewHelmDeployment(m.logger)
+	helm := m.newHelmDeployment(m.logger)
 	return helm.Delete()
 }
 
@@ -48,7 +48,7 @@ func (m *metricsServer) Migrate() error {
 
 func (m *metricsServer) CreateOrUpgrade() error {
 	logger := m.logger.WithField("metrics-server-action", "upgrade")
-	h := m.NewHelmDeployment(logger)
+	h := m.newHelmDeployment(logger)
 
 	err := h.Update()
 	if err != nil {
@@ -77,7 +77,7 @@ func (m *metricsServer) Name() string {
 	return model.MetricsServerCanonicalName
 }
 
-func (m *metricsServer) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
+func (m *metricsServer) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
 
 	var setArguments []string
 

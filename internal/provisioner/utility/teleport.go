@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ type teleport struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func NewTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*teleport, error) {
+func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*teleport, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Teleport handle with nil logger")
 	}
@@ -62,7 +62,7 @@ func (n *teleport) ValuesPath() string {
 }
 
 func (n *teleport) CreateOrUpgrade() error {
-	h := n.NewHelmDeployment()
+	h := n.newHelmDeployment()
 
 	err := h.Update()
 	if err != nil {
@@ -94,7 +94,7 @@ func (n *teleport) Destroy() error {
 		return errors.Wrap(err, "unable to delete Teleport bucket")
 	}
 
-	helm := n.NewHelmDeployment()
+	helm := n.newHelmDeployment()
 	return helm.Delete()
 }
 
@@ -102,7 +102,7 @@ func (n *teleport) Migrate() error {
 	return nil
 }
 
-func (n *teleport) NewHelmDeployment() *helmDeployment {
+func (n *teleport) newHelmDeployment() *helmDeployment {
 	teleportClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
 	return newHelmDeployment(
 		"chartmuseum/teleport-kube-agent",

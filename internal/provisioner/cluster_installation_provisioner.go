@@ -624,7 +624,7 @@ func prepareClusterUtilities(
 	configLocation string,
 	store model.ClusterUtilityDatabaseStoreInterface,
 	awsClient aws.AWS,
-	pgbouncerConfig *pgbouncer.PGBouncerConfig,
+	pgbouncerConfig *model.PGBouncerConfig,
 	logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {

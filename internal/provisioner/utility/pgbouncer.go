@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"context"
@@ -28,7 +28,7 @@ type pgbouncer struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func NewPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*pgbouncer, error) {
+func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*pgbouncer, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Pgbouncer handle with nil logger")
 	}
@@ -76,7 +76,7 @@ func (p *pgbouncer) CreateOrUpgrade() error {
 		return err
 	}
 
-	h := p.NewHelmDeployment()
+	h := p.newHelmDeployment()
 
 	err = h.Update()
 	if err != nil {
@@ -102,7 +102,7 @@ func (p *pgbouncer) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (p *pgbouncer) Destroy() error {
-	helm := p.NewHelmDeployment()
+	helm := p.newHelmDeployment()
 	return helm.Delete()
 }
 
@@ -110,7 +110,7 @@ func (p *pgbouncer) Migrate() error {
 	return nil
 }
 
-func (p *pgbouncer) NewHelmDeployment() *helmDeployment {
+func (p *pgbouncer) newHelmDeployment() *helmDeployment {
 	return newHelmDeployment(
 		"chartmuseum/pgbouncer",
 		"pgbouncer",

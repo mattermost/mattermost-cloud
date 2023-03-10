@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"testing"
@@ -20,7 +20,7 @@ func TestNewHelmDeploymentWithDefaultConfiguration(t *testing.T) {
 
 	logger := log.New()
 	awsClient := mocks.NewMockAWS(ctrl)
-	fluentbit, err := NewFluentbitHandle(&model.Cluster{
+	fluentbit, err := newFluentbitHandle(&model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
@@ -28,6 +28,6 @@ func TestNewHelmDeploymentWithDefaultConfiguration(t *testing.T) {
 	require.NoError(t, err, "should not error when creating new fluentbit handler")
 	require.NotNil(t, fluentbit, "fluentbit should not be nil")
 
-	helmDeployment := fluentbit.NewHelmDeployment()
+	helmDeployment := fluentbit.newHelmDeployment()
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
 }

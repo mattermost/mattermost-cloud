@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"fmt"
@@ -30,7 +30,7 @@ type nginxInternal struct {
 	provisioner    string
 }
 
-func NewNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginxInternal, error) {
+func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginxInternal, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NGINX INTERNAL handle with nil logger")
 	}
@@ -67,7 +67,7 @@ func (n *nginxInternal) updateVersion(h *helmDeployment) error {
 }
 
 func (n *nginxInternal) CreateOrUpgrade() error {
-	h, err := n.NewHelmDeployment(true)
+	h, err := n.newHelmDeployment(true)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate nginx internal helm deployment")
 	}
@@ -119,7 +119,7 @@ func (n *nginxInternal) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (n *nginxInternal) Destroy() error {
-	helm, err := n.NewHelmDeployment(false)
+	helm, err := n.newHelmDeployment(false)
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (n *nginxInternal) Migrate() error {
 	return nil
 }
 
-func (n *nginxInternal) NewHelmDeployment(withArguments bool) (*helmDeployment, error) {
+func (n *nginxInternal) newHelmDeployment(withArguments bool) (*helmDeployment, error) {
 	var setArguments []string
 	if withArguments {
 		certificate, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallPrivateCertificatesTagKey, aws.DefaultInstallPrivateCertificatesTagValue, n.logger)

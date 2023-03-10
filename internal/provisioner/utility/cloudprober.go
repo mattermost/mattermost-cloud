@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ type cloudprober struct {
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func NewCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*cloudprober, error) {
+func newCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*cloudprober, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Cloudprober handle with nil logger")
 	}
@@ -44,7 +44,7 @@ func NewCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *mod
 
 func (f *cloudprober) CreateOrUpgrade() error {
 	logger := f.logger.WithField("cloudprober-action", "upgrade")
-	h := f.NewHelmDeployment(logger)
+	h := f.newHelmDeployment(logger)
 
 	err := h.Update()
 	if err != nil {
@@ -60,7 +60,7 @@ func (f *cloudprober) Name() string {
 }
 
 func (f *cloudprober) Destroy() error {
-	helm := f.NewHelmDeployment(f.logger)
+	helm := f.newHelmDeployment(f.logger)
 	return helm.Delete()
 }
 
@@ -82,7 +82,7 @@ func (f *cloudprober) ActualVersion() *model.HelmUtilityVersion {
 	}
 }
 
-func (f *cloudprober) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
+func (f *cloudprober) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	return newHelmDeployment(
 		"chartmuseum/cloudprober",
 		"cloudprober",

@@ -12,6 +12,7 @@ import (
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/smithy-go/ptr"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -33,7 +34,7 @@ type clusterUpdateStore interface {
 
 // EKSProvisioner provisions clusters using AWS EKS.
 type EKSProvisioner struct {
-	params             ProvisioningParams
+	params             model.ProvisioningParams
 	awsClient          aws.AWS
 	clusterUpdateStore clusterUpdateStore
 	store              model.InstallationDatabaseStoreInterface
@@ -44,7 +45,7 @@ var _ supervisor.ClusterProvisioner = (*EKSProvisioner)(nil)
 
 // NewEKSProvisioner creates new EKSProvisioner.
 func NewEKSProvisioner(
-	params ProvisioningParams,
+	params model.ProvisioningParams,
 	awsClient aws.AWS,
 	store *store.SQLStore,
 	logger log.FieldLogger,
@@ -360,7 +361,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 		return errors.Wrap(err, "failed to get kubeconfig file path")
 	}
 
-	ugh, err := newUtilityGroupHandle(provisioner.params, kubeConfigPath, cluster, provisioner.awsClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(provisioner.params, kubeConfigPath, cluster, provisioner.awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}

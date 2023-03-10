@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ type velero struct {
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func NewVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*velero, error) {
+func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*velero, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Velero handle with nil logger")
 	}
@@ -44,7 +44,7 @@ func NewVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cl
 
 func (f *velero) CreateOrUpgrade() error {
 	logger := f.logger.WithField("velero-action", "upgrade")
-	h := f.NewHelmDeployment(logger)
+	h := f.newHelmDeployment(logger)
 
 	err := h.Update()
 	if err != nil {
@@ -60,7 +60,7 @@ func (f *velero) Name() string {
 }
 
 func (f *velero) Destroy() error {
-	helm := f.NewHelmDeployment(f.logger)
+	helm := f.newHelmDeployment(f.logger)
 	return helm.Delete()
 }
 
@@ -82,7 +82,7 @@ func (f *velero) ActualVersion() *model.HelmUtilityVersion {
 	}
 }
 
-func (f *velero) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
+func (f *velero) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("configuration.backupStorageLocation.prefix=%s", f.cluster.ID)
 
 	return newHelmDeployment(

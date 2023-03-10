@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"context"
@@ -27,7 +27,7 @@ type thanos struct {
 	desiredVersion     *model.HelmUtilityVersion
 }
 
-func NewThanosHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*thanos, error) {
+func newThanosHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*thanos, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Thanos handle with nil logger")
 	}
@@ -74,7 +74,7 @@ func (t *thanos) CreateOrUpgrade() error {
 	dns := fmt.Sprintf("%s.%s.%s", t.cluster.ID, app, privateDomainName)
 	grpcDNS := fmt.Sprintf("%s-grpc.%s.%s", t.cluster.ID, app, privateDomainName)
 
-	h := t.NewHelmDeployment(dns, grpcDNS)
+	h := t.newHelmDeployment(dns, grpcDNS)
 
 	err = h.Update()
 	if err != nil {
@@ -151,7 +151,7 @@ func (t *thanos) Destroy() error {
 
 	t.actualVersion = nil
 
-	helm := t.NewHelmDeployment(dns, grpcDNS)
+	helm := t.newHelmDeployment(dns, grpcDNS)
 	return helm.Delete()
 
 }
@@ -160,7 +160,7 @@ func (t *thanos) Migrate() error {
 	return nil
 }
 
-func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeployment {
+func (t *thanos) newHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("query.ingress.hostname=%s,query.ingress.grpc.hostname=%s,query.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, thanosDNSGRPC, strings.Join(t.allowCIDRRangeList, "\\,"))
 
 	return newHelmDeployment(

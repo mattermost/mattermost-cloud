@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ func TestNewHelmDeploymentWithDefaultConfigurationNodeProblemDetector(t *testing
 	defer ctrl.Finish()
 
 	logger := log.New()
-	nodeProblemDetector, err := NewNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.3.2"}, &model.Cluster{
+	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.3.2"}, &model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
@@ -27,6 +27,6 @@ func TestNewHelmDeploymentWithDefaultConfigurationNodeProblemDetector(t *testing
 	require.NoError(t, err, "should not error when creating new node-problem-detector handler")
 	require.NotNil(t, nodeProblemDetector, "node-problem-detector should not be nil")
 
-	helmDeployment := nodeProblemDetector.NewHelmDeployment(logger)
+	helmDeployment := nodeProblemDetector.newHelmDeployment(logger)
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
 }

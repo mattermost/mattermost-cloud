@@ -45,8 +45,8 @@ server_reset_query_always = %d
 [databases]
 `
 
-func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface, config *PGBouncerConfig) (string, error) {
-	ini := config.generatePGBouncerBaseIni()
+func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface, config *model.PGBouncerConfig) (string, error) {
+	ini := generatePGBouncerBaseIni(config)
 
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          model.DatabaseEngineTypePostgresProxy,
@@ -106,47 +106,7 @@ func GeneratePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) 
 	return userlist, nil
 }
 
-// PGBouncerConfig contains the configuration for the PGBouncer utility.
-// //////////////////////////////////////////////////////////////////////////////
-//   - MaxDatabaseConnectionsPerPool is the maximum number of connections per
-//     logical database pool when using proxy databases.
-//   - MinPoolSize is the minimum pool size.
-//   - DefaultPoolSize is the default pool size per user.
-//   - ReservePoolSize is the default pool size per user.
-//   - MaxClientConnections is the maximum client connections.
-//   - ServerIdleTimeout is the server idle timeout.
-//   - ServerLifetime is the server lifetime.
-//   - ServerResetQueryAlways is boolean 0 or 1 whether server_reset_query should
-//     be run in all pooling modes.
-//
-// //////////////////////////////////////////////////////////////////////////////
-type PGBouncerConfig struct {
-	MinPoolSize                   int
-	DefaultPoolSize               int
-	ReservePoolSize               int
-	MaxClientConnections          int
-	MaxDatabaseConnectionsPerPool int
-	ServerIdleTimeout             int
-	ServerLifetime                int
-	ServerResetQueryAlways        int
-}
-
-// Validate validates a PGBouncerConfig.
-func (c *PGBouncerConfig) Validate() error {
-	if c.MaxDatabaseConnectionsPerPool < 1 {
-		return errors.New("MaxDatabaseConnectionsPerPool must be 1 or greater")
-	}
-	if c.DefaultPoolSize < 1 {
-		return errors.New("DefaultPoolSize must be 1 or greater")
-	}
-	if c.ServerResetQueryAlways != 0 && c.ServerResetQueryAlways != 1 {
-		return errors.New("ServerResetQueryAlways must be 0 or 1")
-	}
-
-	return nil
-}
-
-func (c *PGBouncerConfig) generatePGBouncerBaseIni() string {
+func generatePGBouncerBaseIni(c *model.PGBouncerConfig) string {
 	return fmt.Sprintf(
 		baseIni,
 		c.MinPoolSize, c.DefaultPoolSize, c.ReservePoolSize,
@@ -156,8 +116,8 @@ func (c *PGBouncerConfig) generatePGBouncerBaseIni() string {
 }
 
 // NewPGBouncerConfig returns a new PGBouncerConfig with the provided configuration.
-func NewPGBouncerConfig(minPoolSize, defaultPoolSize, reservePoolSize, maxClientConnections, maxDatabaseConnectionsPerPool, serverIdleTimeout, serverLifetime, serverResetQueryAlways int) *PGBouncerConfig {
-	return &PGBouncerConfig{
+func NewPGBouncerConfig(minPoolSize, defaultPoolSize, reservePoolSize, maxClientConnections, maxDatabaseConnectionsPerPool, serverIdleTimeout, serverLifetime, serverResetQueryAlways int) *model.PGBouncerConfig {
+	return &model.PGBouncerConfig{
 		MinPoolSize:                   minPoolSize,
 		DefaultPoolSize:               defaultPoolSize,
 		ReservePoolSize:               reservePoolSize,
@@ -169,7 +129,7 @@ func NewPGBouncerConfig(minPoolSize, defaultPoolSize, reservePoolSize, maxClient
 	}
 }
 
-func UpdatePGBouncerConfigMap(ctx context.Context, vpc string, store model.ClusterUtilityDatabaseStoreInterface, pgbouncerConfig *PGBouncerConfig, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+func UpdatePGBouncerConfigMap(ctx context.Context, vpc string, store model.ClusterUtilityDatabaseStoreInterface, pgbouncerConfig *model.PGBouncerConfig, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	ini, err := generatePGBouncerIni(vpc, store, pgbouncerConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")

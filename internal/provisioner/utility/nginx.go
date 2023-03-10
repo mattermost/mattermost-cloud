@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ type nginx struct {
 	provisioner    string
 }
 
-func NewNginxHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginx, error) {
+func newNginxHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginx, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NGINX handle with nil logger")
 	}
@@ -65,7 +65,7 @@ func (n *nginx) updateVersion(h *helmDeployment) error {
 }
 
 func (n *nginx) CreateOrUpgrade() error {
-	h, err := n.NewHelmDeployment()
+	h, err := n.newHelmDeployment()
 	if err != nil {
 		return errors.Wrap(err, "failed to generate nginx helm deployment")
 	}
@@ -116,7 +116,7 @@ func (n *nginx) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (n *nginx) Destroy() error {
-	helm, err := n.NewHelmDeployment()
+	helm, err := n.newHelmDeployment()
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func (n *nginx) Migrate() error {
 	return nil
 }
 
-func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
+func (n *nginx) newHelmDeployment() (*helmDeployment, error) {
 	certificate, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, n.logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrive the AWS ACM")

@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package utility
 
 import (
 	"context"
@@ -31,7 +31,7 @@ type prometheusOperator struct {
 	actualVersion      *model.HelmUtilityVersion
 }
 
-func NewPrometheusOperatorHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*prometheusOperator, error) {
+func newPrometheusOperatorHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*prometheusOperator, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Prometheus Operator handle with nil logger")
 	}
@@ -108,7 +108,7 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 	app := "prometheus"
 	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
 
-	h := p.NewHelmDeployment(dns)
+	h := p.newHelmDeployment(dns)
 
 	err = h.Update()
 	if err != nil {
@@ -168,7 +168,7 @@ func (p *prometheusOperator) Destroy() error {
 
 	p.actualVersion = nil
 
-	helm := p.NewHelmDeployment(dns)
+	helm := p.newHelmDeployment(dns)
 	return helm.Delete()
 }
 
@@ -176,7 +176,7 @@ func (p *prometheusOperator) Migrate() error {
 	return nil
 }
 
-func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeployment {
+func (p *prometheusOperator) newHelmDeployment(prometheusDNS string) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("prometheus.prometheusSpec.externalLabels.clusterID=%s,prometheus.ingress.hosts={%s},prometheus.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", p.cluster.ID, prometheusDNS, strings.Join(p.allowCIDRRangeList, "\\,"))
 
 	return newHelmDeployment(

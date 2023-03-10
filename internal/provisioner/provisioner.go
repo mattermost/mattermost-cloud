@@ -25,7 +25,7 @@ func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supe
 
 type Provisioner struct {
 	ClusterProvisionerOption
-	params         ProvisioningParams
+	params         model.ProvisioningParams
 	awsClient      aws.AWS
 	resourceUtil   *utils.ResourceUtil
 	backupOperator *BackupOperator
@@ -48,7 +48,7 @@ var _ kube = (*KopsProvisioner)(nil)
 func NewProvisioner(
 	kopsProvisioner *KopsProvisioner,
 	eksProvisioner *EKSProvisioner,
-	params ProvisioningParams,
+	params model.ProvisioningParams,
 	awsClient aws.AWS,
 	resourceUtil *utils.ResourceUtil,
 	backupOperator *BackupOperator,

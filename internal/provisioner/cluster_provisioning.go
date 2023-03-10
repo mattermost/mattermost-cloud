@@ -13,6 +13,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -27,7 +28,7 @@ func provisionCluster(
 	cluster *model.Cluster,
 	kubeconfigPath string,
 	awsClient aws.AWS,
-	params ProvisioningParams,
+	params model.ProvisioningParams,
 	store model.ClusterUtilityDatabaseStoreInterface,
 	logger logrus.FieldLogger) error {
 
@@ -375,7 +376,7 @@ func provisionCluster(
 		}
 	}
 
-	ugh, err := newUtilityGroupHandle(params, kubeconfigPath, cluster, awsClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(params, kubeconfigPath, cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}
