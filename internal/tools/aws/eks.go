@@ -163,63 +163,6 @@ func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
 	return nil
 }
 
-func (c *Client) EnsureEKSNodeGroupScaling(cluster *model.Cluster) error {
-	eksMetadata := cluster.ProvisionerMetadataEKS
-
-	clusterName := eksMetadata.Name
-	workerName := eksMetadata.WorkerName
-	eksNodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
-	if err != nil {
-		return err
-	}
-
-	if eksNodeGroup == nil {
-		return errors.Errorf("nodegroup %s does not exist", clusterName)
-	}
-
-	if eksNodeGroup.Status != eksTypes.NodegroupStatusActive {
-		return errors.Errorf("nodegroup %s is not active", clusterName)
-	}
-
-	scaling := eksNodeGroup.ScalingConfig
-	if scaling == nil {
-		return errors.Errorf("nodegroup %s scaling config is nil", clusterName)
-	}
-
-	var isUpdateRequired bool
-	scalingConfigInput := eksTypes.NodegroupScalingConfig{}
-	if scaling.DesiredSize != nil && int64(*scaling.DesiredSize) != eksMetadata.ChangeRequest.NodeMinCount {
-		isUpdateRequired = true
-		scalingConfigInput.DesiredSize = aws.Int32(int32(eksMetadata.ChangeRequest.NodeMinCount))
-	}
-
-	if scaling.MinSize != nil && int64(*scaling.MinSize) != eksMetadata.ChangeRequest.NodeMinCount {
-		isUpdateRequired = true
-		scalingConfigInput.MinSize = aws.Int32(int32(eksMetadata.ChangeRequest.NodeMinCount))
-	}
-
-	if scaling.MaxSize != nil && int64(*scaling.MaxSize) != eksMetadata.ChangeRequest.NodeMaxCount {
-		isUpdateRequired = true
-		scalingConfigInput.MaxSize = aws.Int32(int32(eksMetadata.ChangeRequest.NodeMaxCount))
-	}
-
-	if !isUpdateRequired {
-		return nil
-	}
-
-	_, err = c.Service().eks.UpdateNodegroupConfig(context.TODO(), &eks.UpdateNodegroupConfigInput{
-		ClusterName:   aws.String(clusterName),
-		NodegroupName: aws.String(workerName),
-		ScalingConfig: &scalingConfigInput,
-	})
-
-	if err != nil {
-		return errors.Wrap(err, "failed to update EKS nodegroup scaling")
-	}
-
-	return nil
-}
-
 func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
 
 	clusterName := cluster.ProvisionerMetadataEKS.Name

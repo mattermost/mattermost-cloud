@@ -350,23 +350,15 @@ func (provisioner *EKSProvisioner) RotateClusterNodes(cluster *model.Cluster) er
 // ResizeCluster resizes cluster - not implemented.
 func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 	eksMetadata := cluster.ProvisionerMetadataEKS
-	changeRequest := eksMetadata.ChangeRequest
 
 	err := eksMetadata.ValidateChangeRequest()
 	if err != nil {
 		return errors.Wrap(err, "eks Metadata ChangeRequest failed validation")
 	}
 
-	if changeRequest.NodeInstanceType != "" {
-		err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster)
-		if err != nil {
-			return errors.Wrap(err, "failed to migrate EKS NodeGroup")
-		}
-	} else if changeRequest.NodeMinCount != 0 || changeRequest.NodeMaxCount != 0 {
-		err = provisioner.awsClient.EnsureEKSNodeGroupScaling(cluster)
-		if err != nil {
-			return errors.Wrap(err, "failed to update scaling config for EKS NodeGroup")
-		}
+	err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to resize EKS NodeGroup")
 	}
 
 	return nil
