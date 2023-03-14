@@ -71,7 +71,7 @@ var helmRepos = map[string]string{
 }
 
 func NewUtilityGroupHandle(
-	params model.ProvisioningParams,
+	allowCIDRRangeList []string,
 	kubeconfigPath string,
 	cluster *model.Cluster,
 	awsClient aws.AWS,
@@ -93,12 +93,12 @@ func NewUtilityGroupHandle(
 		return nil, errors.Wrap(err, "failed to get handle for NGINX INTERNAL")
 	}
 
-	prometheusOperator, err := newPrometheusOperatorHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
+	prometheusOperator, err := newPrometheusOperatorHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
 	}
 
-	thanos, err := newThanosHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
+	thanos, err := newThanosHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Thanos")
 	}

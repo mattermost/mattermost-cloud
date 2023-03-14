@@ -28,7 +28,7 @@ const KopsProvisionerType = "kops"
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	params    model.ProvisioningParams
+	params    ProvisioningParams
 	awsClient aws.AWS
 	store     model.InstallationDatabaseStoreInterface
 	logger    log.FieldLogger
@@ -39,7 +39,7 @@ var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
 
 // NewKopsProvisioner creates a new KopsProvisioner.
 func NewKopsProvisioner(
-	params model.ProvisioningParams,
+	params ProvisioningParams,
 	awsClient aws.AWS,
 	store model.InstallationDatabaseStoreInterface,
 	logger log.FieldLogger,
@@ -431,7 +431,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return errors.Wrap(err, "unable to attach custom node policy to master")
 	}
 
-	ugh, err := utility.NewUtilityGroupHandle(provisioner.params, kops.GetKubeConfigPath(), cluster, provisioner.awsClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kops.GetKubeConfigPath(), cluster, provisioner.awsClient, logger)
 	if err != nil {
 		return err
 	}
@@ -845,7 +845,7 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, logge
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, kopsMetadata.Name, logger)
 
-	ugh, err := utility.NewUtilityGroupHandle(provisioner.params, kopsClient.GetKubeConfigPath(), cluster, provisioner.awsClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kopsClient.GetKubeConfigPath(), cluster, provisioner.awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}

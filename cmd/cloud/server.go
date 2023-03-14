@@ -263,7 +263,7 @@ func executeServerCmd(flags serverFlags) error {
 		"ETCD_LISTEN_METRICS_URLS": flags.etcdListenMetricsURL,
 	}
 
-	provisioningParams := model.ProvisioningParams{
+	provisioningParams := provisioner.ProvisioningParams{
 		S3StateStore:            flags.s3StateStore,
 		AllowCIDRRangeList:      flags.allowListCIDRRange,
 		VpnCIDRList:             flags.vpnListCIDR,

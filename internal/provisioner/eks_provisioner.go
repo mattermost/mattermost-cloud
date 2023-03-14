@@ -34,7 +34,7 @@ type clusterUpdateStore interface {
 
 // EKSProvisioner provisions clusters using AWS EKS.
 type EKSProvisioner struct {
-	params             model.ProvisioningParams
+	params             ProvisioningParams
 	awsClient          aws.AWS
 	clusterUpdateStore clusterUpdateStore
 	store              model.InstallationDatabaseStoreInterface
@@ -45,7 +45,7 @@ var _ supervisor.ClusterProvisioner = (*EKSProvisioner)(nil)
 
 // NewEKSProvisioner creates new EKSProvisioner.
 func NewEKSProvisioner(
-	params model.ProvisioningParams,
+	params ProvisioningParams,
 	awsClient aws.AWS,
 	store *store.SQLStore,
 	logger log.FieldLogger,
@@ -361,7 +361,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 		return errors.Wrap(err, "failed to get kubeconfig file path")
 	}
 
-	ugh, err := utility.NewUtilityGroupHandle(provisioner.params, kubeConfigPath, cluster, provisioner.awsClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kubeConfigPath, cluster, provisioner.awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}

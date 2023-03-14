@@ -28,7 +28,7 @@ func provisionCluster(
 	cluster *model.Cluster,
 	kubeconfigPath string,
 	awsClient aws.AWS,
-	params model.ProvisioningParams,
+	params ProvisioningParams,
 	store model.ClusterUtilityDatabaseStoreInterface,
 	logger logrus.FieldLogger) error {
 
@@ -376,7 +376,7 @@ func provisionCluster(
 		}
 	}
 
-	ugh, err := utility.NewUtilityGroupHandle(params, kubeconfigPath, cluster, awsClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(params.AllowCIDRRangeList, kubeconfigPath, cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}

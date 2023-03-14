@@ -27,9 +27,25 @@ func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supe
 	return c.kopsProvisioner
 }
 
+// ProvisioningParams represent configuration used during various provisioning operations.
+type ProvisioningParams struct {
+	S3StateStore            string
+	AllowCIDRRangeList      []string
+	VpnCIDRList             []string
+	Owner                   string
+	UseExistingAWSResources bool
+	DeployMysqlOperator     bool
+	DeployMinioOperator     bool
+	NdotsValue              string
+	PGBouncerConfig         *model.PGBouncerConfig
+	SLOInstallationGroups   []string
+	SLOEnterpriseGroups     []string
+	EtcdManagerEnv          map[string]string
+}
+
 type Provisioner struct {
 	ClusterProvisionerOption
-	params         model.ProvisioningParams
+	params         ProvisioningParams
 	awsClient      aws.AWS
 	resourceUtil   *utils.ResourceUtil
 	backupOperator *BackupOperator
@@ -52,7 +68,7 @@ var _ kube = (*KopsProvisioner)(nil)
 func NewProvisioner(
 	kopsProvisioner *KopsProvisioner,
 	eksProvisioner *EKSProvisioner,
-	params model.ProvisioningParams,
+	params ProvisioningParams,
 	awsClient aws.AWS,
 	resourceUtil *utils.ResourceUtil,
 	backupOperator *BackupOperator,
