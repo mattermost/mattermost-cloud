@@ -69,6 +69,7 @@ type AWS interface {
 	EnsureEKSClusterUpdated(cluster *model.Cluster) error
 	EnsureEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error)
 	EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error
+	EnsureEKSNodeGroupScaling(cluster *model.Cluster) error
 	GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, error)
 	GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error)
 	EnsureEKSNodeGroupDeleted(clusterName, workerName string) error

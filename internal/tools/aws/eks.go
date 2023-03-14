@@ -163,6 +163,63 @@ func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
 	return nil
 }
 
+func (c *Client) EnsureEKSNodeGroupScaling(cluster *model.Cluster) error {
+	eksMetadata := cluster.ProvisionerMetadataEKS
+
+	clusterName := eksMetadata.Name
+	workerName := eksMetadata.WorkerName
+	eksNodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
+	if err != nil {
+		return err
+	}
+
+	if eksNodeGroup == nil {
+		return errors.Errorf("nodegroup %s does not exist", clusterName)
+	}
+
+	if eksNodeGroup.Status != eksTypes.NodegroupStatusActive {
+		return errors.Errorf("nodegroup %s is not active", clusterName)
+	}
+
+	scaling := eksNodeGroup.ScalingConfig
+	if scaling == nil {
+		return errors.Errorf("nodegroup %s scaling config is nil", clusterName)
+	}
+
+	var isUpdateRequired bool
+	scalingConfigInput := eksTypes.NodegroupScalingConfig{}
+	if scaling.DesiredSize != nil && int64(*scaling.DesiredSize) != eksMetadata.ChangeRequest.NodeMinCount {
+		isUpdateRequired = true
+		scalingConfigInput.DesiredSize = aws.Int32(int32(eksMetadata.ChangeRequest.NodeMinCount))
+	}
+
+	if scaling.MinSize != nil && int64(*scaling.MinSize) != eksMetadata.ChangeRequest.NodeMinCount {
+		isUpdateRequired = true
+		scalingConfigInput.MinSize = aws.Int32(int32(eksMetadata.ChangeRequest.NodeMinCount))
+	}
+
+	if scaling.MaxSize != nil && int64(*scaling.MaxSize) != eksMetadata.ChangeRequest.NodeMaxCount {
+		isUpdateRequired = true
+		scalingConfigInput.MaxSize = aws.Int32(int32(eksMetadata.ChangeRequest.NodeMaxCount))
+	}
+
+	if !isUpdateRequired {
+		return nil
+	}
+
+	_, err = c.Service().eks.UpdateNodegroupConfig(context.TODO(), &eks.UpdateNodegroupConfigInput{
+		ClusterName:   aws.String(clusterName),
+		NodegroupName: aws.String(workerName),
+		ScalingConfig: &scalingConfigInput,
+	})
+
+	if err != nil {
+		return errors.Wrap(err, "failed to update EKS nodegroup scaling")
+	}
+
+	return nil
+}
+
 func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
 
 	clusterName := cluster.ProvisionerMetadataEKS.Name
@@ -207,6 +264,11 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup
 		}
 	}
 
+	launchTemplateVersion := "$Latest"
+	if changeRequest.LaunchTemplateVersion != nil && *changeRequest.LaunchTemplateVersion > 0 {
+		launchTemplateVersion = fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion)
+	}
+
 	nodeGroupReq := eks.CreateNodegroupInput{
 		ClusterName:   aws.String(clusterName),
 		InstanceTypes: []string{changeRequest.NodeInstanceType},
@@ -221,7 +283,7 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup
 		Subnets: subnetsIDs,
 		LaunchTemplate: &eksTypes.LaunchTemplateSpecification{
 			Name:    aws.String(launchTemplate),
-			Version: aws.String(fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion)),
+			Version: aws.String(launchTemplateVersion),
 		},
 		Tags: map[string]string{
 			fmt.Sprintf("kubernetes.io/cluster/%s", clusterName): "owned",
@@ -309,6 +371,40 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 			*nodeGroup.LaunchTemplate.Version != fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion) {
 			isUpdateRequired = true
 		}
+	} else {
+		if nodeGroup.LaunchTemplate != nil && nodeGroup.LaunchTemplate.Version != nil {
+			version, err := strconv.Atoi(*nodeGroup.LaunchTemplate.Version)
+			if err != nil {
+				logger.Errorln("failed to convert launch template version to int", err)
+			}
+			changeRequest.LaunchTemplateVersion = ptr.Int64(int64(version))
+		}
+	}
+
+	if changeRequest.NodeInstanceType != "" {
+		if nodeGroup.InstanceTypes != nil && len(nodeGroup.InstanceTypes) > 0 &&
+			nodeGroup.InstanceTypes[0] != changeRequest.NodeInstanceType {
+			isUpdateRequired = true
+		}
+	} else {
+		changeRequest.NodeInstanceType = eksMetadata.NodeInstanceType
+	}
+
+	scalingInfo := nodeGroup.ScalingConfig
+	if changeRequest.NodeMinCount != 0 {
+		if *scalingInfo.MinSize != int32(changeRequest.NodeMinCount) {
+			isUpdateRequired = true
+		}
+	} else {
+		changeRequest.NodeMinCount = eksMetadata.NodeMinCount
+	}
+
+	if changeRequest.NodeMaxCount != 0 {
+		if *scalingInfo.MaxSize != int32(changeRequest.NodeMaxCount) {
+			isUpdateRequired = true
+		}
+	} else {
+		changeRequest.NodeMaxCount = eksMetadata.NodeMaxCount
 	}
 
 	if !isUpdateRequired {
@@ -323,13 +419,10 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 		return errors.Wrap(err, "failed to convert worker sequence to int")
 	}
 
-	eksMetadata.ChangeRequest.WorkerName = fmt.Sprintf("worker-%d", workerSeqInt+1)
+	changeRequest.WorkerName = fmt.Sprintf("worker-%d", workerSeqInt+1)
 
-	eksMetadata.ChangeRequest.VPC = eksMetadata.VPC
-	eksMetadata.ChangeRequest.NodeInstanceType = eksMetadata.NodeInstanceType
-	eksMetadata.ChangeRequest.NodeMinCount = eksMetadata.NodeMinCount
-	eksMetadata.ChangeRequest.NodeMaxCount = eksMetadata.NodeMaxCount
-	eksMetadata.ChangeRequest.NodeRoleARN = eksMetadata.NodeRoleARN
+	changeRequest.VPC = eksMetadata.VPC
+	changeRequest.NodeRoleARN = eksMetadata.NodeRoleARN
 
 	nodeGroup, err = c.createEKSNodeGroup(cluster)
 	if err != nil {
