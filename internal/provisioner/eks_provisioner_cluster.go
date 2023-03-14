@@ -319,6 +319,11 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 			return errors.Wrap(err, "failed to migrate EKS NodeGroup")
 		}
 
+		workerNode := eksMetadata.ChangeRequest.WorkerName
+		eksMetadata.NodeInstanceGroups[workerNode] = eksMetadata.NodeInstanceGroups[eksMetadata.WorkerName]
+		delete(eksMetadata.NodeInstanceGroups, eksMetadata.WorkerName)
+		eksMetadata.WorkerName = workerNode
+
 		err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 		if err != nil {
 			return errors.Wrap(err, "failed to store cluster")
@@ -360,6 +365,24 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to resize EKS NodeGroup")
 	}
+
+	workerName := eksMetadata.ChangeRequest.WorkerName
+	nodeGroup, err := provisioner.awsClient.GetActiveEKSNodeGroup(eksMetadata.Name, workerName)
+	if err != nil {
+		return errors.Wrap(err, "failed to get EKS NodeGroup")
+	}
+
+	delete(eksMetadata.NodeInstanceGroups, eksMetadata.WorkerName)
+	eksMetadata.NodeInstanceGroups[*nodeGroup.NodegroupName] = model.EKSInstanceGroupMetadata{
+		NodeInstanceType: nodeGroup.InstanceTypes[0],
+		NodeMinCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
+		NodeMaxCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
+	}
+	eksMetadata.NodeInstanceType = nodeGroup.InstanceTypes[0]
+	eksMetadata.NodeMinCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize))
+	eksMetadata.NodeMaxCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize))
+
+	eksMetadata.WorkerName = *nodeGroup.NodegroupName
 
 	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {

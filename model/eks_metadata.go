@@ -142,15 +142,6 @@ func (em *EKSMetadata) ApplyChangeRequest() {
 		if em.ChangeRequest.LaunchTemplateVersion != nil {
 			em.LaunchTemplateVersion = em.ChangeRequest.LaunchTemplateVersion
 		}
-		if em.ChangeRequest.NodeInstanceType != "" {
-			em.NodeInstanceType = em.ChangeRequest.NodeInstanceType
-		}
-		if em.ChangeRequest.NodeMinCount != 0 {
-			em.NodeMinCount = em.ChangeRequest.NodeMinCount
-		}
-		if em.ChangeRequest.NodeMaxCount != 0 {
-			em.NodeMaxCount = em.ChangeRequest.NodeMaxCount
-		}
 	}
 }
 

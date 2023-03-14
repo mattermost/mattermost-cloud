@@ -372,12 +372,6 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 		return errors.Wrap(err, "failed to create a new NodeGroup")
 	}
 
-	eksMetadata.NodeInstanceGroups[*nodeGroup.NodegroupName] = model.EKSInstanceGroupMetadata{
-		NodeInstanceType: nodeGroup.InstanceTypes[0],
-		NodeMinCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
-		NodeMaxCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
-	}
-
 	wait := 600 // seconds
 	logger.Infof("Waiting up to %d seconds for EKS NodeGroup to become active...", wait)
 	_, err = c.WaitForActiveEKSNodeGroup(eksMetadata.Name, eksMetadata.ChangeRequest.WorkerName, wait)
@@ -392,15 +386,11 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 		return errors.Wrap(err, "failed to delete the old NodeGroup")
 	}
 
-	delete(eksMetadata.NodeInstanceGroups, workerName)
-
 	logger.Infof("Waiting up to %d seconds for NodeGroup to be deleted...", wait)
 	err = c.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, eksMetadata.WorkerName, wait)
 	if err != nil {
 		return err
 	}
-
-	eksMetadata.WorkerName = eksMetadata.ChangeRequest.WorkerName
 
 	return nil
 }
