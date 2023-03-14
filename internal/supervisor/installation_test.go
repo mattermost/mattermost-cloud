@@ -417,14 +417,6 @@ type mockAWS struct{}
 
 var _ aws.AWS = (*mockAWS)(nil)
 
-func (a *mockAWS) EnsureEKSNodeGroupVersionUpdated(cluster *model.Cluster) (*eksTypes.Update, error) {
-	return nil, nil
-}
-
-func (a *mockAWS) WaitForEKSNodeGroupUpdateToBeCompleted(clusterName, workerName, updateID string, timeout int) error {
-	return nil
-}
-
 func (a *mockAWS) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID string, timeout int) error {
 	return nil
 }

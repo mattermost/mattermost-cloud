@@ -431,21 +431,6 @@ func (mr *MockAWSMockRecorder) EnsureEKSNodeGroup(cluster interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSNodeGroup", reflect.TypeOf((*MockAWS)(nil).EnsureEKSNodeGroup), cluster)
 }
 
-// EnsureEKSNodeGroupVersionUpdated mocks base method
-func (m *MockAWS) EnsureEKSNodeGroupVersionUpdated(cluster *model.Cluster) (*types.Update, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureEKSNodeGroupVersionUpdated", cluster)
-	ret0, _ := ret[0].(*types.Update)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnsureEKSNodeGroupVersionUpdated indicates an expected call of EnsureEKSNodeGroupVersionUpdated
-func (mr *MockAWSMockRecorder) EnsureEKSNodeGroupVersionUpdated(cluster interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSNodeGroupVersionUpdated", reflect.TypeOf((*MockAWS)(nil).EnsureEKSNodeGroupVersionUpdated), cluster)
-}
-
 // EnsureEKSNodeGroupMigrated mocks base method
 func (m *MockAWS) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 	m.ctrl.T.Helper()
@@ -602,20 +587,6 @@ func (m *MockAWS) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID str
 func (mr *MockAWSMockRecorder) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForEKSClusterUpdateToBeCompleted", reflect.TypeOf((*MockAWS)(nil).WaitForEKSClusterUpdateToBeCompleted), clusterName, updateID, timeout)
-}
-
-// WaitForEKSNodeGroupUpdateToBeCompleted mocks base method
-func (m *MockAWS) WaitForEKSNodeGroupUpdateToBeCompleted(clusterName, workerName, updateID string, timeout int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForEKSNodeGroupUpdateToBeCompleted", clusterName, workerName, updateID, timeout)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// WaitForEKSNodeGroupUpdateToBeCompleted indicates an expected call of WaitForEKSNodeGroupUpdateToBeCompleted
-func (mr *MockAWSMockRecorder) WaitForEKSNodeGroupUpdateToBeCompleted(clusterName, workerName, updateID, timeout interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForEKSNodeGroupUpdateToBeCompleted", reflect.TypeOf((*MockAWS)(nil).WaitForEKSNodeGroupUpdateToBeCompleted), clusterName, workerName, updateID, timeout)
 }
 
 // EnsureLaunchTemplate mocks base method

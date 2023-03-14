@@ -277,41 +277,6 @@ func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup
 	return c.createEKSNodeGroup(cluster)
 }
 
-func (c *Client) EnsureEKSNodeGroupVersionUpdated(cluster *model.Cluster) (*eksTypes.Update, error) {
-	clusterName := cluster.ProvisionerMetadataEKS.Name
-	workerName := cluster.ProvisionerMetadataEKS.WorkerName
-
-	eksMetadata := cluster.ProvisionerMetadataEKS
-	if eksMetadata.ChangeRequest.Version == "" {
-		return nil, nil
-	}
-
-	eksNodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
-	if err != nil {
-		return nil, err
-	}
-
-	if eksNodeGroup == nil {
-		return nil, errors.Errorf("nodegroup %s not found", workerName)
-	}
-
-	if eksNodeGroup.Status != eksTypes.NodegroupStatusActive {
-		return nil, errors.Errorf("nodegroup %s is not active", workerName)
-	}
-
-	output, err := c.Service().eks.UpdateNodegroupVersion(context.TODO(), &eks.UpdateNodegroupVersionInput{
-		ClusterName:   aws.String(clusterName),
-		NodegroupName: aws.String(workerName),
-		Version:       aws.String(eksMetadata.ChangeRequest.Version),
-	})
-
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to update EKS cluster version")
-	}
-
-	return output.Update, nil
-}
-
 // EnsureEKSNodeGroupMigrated updates EKS cluster node group.
 func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 	logger := c.logger.WithField("cluster", cluster.ID)

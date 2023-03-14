@@ -68,7 +68,6 @@ type AWS interface {
 	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error)
 	EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Update, error)
 	EnsureEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error)
-	EnsureEKSNodeGroupVersionUpdated(cluster *model.Cluster) (*eksTypes.Update, error)
 	EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error
 	GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, error)
 	GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error)
@@ -80,7 +79,6 @@ type AWS interface {
 	WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error
 	WaitForEKSClusterToBeDeleted(clusterName string, timeout int) error
 	WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID string, timeout int) error
-	WaitForEKSNodeGroupUpdateToBeCompleted(clusterName, workerName, updateID string, timeout int) error
 
 	EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
 	UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)

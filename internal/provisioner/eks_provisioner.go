@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"sync"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/smithy-go/ptr"
@@ -338,51 +337,13 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 			return errors.Wrap(err, "failed to update EKS cluster")
 		}
 
-		nodeGroupUpdateRequest, err := provisioner.awsClient.EnsureEKSNodeGroupVersionUpdated(cluster)
-		if err != nil {
-			return errors.Wrap(err, "failed to update EKS NodeGroup version")
-		}
-
-		var wg sync.WaitGroup
-		var updateError error
-		var updateErrorLock sync.Mutex
-
 		if clusterUpdateRequest != nil && clusterUpdateRequest.Id != nil {
-			wg.Add(1)
-			go func(updateID string) {
-				defer wg.Done()
-
-				wait := 3600 // seconds
-				logger.Infof("Waiting up to %d seconds for EKS cluster to be updated...", wait)
-				err = provisioner.awsClient.WaitForEKSClusterUpdateToBeCompleted(eksMetadata.Name, updateID, wait)
-				if err != nil {
-					updateErrorLock.Lock()
-					updateError = errors.Wrap(err, "failed to update EKS cluster")
-					updateErrorLock.Unlock()
-				}
-			}(*clusterUpdateRequest.Id)
-		}
-
-		if nodeGroupUpdateRequest != nil && nodeGroupUpdateRequest.Id != nil {
-			wg.Add(1)
-			go func(updateID string) {
-				defer wg.Done()
-
-				wait := 3600 // seconds
-				logger.Infof("Waiting up to %d seconds for EKS NodeGroup to be updated...", wait)
-				err = provisioner.awsClient.WaitForEKSNodeGroupUpdateToBeCompleted(eksMetadata.Name, eksMetadata.WorkerName, updateID, wait)
-				if err != nil {
-					updateErrorLock.Lock()
-					if updateError == nil {
-						updateError = errors.Wrap(err, "failed to update EKS nodeGroup")
-					}
-					updateErrorLock.Unlock()
-				}
-			}(*nodeGroupUpdateRequest.Id)
-		}
-
-		if updateError != nil {
-			return updateError
+			wait := 3600 // seconds
+			logger.Infof("Waiting up to %d seconds for EKS cluster to be updated...", wait)
+			err = provisioner.awsClient.WaitForEKSClusterUpdateToBeCompleted(eksMetadata.Name, *clusterUpdateRequest.Id, wait)
+			if err != nil {
+				return errors.Wrap(err, "failed to update EKS cluster")
+			}
 		}
 	}
 
