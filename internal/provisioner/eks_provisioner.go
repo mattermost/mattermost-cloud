@@ -321,10 +321,10 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 			return errors.Wrap(err, "failed to migrate EKS NodeGroup")
 		}
 
-		workerNode := eksMetadata.ChangeRequest.WorkerName
-		eksMetadata.NodeInstanceGroups[workerNode] = eksMetadata.NodeInstanceGroups[eksMetadata.WorkerName]
+		workerName := eksMetadata.ChangeRequest.WorkerName
+		eksMetadata.NodeInstanceGroups[workerName] = eksMetadata.NodeInstanceGroups[eksMetadata.WorkerName]
 		delete(eksMetadata.NodeInstanceGroups, eksMetadata.WorkerName)
-		eksMetadata.WorkerName = workerNode
+		eksMetadata.WorkerName = workerName
 
 		err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 		if err != nil {
@@ -373,7 +373,7 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 				err = provisioner.awsClient.WaitForEKSNodeGroupUpdateToBeCompleted(eksMetadata.Name, eksMetadata.WorkerName, updateID, wait)
 				if err != nil {
 					updateErrorLock.Lock()
-					if updateError != nil {
+					if updateError == nil {
 						updateError = errors.Wrap(err, "failed to update EKS nodeGroup")
 					}
 					updateErrorLock.Unlock()

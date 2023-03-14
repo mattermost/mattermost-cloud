@@ -673,7 +673,7 @@ func (c *Client) WaitForEKSNodeGroupUpdateToBeCompleted(clusterName, workerName,
 			}
 
 			if updateStatus == eksTypes.UpdateStatusFailed {
-				return errors.New("EKS cluster update failed")
+				return errors.New("EKS NodeGroup update failed")
 			}
 
 			if updateStatus == eksTypes.UpdateStatusSuccessful {
