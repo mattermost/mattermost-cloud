@@ -316,9 +316,9 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 		}
 	} else {
 		if nodeGroup.LaunchTemplate != nil && nodeGroup.LaunchTemplate.Version != nil {
-			version, err := strconv.Atoi(*nodeGroup.LaunchTemplate.Version)
-			if err != nil {
-				logger.Errorln("failed to convert launch template version to int", err)
+			version, err2 := strconv.Atoi(*nodeGroup.LaunchTemplate.Version)
+			if err2 != nil {
+				logger.Errorln("failed to convert launch template version to int", err2)
 			}
 			changeRequest.LaunchTemplateVersion = ptr.Int64(int64(version))
 		}
