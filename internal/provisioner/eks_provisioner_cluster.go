@@ -331,17 +331,19 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 	}
 
 	if changeRequest.Version != "" {
-		err = provisioner.awsClient.EnsureEKSClusterUpdated(cluster)
+		updateRequest, err := provisioner.awsClient.EnsureEKSClusterUpdated(cluster)
 		if err != nil {
 			return errors.Wrap(err, "failed to update EKS cluster")
 		}
-	}
 
-	wait := 3600 // seconds
-	logger.Infof("Waiting up to %d seconds for EKS cluster to become active...", wait)
-	_, err = provisioner.awsClient.WaitForActiveEKSCluster(eksMetadata.Name, wait)
-	if err != nil {
-		return err
+		if updateRequest != nil && updateRequest.Id != nil {
+			wait := 3600 // seconds
+			logger.Infof("Waiting up to %d seconds for EKS cluster to be updated...", wait)
+			err = provisioner.awsClient.WaitForEKSClusterUpdateToBeCompleted(eksMetadata.Name, *updateRequest.Id, wait)
+			if err != nil {
+				return errors.Wrap(err, "failed to update EKS cluster")
+			}
+		}
 	}
 
 	return nil

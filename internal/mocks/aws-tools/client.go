@@ -402,11 +402,12 @@ func (mr *MockAWSMockRecorder) EnsureEKSCluster(cluster, resources interface{}) 
 }
 
 // EnsureEKSClusterUpdated mocks base method
-func (m *MockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
+func (m *MockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) (*types.Update, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSClusterUpdated", cluster)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*types.Update)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // EnsureEKSClusterUpdated indicates an expected call of EnsureEKSClusterUpdated
@@ -572,6 +573,20 @@ func (m *MockAWS) WaitForEKSClusterToBeDeleted(clusterName string, timeout int) 
 func (mr *MockAWSMockRecorder) WaitForEKSClusterToBeDeleted(clusterName, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForEKSClusterToBeDeleted", reflect.TypeOf((*MockAWS)(nil).WaitForEKSClusterToBeDeleted), clusterName, timeout)
+}
+
+// WaitForEKSClusterUpdateToBeCompleted mocks base method
+func (m *MockAWS) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID string, timeout int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForEKSClusterUpdateToBeCompleted", clusterName, updateID, timeout)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForEKSClusterUpdateToBeCompleted indicates an expected call of WaitForEKSClusterUpdateToBeCompleted
+func (mr *MockAWSMockRecorder) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID, timeout interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForEKSClusterUpdateToBeCompleted", reflect.TypeOf((*MockAWS)(nil).WaitForEKSClusterUpdateToBeCompleted), clusterName, updateID, timeout)
 }
 
 // EnsureLaunchTemplate mocks base method

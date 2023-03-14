@@ -131,36 +131,36 @@ func (a *Client) InstallEKSAddons(cluster *model.Cluster) error {
 	return nil
 }
 
-func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
+func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Update, error) {
 	clusterName := cluster.ProvisionerMetadataEKS.Name
 	eksCluster, err := c.getEKSCluster(clusterName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if eksCluster == nil {
-		return errors.Errorf("cluster %s does not exist", clusterName)
+		return nil, errors.Errorf("cluster %s does not exist", clusterName)
 	}
 
 	if eksCluster.Status != eksTypes.ClusterStatusActive {
-		return errors.Errorf("cluster %s is not active", clusterName)
+		return nil, errors.Errorf("cluster %s is not active", clusterName)
 	}
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata.ChangeRequest.Version == "" {
-		return nil
+		return nil, nil
 	}
 
-	_, err = c.Service().eks.UpdateClusterVersion(context.TODO(), &eks.UpdateClusterVersionInput{
+	output, err := c.Service().eks.UpdateClusterVersion(context.TODO(), &eks.UpdateClusterVersionInput{
 		Name:    aws.String(clusterName),
 		Version: aws.String(eksMetadata.ChangeRequest.Version),
 	})
 
 	if err != nil {
-		return errors.Wrap(err, "failed to update EKS cluster version")
+		return nil, errors.Wrap(err, "failed to update EKS cluster version")
 	}
 
-	return nil
+	return output.Update, nil
 }
 
 func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
@@ -367,7 +367,7 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 	changeRequest.VPC = eksMetadata.VPC
 	changeRequest.NodeRoleARN = eksMetadata.NodeRoleARN
 
-	nodeGroup, err = c.createEKSNodeGroup(cluster)
+	_, err = c.createEKSNodeGroup(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to create a new NodeGroup")
 	}
@@ -592,4 +592,43 @@ func (c *Client) WaitForEKSClusterToBeDeleted(clusterName string, timeout int) e
 			}
 		}
 	}
+}
+
+func (c *Client) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID string, timeout int) error {
+	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timeoutTimer.Stop()
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-timeoutTimer.C:
+			return errors.New("timed out waiting for EKS cluster to become ready")
+		case <-tick.C:
+			updateStatus, err := c.getEKSClusterUpdateStatus(clusterName, updateID)
+			if err != nil {
+				return errors.Wrap(err, "failed to describe EKS cluster")
+			}
+
+			if updateStatus == eksTypes.UpdateStatusFailed {
+				return errors.New("EKS cluster update failed")
+			}
+
+			if updateStatus == eksTypes.UpdateStatusSuccessful {
+				return nil
+			}
+		}
+	}
+}
+
+func (c *Client) getEKSClusterUpdateStatus(clusterName, updateID string) (eksTypes.UpdateStatus, error) {
+	output, err := c.Service().eks.DescribeUpdate(context.TODO(), &eks.DescribeUpdateInput{
+		Name:     ptr.String(clusterName),
+		UpdateId: ptr.String(updateID),
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "failed to describe EKS cluster update")
+	}
+
+	return output.Update.Status, nil
 }
