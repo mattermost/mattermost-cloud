@@ -361,6 +361,11 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 		return errors.Wrap(err, "failed to resize EKS NodeGroup")
 	}
 
+	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to store cluster")
+	}
+
 	return nil
 }
 
