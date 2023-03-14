@@ -621,33 +621,6 @@ func (c *Client) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID stri
 	}
 }
 
-func (c *Client) WaitForEKSNodeGroupUpdateToBeCompleted(clusterName, workerName, updateID string, timeout int) error {
-	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
-	defer timeoutTimer.Stop()
-	tick := time.NewTicker(5 * time.Second)
-	defer tick.Stop()
-
-	for {
-		select {
-		case <-timeoutTimer.C:
-			return errors.New("timed out waiting for EKS NodeGroup update to be completed")
-		case <-tick.C:
-			updateStatus, err := c.getEKSNodeGroupUpdateStatus(clusterName, workerName, updateID)
-			if err != nil {
-				return errors.Wrap(err, "failed to describe EKS cluster")
-			}
-
-			if updateStatus == eksTypes.UpdateStatusFailed {
-				return errors.New("EKS NodeGroup update failed")
-			}
-
-			if updateStatus == eksTypes.UpdateStatusSuccessful {
-				return nil
-			}
-		}
-	}
-}
-
 func (c *Client) getEKSClusterUpdateStatus(clusterName, updateID string) (eksTypes.UpdateStatus, error) {
 	output, err := c.Service().eks.DescribeUpdate(context.TODO(), &eks.DescribeUpdateInput{
 		Name:     ptr.String(clusterName),
@@ -655,19 +628,6 @@ func (c *Client) getEKSClusterUpdateStatus(clusterName, updateID string) (eksTyp
 	})
 	if err != nil {
 		return "", errors.Wrap(err, "failed to describe EKS cluster update")
-	}
-
-	return output.Update.Status, nil
-}
-
-func (c *Client) getEKSNodeGroupUpdateStatus(clusterName, workerName, updateID string) (eksTypes.UpdateStatus, error) {
-	output, err := c.Service().eks.DescribeUpdate(context.TODO(), &eks.DescribeUpdateInput{
-		Name:          ptr.String(clusterName),
-		NodegroupName: ptr.String(workerName),
-		UpdateId:      ptr.String(updateID),
-	})
-	if err != nil {
-		return "", errors.Wrap(err, "failed to describe EKS NodeGroup update")
 	}
 
 	return output.Update.Status, nil
