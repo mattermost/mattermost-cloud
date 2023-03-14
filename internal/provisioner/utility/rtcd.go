@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package utility
 
 import (
 	"strings"
@@ -63,7 +63,7 @@ func (r *rtcd) ValuesPath() string {
 
 func (r *rtcd) CreateOrUpgrade() error {
 
-	h := r.NewHelmDeployment()
+	h := r.newHelmDeployment()
 
 	err := h.Update()
 	if err != nil {
@@ -89,7 +89,7 @@ func (r *rtcd) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (r *rtcd) Destroy() error {
-	helm := r.NewHelmDeployment()
+	helm := r.newHelmDeployment()
 	return helm.Delete()
 }
 
@@ -98,7 +98,7 @@ func (r *rtcd) Migrate() error {
 	return nil
 }
 
-func (r *rtcd) NewHelmDeployment() *helmDeployment {
+func (r *rtcd) newHelmDeployment() *helmDeployment {
 	return newHelmDeployment(
 		"mattermost/mattermost-rtcd",
 		"mattermost-rtcd",

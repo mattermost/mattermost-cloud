@@ -87,7 +87,6 @@ func (provisioner Provisioner) CleanupBackupJob(backup *model.InstallationBackup
 }
 
 // TriggerRestore triggers restoration job for specific installation on the cluster.
-
 func (provisioner Provisioner) TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
