@@ -8,11 +8,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -113,4 +115,32 @@ func getClusterResources(kubeconfigPath string, onlySchedulable bool, logger log
 		TotalPodCount:    totalPodCount,
 		UsedPodCount:     int64(len(allPods)),
 	}, nil
+}
+
+// waitForNamespacesDeleted is used to check when all of the provided namespaces
+// have been fully terminated.
+func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClient *k8s.KubeClient) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return errors.Wrap(ctx.Err(), "timed out waiting for namespaces to become fully terminated")
+		default:
+			var shouldWait bool
+			for _, namespace := range namespaces {
+				_, err := k8sClient.Clientset.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+				if err != nil && k8sErrors.IsNotFound(err) {
+					continue
+				}
+
+				shouldWait = true
+				break
+			}
+
+			if !shouldWait {
+				return nil
+			}
+
+			time.Sleep(5 * time.Second)
+		}
+	}
 }

@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package utility
 
 import (
 	"encoding/base64"
@@ -102,8 +102,8 @@ func (d *helmDeployment) Exists() (bool, error) {
 	return false, nil
 }
 
-// helmRepoAdd adds new helm repos
-func helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
+// AddRepo adds new helm repos
+func AddRepo(repoName, repoURL string, logger log.FieldLogger) error {
 	logger.Infof("Adding helm repo %s", repoName)
 	arguments := []string{
 		"repo",

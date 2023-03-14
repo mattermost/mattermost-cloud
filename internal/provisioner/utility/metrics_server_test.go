@@ -2,12 +2,11 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package utility
 
 import (
 	"testing"
 
-	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-tools"
 	"github.com/mattermost/mattermost-cloud/model"
 
 	"github.com/golang/mock/gomock"
@@ -15,20 +14,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewHelmDeploymentWithDefaultConfiguration(t *testing.T) {
+func TestNewHelmDeploymentWithDefaultConfigurationMetricsServer(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	logger := log.New()
-	awsClient := mocks.NewMockAWS(ctrl)
-	fluentbit, err := newFluentbitHandle(&model.Cluster{
+	metricsServer, err := newMetricsServerHandle(&model.HelmUtilityVersion{Chart: "3.8.3"}, &model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
-	}, &model.HelmUtilityVersion{Chart: "1.2.3"}, "kubeconfig", awsClient, logger)
-	require.NoError(t, err, "should not error when creating new fluentbit handler")
-	require.NotNil(t, fluentbit, "fluentbit should not be nil")
+	}, "kubeconfig", logger)
+	require.NoError(t, err, "should not error when creating new metrics server handler")
+	require.NotNil(t, metricsServer, "metrics server should not be nil")
 
-	helmDeployment := fluentbit.NewHelmDeployment()
+	helmDeployment := metricsServer.newHelmDeployment(logger)
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
 }

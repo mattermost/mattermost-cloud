@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package utility
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -73,7 +74,7 @@ func (t *thanos) CreateOrUpgrade() error {
 	dns := fmt.Sprintf("%s.%s.%s", t.cluster.ID, app, privateDomainName)
 	grpcDNS := fmt.Sprintf("%s-grpc.%s.%s", t.cluster.ID, app, privateDomainName)
 
-	h := t.NewHelmDeployment(dns, grpcDNS)
+	h := t.newHelmDeployment(dns, grpcDNS)
 
 	err = h.Update()
 	if err != nil {
@@ -111,7 +112,7 @@ func (t *thanos) CreateOrUpgrade() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(120)*time.Second)
 		defer cancel()
 
-		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, prometheusNamespace, logger.WithField("thanos-action", "create"), t.kubeconfigPath)
+		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, prometheus.Namespace, logger.WithField("thanos-action", "create"), t.kubeconfigPath)
 		if err != nil {
 			return errors.Wrap(err, "couldn't get the load balancer endpoint for Thanos")
 		}
@@ -150,7 +151,7 @@ func (t *thanos) Destroy() error {
 
 	t.actualVersion = nil
 
-	helm := t.NewHelmDeployment(dns, grpcDNS)
+	helm := t.newHelmDeployment(dns, grpcDNS)
 	return helm.Delete()
 
 }
@@ -159,13 +160,13 @@ func (t *thanos) Migrate() error {
 	return nil
 }
 
-func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeployment {
+func (t *thanos) newHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("query.ingress.hostname=%s,query.ingress.grpc.hostname=%s,query.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, thanosDNSGRPC, strings.Join(t.allowCIDRRangeList, "\\,"))
 
 	return newHelmDeployment(
 		"bitnami/thanos",
 		"thanos",
-		prometheusNamespace,
+		prometheus.Namespace,
 		t.kubeconfigPath,
 		t.desiredVersion,
 		helmValueArguments,

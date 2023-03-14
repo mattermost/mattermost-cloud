@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package utility
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -70,8 +70,8 @@ var helmRepos = map[string]string{
 	"mattermost":           "https://helm.mattermost.com",
 }
 
-func newUtilityGroupHandle(
-	params ProvisioningParams,
+func NewUtilityGroupHandle(
+	allowCIDRRangeList []string,
 	kubeconfigPath string,
 	cluster *model.Cluster,
 	awsClient aws.AWS,
@@ -93,12 +93,12 @@ func newUtilityGroupHandle(
 		return nil, errors.Wrap(err, "failed to get handle for NGINX INTERNAL")
 	}
 
-	prometheusOperator, err := newPrometheusOperatorHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
+	prometheusOperator, err := newPrometheusOperatorHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
 	}
 
-	thanos, err := newThanosHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
+	thanos, err := newThanosHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Thanos")
 	}
@@ -202,7 +202,7 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 
 	logger.Info("Adding new Helm repos.")
 	for repoName, repoURL := range helmRepos {
-		err := helmRepoAdd(repoName, repoURL, logger)
+		err := AddRepo(repoName, repoURL, logger)
 		if err != nil {
 			return errors.Wrap(err, "unable to add helm repos")
 		}

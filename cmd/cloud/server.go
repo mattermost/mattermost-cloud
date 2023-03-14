@@ -25,6 +25,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -87,7 +88,7 @@ func executeServerCmd(flags serverFlags) error {
 		return err
 	}
 
-	pgbouncerConfig := provisioner.NewPGBouncerConfig(
+	pgbouncerConfig := pgbouncer.NewPGBouncerConfig(
 		flags.minPoolSize, flags.defaultPoolSize, flags.reservePoolSize,
 		flags.maxClientConnections, flags.maxDatabaseConnectionsPerPool,
 		flags.serverIdleTimeout, flags.serverLifetime, flags.serverResetQueryAlways,

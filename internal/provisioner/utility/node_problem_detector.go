@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package utility
 
 import (
 	"strings"
@@ -36,7 +36,7 @@ func newNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, clus
 }
 
 func (f *nodeProblemDetector) Destroy() error {
-	helm := f.NewHelmDeployment(f.logger)
+	helm := f.newHelmDeployment(f.logger)
 	return helm.Delete()
 }
 
@@ -46,7 +46,7 @@ func (f *nodeProblemDetector) Migrate() error {
 
 func (f *nodeProblemDetector) CreateOrUpgrade() error {
 	logger := f.logger.WithField("node-problem-detector-action", "upgrade")
-	h := f.NewHelmDeployment(logger)
+	h := f.newHelmDeployment(logger)
 
 	err := h.Update()
 	if err != nil {
@@ -75,7 +75,7 @@ func (f *nodeProblemDetector) Name() string {
 	return model.NodeProblemDetectorCanonicalName
 }
 
-func (f *nodeProblemDetector) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
+func (f *nodeProblemDetector) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	return newHelmDeployment(
 		"deliveryhero/node-problem-detector",
 		"node-problem-detector",
