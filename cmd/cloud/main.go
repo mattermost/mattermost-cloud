@@ -49,6 +49,7 @@ func init() {
 	rootCmd.AddCommand(newCmdDashboard())
 	rootCmd.AddCommand(newCmdEvents())
 	rootCmd.AddCommand(newCmdSubscription())
+	rootCmd.AddCommand(newCmdDoctor())
 }
 
 func main() {
