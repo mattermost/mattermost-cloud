@@ -1,9 +1,14 @@
-package provisioner
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
+package pgbouncer
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -11,7 +16,7 @@ import (
 func TestValidatePGBouncerConfig(t *testing.T) {
 	var testCases = []struct {
 		description string
-		config      *PGBouncerConfig
+		config      *model.PGBouncerConfig
 		valid       bool
 	}{
 		{
@@ -51,7 +56,7 @@ func TestGeneratePGBouncerBaseIni(t *testing.T) {
 	config := NewPGBouncerConfig(5, 10, 54, 2000, 63, 11, 44, 0)
 	require.NoError(t, config.Validate())
 
-	ini := config.generatePGBouncerBaseIni()
+	ini := generatePGBouncerBaseIni(config)
 	assert.Contains(t, ini, "[pgbouncer]")
 
 	// Most of the other values are integers so just spot check a few
