@@ -318,6 +318,14 @@ func (flags *installationListFlags) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.hideEnv, "hide-env", true, "Whether to hide env vars in the output or not.")
 }
 
+type installationGetStatusesFlags struct {
+	clusterFlags
+}
+
+func (flags *installationGetStatusesFlags) addFlags(command *cobra.Command) {
+
+}
+
 type installationRecoveryFlags struct {
 	clusterFlags
 	installationID string
