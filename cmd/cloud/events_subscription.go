@@ -27,7 +27,6 @@ func newCmdSubscription() *cobra.Command {
 }
 
 func newCmdSubscriptionCreate() *cobra.Command {
-
 	var flags subscriptionCreateFlags
 
 	cmd := &cobra.Command{
@@ -43,6 +42,7 @@ func newCmdSubscriptionCreate() *cobra.Command {
 				OwnerID:          flags.owner,
 				EventType:        model.EventType(flags.eventType),
 				FailureThreshold: flags.failureThreshold,
+				Headers:          flags.headers,
 			}
 
 			if flags.dryRun {

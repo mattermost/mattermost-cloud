@@ -21,6 +21,7 @@ var (
 		"Name",
 		"OwnerID",
 		"EventType",
+		"Headers",
 		"FailureThreshold",
 		"LastDeliveryStatus",
 		"LastDeliveryAttemptAt",
@@ -153,6 +154,7 @@ func (sqlStore *SQLStore) CreateSubscription(sub *model.Subscription) error {
 			"DeleteAt":              sub.DeleteAt,
 			"LockAcquiredAt":        sub.LockAcquiredAt,
 			"LockAcquiredBy":        sub.LockAcquiredBy,
+			"Headers":               sub.Headers,
 		}))
 	if err != nil {
 		return errors.Wrap(err, "failed to create subscription")

@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package main
 
 import (
@@ -14,6 +18,7 @@ type subscriptionCreateFlags struct {
 	owner            string
 	eventType        string
 	failureThreshold time.Duration
+	headers          map[string]string
 }
 
 func (flags *subscriptionCreateFlags) addFlags(command *cobra.Command) {
@@ -22,6 +27,7 @@ func (flags *subscriptionCreateFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.owner, "owner", "", "OwnerID of the subscription.")
 	command.Flags().StringVar(&flags.eventType, "event-type", string(model.ResourceStateChangeEventType), "Event type of the subscription.")
 	command.Flags().DurationVar(&flags.failureThreshold, "failure-threshold", 0, "Failure threshold of the subscription.")
+	command.Flags().StringToStringVar(&flags.headers, "headers", nil, "headers that should be sent with the request")
 	_ = command.MarkFlagRequired("url")
 	_ = command.MarkFlagRequired("owner")
 	_ = command.MarkFlagRequired("event-type")
