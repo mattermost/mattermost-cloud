@@ -2136,12 +2136,12 @@ var migrations = []migration{
 			fieldType = "TEXT"
 		}
 
-		_, err := e.Exec(fmt.Sprintf(`ALTER TABLE Webhooks ADD COLUMN Headers %s;`, fieldType))
+		_, err := e.Exec(fmt.Sprintf(`ALTER TABLE Webhooks ADD COLUMN Headers %s NULL;`, fieldType))
 		if err != nil {
 			return err
 		}
 
-		_, err = e.Exec(fmt.Sprintf(`ALTER TABLE Subscription ADD COLUMN Headers %s;`, fieldType))
+		_, err = e.Exec(fmt.Sprintf(`ALTER TABLE Subscription ADD COLUMN Headers %s NULL;`, fieldType))
 		if err != nil {
 			return err
 		}
