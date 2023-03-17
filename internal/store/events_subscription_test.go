@@ -21,6 +21,9 @@ func TestCountSubscriptionsForEvent(t *testing.T) {
 
 	sub1 := &model.Subscription{
 		EventType: model.ResourceStateChangeEventType,
+		Headers: model.StringMap{
+			"Foo": "Bar",
+		},
 	}
 	err := sqlStore.CreateSubscription(sub1)
 	require.NoError(t, err)
