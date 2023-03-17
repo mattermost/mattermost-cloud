@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
+	"emperror.dev/errors"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -59,14 +59,14 @@ type DelivererConfig struct {
 }
 
 // NewDeliverer creates new EventDeliverer component.
-func NewDeliverer(ctx context.Context, store delivererStore, instanceID string, log logrus.FieldLogger, cfg DelivererConfig) *EventDeliverer {
+func NewDeliverer(ctx context.Context, store delivererStore, instanceID string, logger logrus.FieldLogger, cfg DelivererConfig) *EventDeliverer {
 	delivery := &EventDeliverer{
 		ctx:        ctx,
 		store:      store,
 		client:     &http.Client{Timeout: 15 * time.Second},
 		instanceID: instanceID,
 		config:     cfg,
-		logger:     log.WithField("component", "eventsDelivery"),
+		logger:     logger.WithField("component", "eventsDelivery"),
 		retryDelay: retryDelay,
 	}
 
@@ -202,7 +202,7 @@ func (s *sender) processSubscriptionEvents(claimFunc func(instanceID string) (*m
 	log := s.logger.WithField("subscription", subscription.ID)
 	defer s.unlockSubscription(subscription.ID, log)
 
-	log.Debug("Processing events delivery for subscription")
+	s.logger.Debug("Processing events delivery for subscription")
 
 	// If amount of events will grow substantially we might consider
 	// fetching in batches. For now fetching all should be good.
@@ -230,7 +230,7 @@ func (s *sender) processDeliveries(sub *model.Subscription, deliveries []*model.
 
 	err := s.store.UpdateSubscriptionStatus(sub)
 	if err != nil {
-		log.WithError(err).Error("Failed to update subscription status after delivery")
+		s.logger.WithError(err).Error("Failed to update subscription status after delivery")
 		return
 	}
 }
@@ -244,14 +244,14 @@ func (s *sender) processDelivery(sub *model.Subscription, delivery *model.StateC
 		"eventDelivery": delivery.EventDelivery.ID,
 	})
 
-	log.Debug("Attempting to deliver event...")
+	s.logger.Debug("Attempting to deliver event...")
 
 	var subDeliveryStatus model.SubscriptionDeliveryStatus
 
 	delivery.EventHeaders = sub.Headers
 	err := s.sendEvent(sub.ID, sub.URL, delivery, log)
 	if err != nil {
-		log.WithError(err).Error("Failed to deliver event")
+		s.logger.WithError(err).Error("Failed to deliver event")
 
 		// We abort delivery on the subscription only if the event will be retried
 		// otherwise we mark event as failed and continue.
@@ -267,7 +267,7 @@ func (s *sender) processDelivery(sub *model.Subscription, delivery *model.StateC
 
 	err = s.store.UpdateEventDeliveryStatus(&delivery.EventDelivery)
 	if err != nil {
-		log.WithError(err).Error("Failed to update event delivery state")
+		s.logger.WithError(err).Error("Failed to update event delivery state")
 		return subDeliveryStatus, false
 	}
 
@@ -310,7 +310,7 @@ func (s *sender) sendEvent(subscription_id, url string, data *model.StateChangeE
 		)
 	}
 	if resp.StatusCode != http.StatusOK {
-		log.Errorf("Event delivery resulted in status %d. Treating it as consumer error, delivery will not be retried",
+		s.logger.Errorf("Event delivery resulted in status %d. Treating it as consumer error, delivery will not be retried",
 			resp.StatusCode)
 	}
 
@@ -320,9 +320,9 @@ func (s *sender) sendEvent(subscription_id, url string, data *model.StateChangeE
 func (s *sender) unlockSubscription(subID string, log logrus.FieldLogger) {
 	unlocked, err := s.store.UnlockSubscription(subID, s.instanceID, false)
 	if err != nil {
-		log.WithError(err).Error("failed to unlock subscription")
+		s.logger.WithError(err).Error("failed to unlock subscription")
 	} else if !unlocked {
-		log.Error("failed to release lock for subscription")
+		s.logger.Error("failed to release lock for subscription")
 	}
 }
 
