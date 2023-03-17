@@ -11,6 +11,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,6 +60,18 @@ func sendWebhook(hook *model.Webhook, payload *model.WebhookPayload, logger *log
 		return errors.Wrap(err, "unable to create request from payload")
 	}
 	req.Header.Set("Content-Type", "application/json")
+	headers, err := model.ParseHeadersFromStringMap(hook.Headers)
+	if err != nil {
+		// If there's an error parsing the headers, log it but continue execution so the webhook is
+		// sent, `model.ParseHeadersFromStringMap` should take care of not disclosing any unset
+		// environment variables into resulting headers.
+		logger.WithFields(logrus.Fields{
+			"webhook": hook.ID,
+		}).WithError(err).Error()
+	}
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	_, err = client.Do(req)

@@ -6,8 +6,38 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"os"
+	"strings"
 )
+
+const (
+	WebhookHeaderEnvironmentValuePrefix = "env:"
+)
+
+// ParseHeadersFromStringMap parses the headers from a string map, finding and returning correct
+// header values for the items that require getting values from environment variables
+func ParseHeadersFromStringMap(sm StringMap) (map[string]string, error) {
+	headers := make(map[string]string, len(sm))
+	var err error
+	for key, value := range sm {
+		headerValue := value
+		if strings.HasPrefix(value, WebhookHeaderEnvironmentValuePrefix) {
+			headerValue = os.Getenv(strings.TrimPrefix(value, WebhookHeaderEnvironmentValuePrefix))
+			// check if the header is set first, if not, return an error that can be checked in the
+			// consumers but continue parsing headers so the webhook is sent (without this header to
+			// avoid disclosing invormation)
+			if headerValue == "" {
+				err = fmt.Errorf("header from unset environment variable")
+				continue
+			}
+		}
+		headers[key] = headerValue
+	}
+
+	return headers, err
+}
 
 // ResourceType specifies a type of Provisioners' resource.
 type ResourceType string

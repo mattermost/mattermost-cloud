@@ -5,11 +5,72 @@
 package model
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestParseHeadersFromStringMap(t *testing.T) {
+	envName := "DUMMY_ENV"
+	os.Setenv(envName, "mattermost")
+	t.Cleanup(func() {
+		os.Unsetenv(envName)
+	})
+	testCases := []struct {
+		name          string
+		input         StringMap
+		outputHeaders map[string]string
+		outputErr     bool
+	}{
+		{
+			name: "proper headers (plain)",
+			input: StringMap{
+				"Foo": "Bar",
+			},
+			outputHeaders: map[string]string{
+				"Foo": "Bar",
+			},
+			outputErr: false,
+		},
+		{
+			name: "proper headers (with environment)",
+			input: StringMap{
+				"Foo": "Bar",
+				"Env": WebhookHeaderEnvironmentValuePrefix + envName,
+			},
+			outputHeaders: map[string]string{
+				"Foo": "Bar",
+				"Env": os.Getenv(envName),
+			},
+			outputErr: false,
+		},
+		{
+			name: "proper headers (with environment error)",
+			input: StringMap{
+				"Foo": "Bar",
+				"Env": "env:NON_EXISTANT",
+			},
+			outputHeaders: map[string]string{
+				"Foo": "Bar",
+			},
+			outputErr: true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			resultHeader, resultErr := ParseHeadersFromStringMap(testCase.input)
+			if testCase.outputErr {
+				require.Error(t, resultErr)
+			} else {
+				require.NoError(t, resultErr)
+			}
+			require.Equal(t, testCase.outputHeaders, resultHeader)
+		})
+	}
+}
 
 func TestWebhookIsDeleted(t *testing.T) {
 	webhook := &Webhook{
