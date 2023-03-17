@@ -38,7 +38,7 @@ func handleCreateWebhook(c *Context, w http.ResponseWriter, r *http.Request) {
 	webhook := model.Webhook{
 		OwnerID: createWebhookRequest.OwnerID,
 		URL:     createWebhookRequest.URL,
-		Headers: createWebhookRequest.Headers,
+		Headers: &createWebhookRequest.Headers,
 	}
 
 	err = c.Store.CreateWebhook(&webhook)

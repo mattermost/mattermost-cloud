@@ -4,7 +4,9 @@
 
 package main
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+)
 
 func setWebhookFlags(command *cobra.Command) {
 	command.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")

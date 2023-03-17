@@ -18,10 +18,14 @@ const (
 
 // ParseHeadersFromStringMap parses the headers from a string map, finding and returning correct
 // header values for the items that require getting values from environment variables
-func ParseHeadersFromStringMap(sm StringMap) (map[string]string, error) {
-	headers := make(map[string]string, len(sm))
+// This is also used in event subscription headers
+func ParseHeadersFromStringMap(sm *StringMap) (map[string]string, error) {
+	if sm == nil {
+		return map[string]string{}, nil
+	}
+	headers := make(map[string]string, len(*sm))
 	var err error
-	for key, value := range sm {
+	for key, value := range *sm {
 		headerValue := value
 		if strings.HasPrefix(value, WebhookHeaderEnvironmentValuePrefix) {
 			headerValue = os.Getenv(strings.TrimPrefix(value, WebhookHeaderEnvironmentValuePrefix))
@@ -70,7 +74,7 @@ type Webhook struct {
 	URL      string
 	CreateAt int64
 	DeleteAt int64
-	Headers  StringMap
+	Headers  *StringMap
 }
 
 // WebhookFilter describes the parameters used to constrain a set of webhooks.

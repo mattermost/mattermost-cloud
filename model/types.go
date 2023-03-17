@@ -11,23 +11,20 @@ import (
 )
 
 // StringMap type used to have a map[string]string directly in the database in a TEXT or JSON/JSONB
-// field
+// field.
 type StringMap map[string]string
 
 func (sm StringMap) Value() (driver.Value, error) {
 	return json.Marshal(sm)
 }
 
-func (sm StringMap) Scan(v interface{}) error {
-	if v == nil {
-		return nil
-	}
-	switch data := v.(type) {
+func (sm *StringMap) Scan(databaseValue interface{}) error {
+	switch value := databaseValue.(type) {
 	case string: // sqlite's text
-		return json.Unmarshal([]byte(data), &sm)
+		return json.Unmarshal([]byte(value), sm)
 	case []byte: // psqls jsonb
-		return json.Unmarshal(data, &sm)
+		return json.Unmarshal(value, sm)
 	default:
-		return fmt.Errorf("cannot scan type %t into Map", v)
+		return fmt.Errorf("cannot scan type %t into StringMap", databaseValue)
 	}
 }

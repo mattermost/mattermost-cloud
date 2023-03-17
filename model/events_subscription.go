@@ -39,7 +39,7 @@ type Subscription struct {
 	DeleteAt         int64
 	LockAcquiredBy   *string
 	LockAcquiredAt   int64
-	Headers          StringMap
+	Headers          *StringMap
 }
 
 // IsDeleted returns true if subscription is deleted.

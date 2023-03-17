@@ -17,7 +17,7 @@ import (
 type CreateWebhookRequest struct {
 	OwnerID string
 	URL     string
-	Headers map[string]string
+	Headers StringMap
 }
 
 // NewCreateWebhookRequestFromReader will create a CreateWebhookRequest from an io.Reader with JSON data.
