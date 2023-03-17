@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"emperror.dev/errors"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -285,7 +285,7 @@ func (s *sender) sendEvent(subscription_id, url string, data *model.StateChangeE
 		s.logger.WithField("subscription_url", url).WithError(err).Error("Unable to create request")
 		return errors.Wrap(err, "unable to create request from payload")
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", contentTypeApplicationJSON)
 	headers, err := model.ParseHeadersFromStringMap(data.EventHeaders)
 	if err != nil {
 		// If there's an error parsing the headers, log it but continue execution so the subscription
