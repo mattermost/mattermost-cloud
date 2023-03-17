@@ -2130,4 +2130,22 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.41.0"), semver.MustParse("0.42.0"), func(e execer) error {
+		fieldType := "JSONB"
+		if e.DriverName() == driverSqlite {
+			fieldType = "TEXT"
+		}
+
+		_, err := e.Exec(fmt.Sprintf(`ALTER TABLE Webhooks ADD COLUMN Headers %s;`, fieldType))
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(fmt.Sprintf(`ALTER TABLE Subscription ADD COLUMN Headers %s;`, fieldType))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }
