@@ -30,7 +30,7 @@ func TestWebhooks(t *testing.T) {
 		webhook1 := &model.Webhook{
 			OwnerID: "owner1",
 			URL:     "https://url1.com",
-			Headers: model.StringMap{
+			Headers: &model.StringMap{
 				"Foo": "bar",
 			},
 		}
@@ -38,7 +38,7 @@ func TestWebhooks(t *testing.T) {
 		webhook2 := &model.Webhook{
 			OwnerID: "owner2",
 			URL:     "https://url2.com",
-			Headers: model.StringMap{
+			Headers: &model.StringMap{
 				"Foo": "bar",
 			},
 		}

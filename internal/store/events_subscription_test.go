@@ -21,7 +21,7 @@ func TestCountSubscriptionsForEvent(t *testing.T) {
 
 	sub1 := &model.Subscription{
 		EventType: model.ResourceStateChangeEventType,
-		Headers: model.StringMap{
+		Headers: &model.StringMap{
 			"Foo": "Bar",
 		},
 	}

@@ -20,13 +20,13 @@ func TestParseHeadersFromStringMap(t *testing.T) {
 	})
 	testCases := []struct {
 		name          string
-		input         StringMap
+		input         *StringMap
 		outputHeaders map[string]string
 		outputErr     bool
 	}{
 		{
 			name: "proper headers (plain)",
-			input: StringMap{
+			input: &StringMap{
 				"Foo": "Bar",
 			},
 			outputHeaders: map[string]string{
@@ -35,8 +35,20 @@ func TestParseHeadersFromStringMap(t *testing.T) {
 			outputErr: false,
 		},
 		{
+			name:          "no headers (empty)",
+			input:         &StringMap{},
+			outputHeaders: map[string]string{},
+			outputErr:     false,
+		},
+		{
+			name:          "no headers (nil)",
+			input:         nil,
+			outputHeaders: map[string]string{},
+			outputErr:     false,
+		},
+		{
 			name: "proper headers (with environment)",
-			input: StringMap{
+			input: &StringMap{
 				"Foo": "Bar",
 				"Env": WebhookHeaderEnvironmentValuePrefix + envName,
 			},
@@ -48,7 +60,7 @@ func TestParseHeadersFromStringMap(t *testing.T) {
 		},
 		{
 			name: "proper headers (with environment error)",
-			input: StringMap{
+			input: &StringMap{
 				"Foo": "Bar",
 				"Env": "env:NON_EXISTANT",
 			},

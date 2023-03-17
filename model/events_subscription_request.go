@@ -20,7 +20,7 @@ type CreateSubscriptionRequest struct {
 	OwnerID          string
 	EventType        EventType
 	FailureThreshold time.Duration
-	Headers          map[string]string
+	Headers          StringMap
 }
 
 // ToSubscription validates request and converts it to subscription
@@ -47,7 +47,7 @@ func (r CreateSubscriptionRequest) ToSubscription() (Subscription, error) {
 		LastDeliveryStatus:    SubscriptionDeliveryNone,
 		LastDeliveryAttemptAt: 0,
 		FailureThreshold:      r.FailureThreshold,
-		Headers:               r.Headers,
+		Headers:               &r.Headers,
 	}, nil
 }
 
