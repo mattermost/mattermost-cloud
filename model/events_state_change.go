@@ -30,6 +30,7 @@ type StateChangeEventData struct {
 type StateChangeEventDeliveryData struct {
 	EventDelivery EventDelivery
 	EventData     StateChangeEventData
+	EventHeaders  map[string]string
 }
 
 // StateChangeEventPayload represents payload that is sent to consumers.

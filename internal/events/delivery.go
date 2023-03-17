@@ -248,7 +248,8 @@ func (s *sender) processDelivery(sub *model.Subscription, delivery *model.StateC
 
 	var subDeliveryStatus model.SubscriptionDeliveryStatus
 
-	err := s.sendEvent(sub.URL, delivery, log)
+	delivery.EventHeaders = sub.Headers
+	err := s.sendEvent(sub.ID, sub.URL, delivery, log)
 	if err != nil {
 		log.WithError(err).Error("Failed to deliver event")
 
@@ -273,13 +274,31 @@ func (s *sender) processDelivery(sub *model.Subscription, delivery *model.StateC
 	return subDeliveryStatus, subDeliveryStatus != model.SubscriptionDeliveryFailed
 }
 
-func (s *sender) sendEvent(url string, data *model.StateChangeEventDeliveryData, log logrus.FieldLogger) error {
+func (s *sender) sendEvent(subscription_id, url string, data *model.StateChangeEventDeliveryData, log logrus.FieldLogger) error {
 	payload, err := json.Marshal(data.EventData.ToEventPayload())
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal event payload")
 	}
 
-	resp, err := s.client.Post(url, contentTypeApplicationJSON, bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		s.logger.WithField("subscription_url", url).WithError(err).Error("Unable to create request")
+		return errors.Wrap(err, "unable to create request from payload")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	headers, err := model.ParseHeadersFromStringMap(data.EventHeaders)
+	if err != nil {
+		// If there's an error parsing the headers, log it but continue execution so the subscription
+		// event is sent, `model.ParseHeadersFromStringMap` should take care of not disclosing any
+		// unset environment variables into resulting headers.
+		s.logger.WithFields(logrus.Fields{
+			"subscription": subscription_id,
+		}).WithError(err).Error()
+	}
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	resp, err := s.client.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to deliver event")
 	}
