@@ -417,6 +417,10 @@ type mockAWS struct{}
 
 var _ aws.AWS = (*mockAWS)(nil)
 
+func (a *mockAWS) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID string, timeout int) error {
+	return nil
+}
+
 func (a *mockAWS) WaitForActiveEKSNodeGroup(clusterName, workerName string, timeout int) (*eksTypes.Nodegroup, error) {
 	return nil, nil
 }
@@ -429,8 +433,8 @@ func (a *mockAWS) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string,
 	return nil
 }
 
-func (a *mockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
-	return nil
+func (a *mockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Update, error) {
+	return nil, nil
 }
 
 func (a *mockAWS) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
