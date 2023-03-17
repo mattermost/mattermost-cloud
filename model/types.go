@@ -14,19 +14,19 @@ import (
 // field
 type StringMap map[string]string
 
-func (m StringMap) Value() (driver.Value, error) {
-	return json.Marshal(m)
+func (sm StringMap) Value() (driver.Value, error) {
+	return json.Marshal(sm)
 }
 
-func (m StringMap) Scan(v interface{}) error {
+func (sm StringMap) Scan(v interface{}) error {
 	if v == nil {
 		return nil
 	}
 	switch data := v.(type) {
 	case string: // sqlite's text
-		return json.Unmarshal([]byte(data), &m)
+		return json.Unmarshal([]byte(data), &sm)
 	case []byte: // psqls jsonb
-		return json.Unmarshal(data, &m)
+		return json.Unmarshal(data, &sm)
 	default:
 		return fmt.Errorf("cannot scan type %t into Map", v)
 	}
