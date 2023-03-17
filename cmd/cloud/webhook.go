@@ -42,6 +42,7 @@ func newCmdWebhookCreate() *cobra.Command {
 			webhook, err := client.CreateWebhook(&model.CreateWebhookRequest{
 				OwnerID: flags.ownerID,
 				URL:     flags.url,
+				Headers: flags.headers,
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to create webhook")

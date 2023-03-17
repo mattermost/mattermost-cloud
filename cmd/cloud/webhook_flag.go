@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package main
 
 import "github.com/spf13/cobra"
@@ -18,11 +22,13 @@ type webhookCreateFlag struct {
 	webhookFlags
 	ownerID string
 	url     string
+	headers map[string]string
 }
 
 func (flags *webhookCreateFlag) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.ownerID, "owner", "", "An opaque identifier describing the owner of the webhook.")
 	command.Flags().StringVar(&flags.url, "url", "", "The callback URL of the webhook.")
+	command.Flags().StringToStringVar(&flags.headers, "headers", nil, "headers that should be sent with the request")
 	_ = command.MarkFlagRequired("owner")
 	_ = command.MarkFlagRequired("url")
 }
