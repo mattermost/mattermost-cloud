@@ -13,7 +13,7 @@ import (
 
 func TestGroupDTOFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		groupDTO, err := GroupDTOFromReader(bytes.NewReader([]byte(
+		groupDTO, err := DTOFromReader[GroupDTO](bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
@@ -21,7 +21,7 @@ func TestGroupDTOFromReader(t *testing.T) {
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
-		groupDTO, err := GroupDTOFromReader(bytes.NewReader([]byte(
+		groupDTO, err := DTOFromReader[GroupDTO](bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -29,7 +29,7 @@ func TestGroupDTOFromReader(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
-		groupDTO, err := GroupDTOFromReader(bytes.NewReader([]byte(`{
+		groupDTO, err := DTOFromReader[GroupDTO](bytes.NewReader([]byte(`{
 			"ID":"id",
 			"Sequence":10,
 			"Name": "group1",
@@ -61,7 +61,7 @@ func TestGroupDTOFromReader(t *testing.T) {
 
 func TestGroupDTOsFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		groupDTOs, err := GroupDTOsFromReader(bytes.NewReader([]byte(
+		groupDTOs, err := DTOsFromReader[GroupDTO](bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestGroupDTOsFromReader(t *testing.T) {
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
-		groupDTOs, err := GroupDTOsFromReader(bytes.NewReader([]byte(
+		groupDTOs, err := DTOsFromReader[GroupDTO](bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -77,7 +77,7 @@ func TestGroupDTOsFromReader(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
-		groupDTOs, err := GroupDTOsFromReader(bytes.NewReader([]byte(`[
+		groupDTOs, err := DTOsFromReader[GroupDTO](bytes.NewReader([]byte(`[
 			{
 				"ID":"id",
 				"Sequence":10,

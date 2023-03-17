@@ -13,7 +13,7 @@ import (
 
 func TestInstallationDTOFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		installationDTO, err := InstallationDTOFromReader(bytes.NewReader([]byte(
+		installationDTO, err := DTOFromReader[InstallationDTO](bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
@@ -21,7 +21,7 @@ func TestInstallationDTOFromReader(t *testing.T) {
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
-		installationDTO, err := InstallationDTOFromReader(bytes.NewReader([]byte(
+		installationDTO, err := DTOFromReader[InstallationDTO](bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -29,7 +29,7 @@ func TestInstallationDTOFromReader(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
-		installationDTO, err := InstallationDTOFromReader(bytes.NewReader([]byte(`{
+		installationDTO, err := DTOFromReader[InstallationDTO](bytes.NewReader([]byte(`{
 			"ID":"id",
 			"OwnerID":"owner",
 			"GroupID":"group_id",
@@ -70,7 +70,7 @@ func TestInstallationDTOFromReader(t *testing.T) {
 
 func TestInstallationDTOsFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		installationDTOs, err := InstallationDTOsFromReader(bytes.NewReader([]byte(
+		installationDTOs, err := DTOsFromReader[InstallationDTO](bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
@@ -78,7 +78,7 @@ func TestInstallationDTOsFromReader(t *testing.T) {
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
-		installationDTOs, err := InstallationDTOsFromReader(bytes.NewReader([]byte(
+		installationDTOs, err := DTOsFromReader[InstallationDTO](bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -86,7 +86,7 @@ func TestInstallationDTOsFromReader(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
-		installationDTOs, err := InstallationDTOsFromReader(bytes.NewReader([]byte(`[
+		installationDTOs, err := DTOsFromReader[InstallationDTO](bytes.NewReader([]byte(`[
 			{
 				"ID":"id1",
 				"OwnerID":"owner1",
