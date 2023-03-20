@@ -72,7 +72,6 @@ func (em *EKSMetadata) ApplyClusterCreateRequest(createRequest *CreateClusterReq
 	}
 
 	nodeGroups[NodeGroupWorker] = NodeGroupMetadata{
-		Name:         fmt.Sprintf("%s-%s", NodeGroupWorker, NewNodeGroupSuffix()),
 		InstanceType: createRequest.NodeInstanceType,
 		MinCount:     createRequest.NodeMinCount,
 		MaxCount:     createRequest.NodeMaxCount,
@@ -146,8 +145,8 @@ func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRe
 	}
 
 	if patchRequest.NodeMinCount != nil {
-		for _, ngToUpgrade := range nodeGroups {
-			ng := em.NodeGroups[ngToUpgrade]
+		for _, ngToResize := range nodeGroups {
+			ng := em.NodeGroups[ngToResize]
 			nodeMaxCount := ng.MaxCount
 			if *patchRequest.NodeMinCount > nodeMaxCount {
 				return errors.New("resize patch would set min node count higher than max node count")
@@ -156,8 +155,8 @@ func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRe
 	}
 
 	if patchRequest.NodeMaxCount != nil {
-		for _, ngToUpgrade := range nodeGroups {
-			ng := em.NodeGroups[ngToUpgrade]
+		for _, ngToResize := range nodeGroups {
+			ng := em.NodeGroups[ngToResize]
 			nodeMinCount := ng.MinCount
 			if *patchRequest.NodeMaxCount < nodeMinCount {
 				return errors.New("resize patch would set max node count lower than min node count")
@@ -220,6 +219,10 @@ func (em *EKSMetadata) ValidateChangeRequest() error {
 	changeAllowed := false
 	if len(changeRequest.Version) != 0 || len(changeRequest.AMI) != 0 || changeRequest.MaxPodsPerNode != 0 {
 		changeAllowed = true
+	}
+
+	if changeAllowed {
+		return nil
 	}
 
 	for _, ng := range changeRequest.NodeGroups {

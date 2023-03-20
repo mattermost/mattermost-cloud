@@ -281,13 +281,13 @@ func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 		return nil, errors.Errorf("nodegroup %s not found in change request", ngPrefix)
 	}
 
-	existingNodeGroup, err := c.getEKSNodeGroup(clusterName, ngChangeRequest.Name)
+	nodeGroup, err := c.getEKSNodeGroup(clusterName, ngChangeRequest.Name)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get existing EKS NodeGroup %s", ngChangeRequest.Name)
+		return nil, errors.Wrapf(err, "failed to get an EKS NodeGroup %s", ngChangeRequest.Name)
 	}
 
-	if existingNodeGroup != nil {
-		return existingNodeGroup, nil
+	if nodeGroup != nil {
+		return nodeGroup, nil
 	}
 
 	return c.createEKSNodeGroup(cluster, ngPrefix)
@@ -317,41 +317,41 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 
 	oldNodeGroupMeta := eksMetadata.NodeGroups[ngPrefix]
 	oldNodeGroupName := oldNodeGroupMeta.Name
-	nodeGroup, err := c.getEKSNodeGroup(clusterName, oldNodeGroupName)
+	oldNodeGroup, err := c.getEKSNodeGroup(clusterName, oldNodeGroupName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to describe EKS NodeGroup %s", oldNodeGroupName)
 	}
 
-	if nodeGroup == nil {
+	if oldNodeGroup == nil {
 		return errors.Errorf("EKS NodeGroup %s does not exist", oldNodeGroupName)
 	}
 
-	if nodeGroup.Status != eksTypes.NodegroupStatusActive {
+	if oldNodeGroup.Status != eksTypes.NodegroupStatusActive {
 		return errors.Errorf("EKS NodeGroup %s is not active", oldNodeGroupName)
 	}
 
 	var isUpdateRequired bool
 	if changeRequest.LaunchTemplateVersion != nil {
-		if nodeGroup.LaunchTemplate != nil && nodeGroup.LaunchTemplate.Version != nil &&
-			*nodeGroup.LaunchTemplate.Version != *changeRequest.LaunchTemplateVersion {
+		if oldNodeGroup.LaunchTemplate != nil && oldNodeGroup.LaunchTemplate.Version != nil &&
+			*oldNodeGroup.LaunchTemplate.Version != *changeRequest.LaunchTemplateVersion {
 			isUpdateRequired = true
 		}
 	} else {
-		if nodeGroup.LaunchTemplate != nil && nodeGroup.LaunchTemplate.Version != nil {
-			changeRequest.LaunchTemplateVersion = nodeGroup.LaunchTemplate.Version
+		if oldNodeGroup.LaunchTemplate != nil && oldNodeGroup.LaunchTemplate.Version != nil {
+			changeRequest.LaunchTemplateVersion = oldNodeGroup.LaunchTemplate.Version
 		}
 	}
 
 	if ngChangeRequest.InstanceType != "" {
-		if nodeGroup.InstanceTypes != nil && len(nodeGroup.InstanceTypes) > 0 &&
-			nodeGroup.InstanceTypes[0] != ngChangeRequest.InstanceType {
+		if oldNodeGroup.InstanceTypes != nil && len(oldNodeGroup.InstanceTypes) > 0 &&
+			oldNodeGroup.InstanceTypes[0] != ngChangeRequest.InstanceType {
 			isUpdateRequired = true
 		}
 	} else {
 		ngChangeRequest.InstanceType = oldNodeGroupMeta.InstanceType
 	}
 
-	scalingInfo := nodeGroup.ScalingConfig
+	scalingInfo := oldNodeGroup.ScalingConfig
 	if ngChangeRequest.MinCount != 0 {
 		if *scalingInfo.MinSize != int32(ngChangeRequest.MinCount) {
 			isUpdateRequired = true

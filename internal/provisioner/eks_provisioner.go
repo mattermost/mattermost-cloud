@@ -266,6 +266,7 @@ func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bo
 
 			nodeGroup, err := provisioner.awsClient.WaitForActiveEKSNodeGroup(eksMetadata.Name, ngMetadata.Name, wait)
 			if err != nil {
+				logger.WithError(err).Errorf("failed to wait for EKS NodeGroup %s to become active", ngMetadata.Name)
 				errOccurred = true
 				return
 			}
@@ -513,21 +514,21 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 
 	for _, ng := range eksMetadata.NodeGroups {
 		wg.Add(1)
-		go func(ng model.NodeGroupMetadata) {
+		go func(ngMetadata model.NodeGroupMetadata) {
 			defer wg.Done()
 
-			err = provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, ng.Name)
+			err = provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, ngMetadata.Name)
 			if err != nil {
-				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ng.Name)
+				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ngMetadata.Name)
 				errOccurred = true
 				return
 			}
 
 			wait := 600
-			logger.Infof("Waiting up to %d seconds for NodeGroup %s to be deleted...", wait, ng.Name)
-			err = provisioner.awsClient.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, ng.Name, wait)
+			logger.Infof("Waiting up to %d seconds for NodeGroup %s to be deleted...", wait, ngMetadata.Name)
+			err = provisioner.awsClient.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, ngMetadata.Name, wait)
 			if err != nil {
-				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ng.Name)
+				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ngMetadata.Name)
 				errOccurred = true
 				return
 			}
