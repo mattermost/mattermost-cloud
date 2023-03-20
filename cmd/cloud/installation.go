@@ -874,12 +874,14 @@ func executeInstallationDeletionReportCmd(flags clusterFlags) error {
 	// Prepare the time cutoffs for the report.
 	now := time.Now()
 	var report DeletionPendingReport
-	report.NewCutoff("Under 1 hour", now.Add(time.Hour))
-	report.NewCutoff("1-24 hours", now.Add(24*time.Hour))
-	report.NewCutoff("1-7 days", now.Add(24*7*time.Hour))
-	report.NewCutoff("7-30 days", now.Add(24*30*time.Hour))
+	for i := 1; i <= 9; i++ {
+		report.NewCutoff(fmt.Sprintf("%d day(s)", i), now.Add(time.Duration(i)*24*time.Hour))
+	}
 
 	for _, installation := range installations {
+		if installation.DeletionPendingExpiry == 0 {
+			fmt.Println(installation.ID)
+		}
 		report.Count(installation.DeletionPendingExpiry)
 	}
 
