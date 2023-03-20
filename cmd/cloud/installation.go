@@ -439,7 +439,7 @@ func dnsNames(dnsRecords []*model.InstallationDNS) string {
 }
 
 func newCmdInstallationGetStatuses() *cobra.Command {
-	var flags clusterFlags
+	var flags installationGetStatusesFlags
 
 	cmd := &cobra.Command{
 		Use:   "status",
@@ -457,6 +457,9 @@ func newCmdInstallationGetStatuses() *cobra.Command {
 			}
 
 			return printJSON(installationsStatus)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
