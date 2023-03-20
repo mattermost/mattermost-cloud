@@ -402,10 +402,17 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
+	var nodeMinCount int64
+	if clusterDTO.Provisioner == model.ProvisionerEKS {
+		nodeMinCount = clusterDTO.ProvisionerMetadataEKS.NodeMinCount
+	} else if clusterDTO.Provisioner == model.ProvisionerKops {
+		nodeMinCount = clusterDTO.ProvisionerMetadataKops.NodeMinCount
+	}
+
 	// One more check that can't be done without both the request and the cluster.
 	if resizeClusterRequest.NodeMinCount == nil &&
 		resizeClusterRequest.NodeMaxCount != nil &&
-		*resizeClusterRequest.NodeMaxCount < clusterDTO.ProvisionerMetadataKops.NodeMinCount {
+		*resizeClusterRequest.NodeMaxCount < nodeMinCount {
 		c.Logger.Error("resize patch would set max node count lower than min node count")
 		w.WriteHeader(http.StatusBadRequest)
 		return
