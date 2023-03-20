@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package utility
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -89,12 +90,12 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
 
-	_, err = k8sClient.CreateOrUpdateNamespace(prometheusNamespace)
+	_, err = k8sClient.CreateOrUpdateNamespace(prometheus.Namespace)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the prometheus namespace")
 	}
 
-	_, err = k8sClient.CreateOrUpdateSecret(prometheusNamespace, thanosObjStoreSecret)
+	_, err = k8sClient.CreateOrUpdateSecret(prometheus.Namespace, thanosObjStoreSecret)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the Thanos object storage secret")
 	}
@@ -107,7 +108,7 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 	app := "prometheus"
 	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
 
-	h := p.NewHelmDeployment(dns)
+	h := p.newHelmDeployment(dns)
 
 	err = h.Update()
 	if err != nil {
@@ -167,7 +168,7 @@ func (p *prometheusOperator) Destroy() error {
 
 	p.actualVersion = nil
 
-	helm := p.NewHelmDeployment(dns)
+	helm := p.newHelmDeployment(dns)
 	return helm.Delete()
 }
 
@@ -175,13 +176,13 @@ func (p *prometheusOperator) Migrate() error {
 	return nil
 }
 
-func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeployment {
+func (p *prometheusOperator) newHelmDeployment(prometheusDNS string) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("prometheus.prometheusSpec.externalLabels.clusterID=%s,prometheus.ingress.hosts={%s},prometheus.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", p.cluster.ID, prometheusDNS, strings.Join(p.allowCIDRRangeList, "\\,"))
 
 	return newHelmDeployment(
 		"prometheus-community/kube-prometheus-stack",
 		"prometheus-operator",
-		prometheusNamespace,
+		prometheus.Namespace,
 		p.kubeconfigPath,
 		p.desiredVersion,
 		helmValueArguments,

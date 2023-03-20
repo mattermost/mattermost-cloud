@@ -40,6 +40,7 @@ type CreateClusterRequest struct {
 	ClusterRoleARN         string                         `json:"cluster-role-arn,omitempty"`
 	NodeRoleARN            string                         `json:"node-role-arn,omitempty"`
 	Provisioner            string                         `json:"provisioner,omitempty"`
+	AdditionalNodeGroups   map[string]NodeGroupMetadata   `json:"additional-node-groups,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -107,6 +108,22 @@ func (request *CreateClusterRequest) SetDefaults() {
 		request.Networking = NetworkingCalico
 	}
 
+	if request.Provisioner == ProvisionerEKS {
+		for ng, meta := range request.AdditionalNodeGroups {
+			if len(meta.InstanceType) == 0 {
+				meta.InstanceType = "m5.large"
+			}
+			if meta.MinCount == 0 {
+				meta.MinCount = 2
+			}
+			if meta.MaxCount == 0 {
+				meta.MaxCount = meta.MinCount
+			}
+
+			request.AdditionalNodeGroups[ng] = meta
+		}
+	}
+
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
 	}
@@ -151,6 +168,21 @@ func (request *CreateClusterRequest) Validate() error {
 
 		if len(request.Zones) < 2 {
 			return errors.New("EKS cluster needs at least two zones")
+		}
+
+		if request.AdditionalNodeGroups != nil {
+			if _, f := request.AdditionalNodeGroups[NodeGroupWorker]; f {
+				return errors.New("additional node group name cannot be worker")
+			}
+
+			for name, ng := range request.AdditionalNodeGroups {
+				if ng.MinCount < 1 {
+					return errors.Errorf("node min count (%d) must be 1 or greater for node group %s", ng.MinCount, name)
+				}
+				if ng.MaxCount != ng.MinCount {
+					return errors.Errorf("node min (%d) and max (%d) counts must match for node group %s", ng.MinCount, ng.MaxCount, name)
+				}
+			}
 		}
 	}
 
@@ -269,6 +301,7 @@ type PatchClusterSizeRequest struct {
 	NodeMinCount     *int64         `json:"node-min-count,omitempty"`
 	NodeMaxCount     *int64         `json:"node-max-count,omitempty"`
 	RotatorConfig    *RotatorConfig `json:"rotatorConfig,omitempty"`
+	NodeGroups       []string       `json:"nodeGroups,omitempty"`
 }
 
 // Validate validates the values of a PatchClusterSizeRequest.

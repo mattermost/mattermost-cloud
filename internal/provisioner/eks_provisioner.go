@@ -9,9 +9,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"sync"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/smithy-go/ptr"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -145,6 +147,7 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster) (
 	}
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
+	changeRequest := eksMetadata.ChangeRequest
 
 	wait := 1200
 	logger.Infof("Waiting up to %d seconds for EKS cluster to become active...", wait)
@@ -154,18 +157,13 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster) (
 	}
 
 	if eksCluster.Version != nil {
-		eksMetadata.ChangeRequest.Version = *eksCluster.Version
+		changeRequest.Version = *eksCluster.Version
 	}
 
 	eksMetadata.ClusterRoleARN = *eksCluster.RoleArn
 	eksMetadata.Networking = model.NetworkingCalico
-
-	// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
-	launchTemplateVersion, err := provisioner.awsClient.EnsureLaunchTemplate(eksMetadata.Name, cluster.ProvisionerMetadataEKS)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to ensure launch template")
-	}
-	eksMetadata.ChangeRequest.LaunchTemplateVersion = launchTemplateVersion
+	eksMetadata.VPC = changeRequest.VPC
+	eksMetadata.Version = changeRequest.Version
 
 	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {
@@ -198,16 +196,42 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster) (
 
 // CreateNodes creates the EKS nodes.
 func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
 		return errors.New("error: EKS metadata not set when creating EKS NodeGroup")
 	}
-	eksMetadata.ChangeRequest.WorkerName = "worker-1"
+	changeRequest := eksMetadata.ChangeRequest
 
-	nodeGroup, err := provisioner.awsClient.EnsureEKSNodeGroup(cluster)
-	if err != nil || nodeGroup == nil {
-		return errors.Wrap(err, "failed to ensure EKS NodeGroup")
+	// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
+	launchTemplateVersion, err := provisioner.awsClient.EnsureLaunchTemplate(eksMetadata.Name, eksMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure launch template")
+	}
+	changeRequest.LaunchTemplateVersion = &launchTemplateVersion
+
+	var wg sync.WaitGroup
+	var errOccurred bool
+
+	for ng, meta := range changeRequest.NodeGroups {
+		wg.Add(1)
+		go func(ngPrefix string, ngMetadata model.NodeGroupMetadata) {
+			defer wg.Done()
+			logger.Debugf("Creating EKS NodeGroup %s", ngMetadata.Name)
+			_, err2 := provisioner.awsClient.EnsureEKSNodeGroup(cluster, ngPrefix)
+			if err2 != nil {
+				logger.WithError(err2).Errorf("failed to create EKS NodeGroup %s", ngMetadata.Name)
+				errOccurred = true
+				return
+			}
+		}(ng, meta)
+	}
+
+	wg.Wait()
+
+	if errOccurred {
+		return errors.New("failed to create one of the EKS NodeGroups")
 	}
 
 	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
@@ -223,34 +247,50 @@ func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bo
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
-	clusterName := eksMetadata.Name
-	workerName := eksMetadata.ChangeRequest.WorkerName
+	changeRequest := eksMetadata.ChangeRequest
 
-	wait := 300
-	logger.Infof("Waiting up to %d seconds for EKS NodeGroup to become active...", wait)
-	nodeGroup, err := provisioner.awsClient.WaitForActiveEKSNodeGroup(clusterName, workerName, wait)
-	if err != nil {
-		return false, err
+	if eksMetadata.NodeGroups == nil {
+		eksMetadata.NodeGroups = make(map[string]model.NodeGroupMetadata)
 	}
 
-	if eksMetadata.NodeInstanceGroups == nil {
-		eksMetadata.NodeInstanceGroups = make(map[string]model.EKSInstanceGroupMetadata)
+	var wg sync.WaitGroup
+	var errOccurred bool
+
+	for ng, meta := range changeRequest.NodeGroups {
+		wg.Add(1)
+		go func(ngPrefix string, ngMetadata model.NodeGroupMetadata) {
+			defer wg.Done()
+
+			wait := 300
+			logger.Infof("Waiting up to %d seconds for EKS NodeGroup %s to become active...", wait, ngMetadata.Name)
+
+			nodeGroup, err := provisioner.awsClient.WaitForActiveEKSNodeGroup(eksMetadata.Name, ngMetadata.Name, wait)
+			if err != nil {
+				errOccurred = true
+				return
+			}
+
+			eksMetadata.NodeGroups[ngPrefix] = model.NodeGroupMetadata{
+				Name:         ngMetadata.Name,
+				InstanceType: nodeGroup.InstanceTypes[0],
+				MinCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
+				MaxCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
+			}
+		}(ng, meta)
 	}
 
-	eksMetadata.WorkerName = *nodeGroup.NodegroupName
-	eksMetadata.NodeInstanceGroups[*nodeGroup.NodegroupName] = model.EKSInstanceGroupMetadata{
-		NodeInstanceType: nodeGroup.InstanceTypes[0],
-		NodeMinCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
-		NodeMaxCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
+	wg.Wait()
+
+	if errOccurred {
+		return false, errors.New("one of the EKS NodeGroups failed to become active")
 	}
 
-	eksMetadata.NodeInstanceType = nodeGroup.InstanceTypes[0]
-	eksMetadata.NodeMinCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize))
-	eksMetadata.NodeMaxCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize))
+	eksMetadata.NodeRoleARN = changeRequest.NodeRoleARN
+	eksMetadata.LaunchTemplateVersion = changeRequest.LaunchTemplateVersion
+	eksMetadata.AMI = changeRequest.AMI
+	eksMetadata.MaxPodsPerNode = changeRequest.MaxPodsPerNode
 
-	eksMetadata.NodeRoleARN = *nodeGroup.NodeRole
-
-	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
+	err := provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to store cluster")
 	}
@@ -307,16 +347,48 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 
 	if changeRequest.AMI != "" || changeRequest.MaxPodsPerNode > 0 {
 		// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
-		var launchTemplateVersion *int64
-		launchTemplateVersion, err = provisioner.awsClient.UpdateLaunchTemplate(eksMetadata.Name, cluster.ProvisionerMetadataEKS)
+		var launchTemplateVersion string
+		launchTemplateVersion, err = provisioner.awsClient.UpdateLaunchTemplate(eksMetadata.Name, eksMetadata)
 		if err != nil {
 			return errors.Wrap(err, "failed to update launch template")
 		}
-		changeRequest.LaunchTemplateVersion = launchTemplateVersion
+		changeRequest.LaunchTemplateVersion = &launchTemplateVersion
 
-		err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster)
-		if err != nil {
-			return errors.Wrap(err, "failed to migrate EKS NodeGroup")
+		var wg sync.WaitGroup
+		var errOccurred bool
+
+		for ng, meta := range changeRequest.NodeGroups {
+			wg.Add(1)
+			go func(ngPrefix string, ngMetadata model.NodeGroupMetadata) {
+				defer wg.Done()
+				logger.Debugf("Migrating EKS NodeGroup for %s", ngPrefix)
+
+				err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster, ngPrefix)
+				if err != nil {
+					logger.WithError(err).Errorf("failed to migrate EKS NodeGroup for %s", ngPrefix)
+					errOccurred = true
+					return
+				}
+				oldNodeGroup := eksMetadata.NodeGroups[ngPrefix]
+				oldNodeGroup.Name = ngMetadata.Name
+				eksMetadata.NodeGroups[ngPrefix] = oldNodeGroup
+
+				logger.Debugf("Successfully migrated EKS NodeGroup for %s", ngPrefix)
+			}(ng, meta)
+		}
+
+		wg.Wait()
+
+		if errOccurred {
+			return errors.New("failed to migrate one of the EKS NodeGroups")
+		}
+
+		eksMetadata.LaunchTemplateVersion = &launchTemplateVersion
+		if changeRequest.AMI != "" {
+			eksMetadata.AMI = changeRequest.AMI
+		}
+		if changeRequest.MaxPodsPerNode > 0 {
+			eksMetadata.MaxPodsPerNode = changeRequest.MaxPodsPerNode
 		}
 
 		err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
@@ -326,17 +398,26 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 	}
 
 	if changeRequest.Version != "" {
-		err = provisioner.awsClient.EnsureEKSClusterUpdated(cluster)
+		clusterUpdateRequest, err := provisioner.awsClient.EnsureEKSClusterUpdated(cluster)
 		if err != nil {
 			return errors.Wrap(err, "failed to update EKS cluster")
 		}
-	}
 
-	wait := 3600 // seconds
-	logger.Infof("Waiting up to %d seconds for EKS cluster to become active...", wait)
-	_, err = provisioner.awsClient.WaitForActiveEKSCluster(eksMetadata.Name, wait)
-	if err != nil {
-		return err
+		if clusterUpdateRequest != nil && clusterUpdateRequest.Id != nil {
+			wait := 3600 // seconds
+			logger.Infof("Waiting up to %d seconds for EKS cluster to be updated...", wait)
+			err = provisioner.awsClient.WaitForEKSClusterUpdateToBeCompleted(eksMetadata.Name, *clusterUpdateRequest.Id, wait)
+			if err != nil {
+				return errors.Wrap(err, "failed to update EKS cluster")
+			}
+		}
+
+		eksMetadata.Version = changeRequest.Version
+
+		err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
+		if err != nil {
+			return errors.Wrap(err, "failed to store cluster")
+		}
 	}
 
 	return nil
@@ -349,16 +430,59 @@ func (provisioner *EKSProvisioner) RotateClusterNodes(cluster *model.Cluster) er
 
 // ResizeCluster resizes cluster - not implemented.
 func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
 	eksMetadata := cluster.ProvisionerMetadataEKS
+	changeRequest := eksMetadata.ChangeRequest
 
 	err := eksMetadata.ValidateChangeRequest()
 	if err != nil {
 		return errors.Wrap(err, "eks Metadata ChangeRequest failed validation")
 	}
 
-	err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster)
+	var wg sync.WaitGroup
+	var errOccurred bool
+
+	for ng, meta := range changeRequest.NodeGroups {
+		wg.Add(1)
+		go func(ngPrefix string, ngMetadata model.NodeGroupMetadata) {
+			defer wg.Done()
+			logger.Debugf("Migrating EKS NodeGroup for %s", ngPrefix)
+
+			err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster, ngPrefix)
+			if err != nil {
+				logger.WithError(err).Errorf("failed to migrate EKS NodeGroup for %s", ngPrefix)
+				errOccurred = true
+				return
+			}
+
+			nodeGroup, err2 := provisioner.awsClient.GetActiveEKSNodeGroup(eksMetadata.Name, ngMetadata.Name)
+			if err2 != nil {
+				logger.WithError(err2).Errorf("failed to get EKS NodeGroup %s", ngMetadata.Name)
+				errOccurred = true
+				return
+			}
+
+			oldNodeGroup := eksMetadata.NodeGroups[ngPrefix]
+			oldNodeGroup.Name = ngMetadata.Name
+			oldNodeGroup.InstanceType = nodeGroup.InstanceTypes[0]
+			oldNodeGroup.MinCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize))
+			oldNodeGroup.MaxCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize))
+			eksMetadata.NodeGroups[ngPrefix] = oldNodeGroup
+
+			logger.Debugf("Successfully migrated EKS NodeGroup for %s", ngPrefix)
+		}(ng, meta)
+	}
+
+	wg.Wait()
+
+	if errOccurred {
+		return errors.New("failed to migrate one of the nodegroups")
+	}
+
+	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to resize EKS NodeGroup")
+		return errors.Wrap(err, "failed to store cluster")
 	}
 
 	return nil
@@ -372,7 +496,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 		return errors.Wrap(err, "failed to get kubeconfig file path")
 	}
 
-	ugh, err := newUtilityGroupHandle(provisioner.params, kubeConfigPath, cluster, provisioner.awsClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kubeConfigPath, cluster, provisioner.awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}
@@ -384,15 +508,36 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 
-	err = provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, eksMetadata.WorkerName)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete EKS NodeGroup")
+	var wg sync.WaitGroup
+	var errOccurred bool
+
+	for _, ng := range eksMetadata.NodeGroups {
+		wg.Add(1)
+		go func(ng model.NodeGroupMetadata) {
+			defer wg.Done()
+
+			err = provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, ng.Name)
+			if err != nil {
+				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ng.Name)
+				errOccurred = true
+				return
+			}
+
+			wait := 600
+			logger.Infof("Waiting up to %d seconds for NodeGroup %s to be deleted...", wait, ng.Name)
+			err = provisioner.awsClient.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, ng.Name, wait)
+			if err != nil {
+				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ng.Name)
+				errOccurred = true
+				return
+			}
+		}(ng)
 	}
-	wait := 600
-	logger.Infof("Waiting up to %d seconds for NodeGroup to be deleted...", wait)
-	err = provisioner.awsClient.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, eksMetadata.WorkerName, wait)
-	if err != nil {
-		return err
+
+	wg.Wait()
+
+	if errOccurred {
+		return errors.New("failed to delete one of the nodegroups")
 	}
 
 	err = provisioner.awsClient.EnsureLaunchTemplateDeleted(eksMetadata.Name)
@@ -405,7 +550,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 		return errors.Wrap(err, "failed to delete EKS cluster")
 	}
 
-	wait = 1200
+	wait := 1200
 	logger.Infof("Waiting up to %d seconds for EKS cluster to be deleted...", wait)
 	err = provisioner.awsClient.WaitForEKSClusterToBeDeleted(eksMetadata.Name, wait)
 	if err != nil {

@@ -171,27 +171,30 @@ func (a *Client) getLaunchTemplate(clusterName string) (*ec2Types.LaunchTemplate
 	return nil, nil
 }
 
-func (a *Client) EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error) {
+func (a *Client) EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
 
 	launchTemplate, err := a.getLaunchTemplate(clusterName)
 	if err != nil {
 		if !IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
-			return nil, errors.Wrap(err, "failed to get launch template")
+			return "", errors.Wrap(err, "failed to get launch template")
 		}
 	}
 
 	if launchTemplate != nil {
-		return launchTemplate.LatestVersionNumber, nil
+		latestVersionNumber := launchTemplate.LatestVersionNumber
+		if latestVersionNumber != nil {
+			return fmt.Sprintf("%d", *latestVersionNumber), nil
+		}
+		return "$Latest", nil
 	}
 
 	return a.createLaunchTemplate(clusterName, eksMetadata)
-
 }
 
-func (a *Client) createLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error) {
+func (a *Client) createLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
 	eksCluster, err := a.getEKSCluster(clusterName)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get eks cluster")
+		return "", errors.Wrap(err, "failed to get eks cluster")
 	}
 
 	userData := getLaunchTemplateUserData(eksCluster, eksMetadata)
@@ -205,16 +208,26 @@ func (a *Client) createLaunchTemplate(clusterName string, eksMetadata *model.EKS
 		LaunchTemplateName: aws.String(getLaunchTemplateName(clusterName)),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create eks launch template")
+		return "", errors.Wrap(err, "failed to create eks launch template")
 	}
 
-	return launchTemplate.LaunchTemplate.LatestVersionNumber, nil
+	if launchTemplate == nil || launchTemplate.LaunchTemplate == nil {
+		return "", errors.New("failed to create eks launch template")
+	}
+
+	latestVersionNumber := launchTemplate.LaunchTemplate.LatestVersionNumber
+
+	if latestVersionNumber != nil {
+		return fmt.Sprintf("%d", *latestVersionNumber), nil
+	}
+
+	return "$Latest", nil
 }
 
-func (a *Client) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error) {
+func (a *Client) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
 	eksCluster, err := a.getEKSCluster(clusterName)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get eks cluster")
+		return "", errors.Wrap(err, "failed to get eks cluster")
 	}
 
 	if eksMetadata.ChangeRequest == nil {
@@ -239,10 +252,20 @@ func (a *Client) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKS
 		LaunchTemplateName: aws.String(getLaunchTemplateName(clusterName)),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create eks launch template")
+		return "", errors.Wrap(err, "failed to create eks launch template version")
 	}
 
-	return launchTemplate.LaunchTemplateVersion.VersionNumber, nil
+	if launchTemplate == nil || launchTemplate.LaunchTemplateVersion == nil {
+		return "", errors.New("failed to create eks launch template version")
+	}
+
+	latestVersionNumber := launchTemplate.LaunchTemplateVersion.VersionNumber
+
+	if latestVersionNumber != nil {
+		return fmt.Sprintf("%d", *latestVersionNumber), nil
+	}
+
+	return "$Latest", nil
 }
 
 func (a *Client) EnsureLaunchTemplateDeleted(clusterName string) error {

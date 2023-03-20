@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package utility
 
 import (
 	"testing"
@@ -14,19 +14,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewHelmDeploymentWithDefaultConfigurationMetricsServer(t *testing.T) {
+func TestNewHelmDeploymentWithDefaultConfigurationNodeProblemDetector(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	logger := log.New()
-	metricsServer, err := newMetricsServerHandle(&model.HelmUtilityVersion{Chart: "3.8.3"}, &model.Cluster{
+	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.3.2"}, &model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
 	}, "kubeconfig", logger)
-	require.NoError(t, err, "should not error when creating new metrics server handler")
-	require.NotNil(t, metricsServer, "metrics server should not be nil")
+	require.NoError(t, err, "should not error when creating new node-problem-detector handler")
+	require.NotNil(t, nodeProblemDetector, "node-problem-detector should not be nil")
 
-	helmDeployment := metricsServer.NewHelmDeployment(logger)
+	helmDeployment := nodeProblemDetector.newHelmDeployment(logger)
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
 }
