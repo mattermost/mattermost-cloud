@@ -1,14 +1,15 @@
 name: cd
 on:
+  workflow_run:
+    workflows: [ "ci" ]
+    types:
+      - completed
   push:
     branches:
       - master
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
-  workflow_run:
-    workflows: ["ci"]
-    types:
-      - completed
+
 
 permissions:
   contents: read
@@ -21,6 +22,7 @@ jobs:
         uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.2.0
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.ref }}
 
       - name: cd/build-docker
         run: make build-image build-image-e2e
