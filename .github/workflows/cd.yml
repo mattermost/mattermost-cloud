@@ -1,17 +1,9 @@
 name: cd
 
 on:
-  workflow_call:
-    inputs:
-      tag:
-        required: true
-        type: string
-      dockerhub_username:
-        required: true
-        type: string
-      dockerhub_token:
-        required: true
-        type: string
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: read
@@ -20,39 +12,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
+      - name: cd/checkout-repo
         uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
         with:
           fetch-depth: 0
 
       - name: cd/build-docker
-        run: make build-image
-
-      - name: cd/scan-docker-security
-        uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
-        with:
-          image-ref: "mattermost/mattermost-cloud"
-          format: "table"
-          ignore-unfixed: true
-          vuln-type: "os,library"
-          severity: "CRITICAL"
-
-      - name: cd/build-docker-e2e
-        run: make build-image-e2e
-
-      - name: cd/scan-docker-security-e2e
-        uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
-        with:
-          image-ref: "mattermost/mattermost-cloud-e2e"
-          format: "table"
-          ignore-unfixed: true
-          vuln-type: "os,library"
-          severity: "CRITICAL"
-
-      - name: cd/docker-push
-        run: |
-          TAG=${{ inputs.tag }} ./scripts/push-docker.sh
         env:
-          DOCKERHUB_USERNAME: ${{ inputs.dockerhub_username }}
-          DOCKERHUB_TOKEN: ${{ inputs.dockerhub_token }}
+          TAG: ${{ github.ref_name }}
           REF_NAME: ${{ github.ref_name }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        uses: ./.github/actions/docker-build
