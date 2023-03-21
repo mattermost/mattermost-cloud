@@ -13,7 +13,7 @@ import (
 
 func TestClusterDTOFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		clusterDTO, err := ClusterDTOFromReader(bytes.NewReader([]byte(
+		clusterDTO, err := DTOFromReader[ClusterDTO](bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
@@ -21,7 +21,7 @@ func TestClusterDTOFromReader(t *testing.T) {
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
-		clusterDTO, err := ClusterDTOFromReader(bytes.NewReader([]byte(
+		clusterDTO, err := DTOFromReader[ClusterDTO](bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -29,7 +29,7 @@ func TestClusterDTOFromReader(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
-		clusterDTO, err := ClusterDTOFromReader(bytes.NewReader([]byte(
+		clusterDTO, err := DTOFromReader[ClusterDTO](bytes.NewReader([]byte(
 			`{"ID":"id","Provider":"aws","Annotations":[{"ID":"abc","Name":"efg"}]}`,
 		)))
 		require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestClusterDTOFromReader(t *testing.T) {
 
 func TestClustersDTOFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		clusterDTOs, err := ClusterDTOsFromReader(bytes.NewReader([]byte(
+		clusterDTOs, err := DTOsFromReader[ClusterDTO](bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestClustersDTOFromReader(t *testing.T) {
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
-		clusterDTOs, err := ClusterDTOsFromReader(bytes.NewReader([]byte(
+		clusterDTOs, err := DTOsFromReader[ClusterDTO](bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -57,7 +57,7 @@ func TestClustersDTOFromReader(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
-		clusterDTOs, err := ClusterDTOsFromReader(bytes.NewReader([]byte(
+		clusterDTOs, err := DTOsFromReader[ClusterDTO](bytes.NewReader([]byte(
 			`[{"ID":"id1","Provider":"aws","Annotations":[{"ID":"abc","Name":"efg"}]},{"ID":"id2","Provider":"aws"}]`,
 		)))
 		require.NoError(t, err)
