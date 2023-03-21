@@ -82,7 +82,8 @@ jobs:
     uses: ./.github/workflows/cd.yml
     with:
       tag: ${GITHUB_SHA:0:7}
-    secrets: inherit
+      dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+      dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
   master:
     if: ${{ github.ref_name  == 'master' }}
@@ -90,7 +91,8 @@ jobs:
     uses: ./.github/workflows/cd.yml
     with:
       tag: ${GITHUB_SHA:0:7}
-    secrets: inherit
+      dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+      dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
   tag:
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
@@ -98,4 +100,5 @@ jobs:
     uses: ./.github/workflows/cd.yml
     with:
       tag: ${GITHUB_REF_NAME}
-    secrets: inherit
+      dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+      dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}

@@ -6,6 +6,12 @@ on:
       tag:
         required: true
         type: string
+      dockerhub_username:
+        required: true
+        type: string
+      dockerhub_token:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -47,6 +53,6 @@ jobs:
         run: |
           TAG=${{ inputs.tag }} ./scripts/push-docker.sh
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ inputs.dockerhub_username }}
+          DOCKERHUB_TOKEN: ${{ inputs.dockerhub_token }}
           REF_NAME: ${{ github.ref_name }}
