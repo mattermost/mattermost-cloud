@@ -12,23 +12,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseHeadersFromStringMap(t *testing.T) {
+func TestParseHeaders(t *testing.T) {
 	envName := "DUMMY_ENV"
+	envNameNonExistant := "NON_EXISTANT_ENV_VAR"
 	os.Setenv(envName, "mattermost")
 	t.Cleanup(func() {
 		os.Unsetenv(envName)
 	})
+	headerValue := "Bar"
 	testCases := []struct {
 		name          string
-		input         *StringMap
+		input         *Headers
 		outputHeaders map[string]string
 		outputErr     bool
 	}{
 		{
 			name: "proper headers (plain)",
-			input: &StringMap{
-				"Foo": "Bar",
-			},
+			input: &Headers{{
+				Key: "Foo", Value: &headerValue,
+			}},
 			outputHeaders: map[string]string{
 				"Foo": "Bar",
 			},
@@ -36,21 +38,15 @@ func TestParseHeadersFromStringMap(t *testing.T) {
 		},
 		{
 			name:          "no headers (empty)",
-			input:         &StringMap{},
-			outputHeaders: map[string]string{},
-			outputErr:     false,
-		},
-		{
-			name:          "no headers (nil)",
-			input:         nil,
+			input:         &Headers{},
 			outputHeaders: map[string]string{},
 			outputErr:     false,
 		},
 		{
 			name: "proper headers (with environment)",
-			input: &StringMap{
-				"Foo": "Bar",
-				"Env": WebhookHeaderEnvironmentValuePrefix + envName,
+			input: &Headers{
+				{Key: "Foo", Value: &headerValue},
+				{Key: "Env", ValueFromEnv: &envName},
 			},
 			outputHeaders: map[string]string{
 				"Foo": "Bar",
@@ -60,12 +56,13 @@ func TestParseHeadersFromStringMap(t *testing.T) {
 		},
 		{
 			name: "proper headers (with environment error)",
-			input: &StringMap{
-				"Foo": "Bar",
-				"Env": "env:NON_EXISTANT",
+			input: &Headers{
+				{Key: "Foo", Value: &headerValue},
+				{Key: "Env", ValueFromEnv: &envNameNonExistant},
 			},
 			outputHeaders: map[string]string{
 				"Foo": "Bar",
+				"Env": "",
 			},
 			outputErr: true,
 		},
@@ -73,13 +70,7 @@ func TestParseHeadersFromStringMap(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			resultHeader, resultErr := ParseHeadersFromStringMap(testCase.input)
-			if testCase.outputErr {
-				require.Error(t, resultErr)
-			} else {
-				require.NoError(t, resultErr)
-			}
-			require.Equal(t, testCase.outputHeaders, resultHeader)
+			require.Equal(t, testCase.outputHeaders, testCase.input.GetHeaders())
 		})
 	}
 }

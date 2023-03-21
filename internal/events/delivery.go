@@ -286,15 +286,7 @@ func (s *sender) sendEvent(subscription_id, url string, data *model.StateChangeE
 		return errors.Wrap(err, "unable to create request from payload")
 	}
 	req.Header.Set("Content-Type", contentTypeApplicationJSON)
-	headers, err := model.ParseHeadersFromStringMap(data.EventHeaders)
-	if err != nil {
-		// If there's an error parsing the headers, log it but continue execution so the subscription
-		// event is sent, `model.ParseHeadersFromStringMap` should take care of not disclosing any
-		// unset environment variables into resulting headers.
-		s.logger.WithFields(logrus.Fields{
-			"subscription": subscription_id,
-		}).WithError(err).Error()
-	}
+	headers := data.EventHeaders.GetHeaders()
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}

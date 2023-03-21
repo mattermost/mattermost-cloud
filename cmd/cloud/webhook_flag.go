@@ -22,15 +22,17 @@ func (flags *webhookFlags) addFlags(command *cobra.Command) {
 
 type webhookCreateFlag struct {
 	webhookFlags
-	ownerID string
-	url     string
-	headers map[string]string
+	ownerID        string
+	url            string
+	headers        map[string]string
+	headersFromEnv map[string]string
 }
 
 func (flags *webhookCreateFlag) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.ownerID, "owner", "", "An opaque identifier describing the owner of the webhook.")
 	command.Flags().StringVar(&flags.url, "url", "", "The callback URL of the webhook.")
-	command.Flags().StringToStringVar(&flags.headers, "headers", nil, "headers that should be sent with the request")
+	command.Flags().StringToStringVar(&flags.headers, "header", nil, "a header that should be sent with the request")
+	command.Flags().StringToStringVar(&flags.headersFromEnv, "header-from-env", nil, "a header that should be sent with the request, with values read from environment variables")
 	_ = command.MarkFlagRequired("owner")
 	_ = command.MarkFlagRequired("url")
 }

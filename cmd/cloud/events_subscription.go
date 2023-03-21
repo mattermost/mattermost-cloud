@@ -36,13 +36,34 @@ func newCmdSubscriptionCreate() *cobra.Command {
 			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
+			var headers model.Headers
+			for key, value := range flags.headers {
+				valueInner := value
+				headers = append(headers, model.WebhookHeader{
+					Key:   key,
+					Value: &valueInner,
+				})
+			}
+
+			for key, value := range flags.headersFromEnv {
+				valueInner := value
+				headers = append(headers, model.WebhookHeader{
+					Key:          key,
+					ValueFromEnv: &valueInner,
+				})
+			}
+
+			if err := headers.Validate(); err != nil {
+				return errors.Wrap(err, "failed to validate webhook headers")
+			}
+
 			request := &model.CreateSubscriptionRequest{
 				Name:             flags.name,
 				URL:              flags.url,
 				OwnerID:          flags.owner,
 				EventType:        model.EventType(flags.eventType),
 				FailureThreshold: flags.failureThreshold,
-				Headers:          flags.headers,
+				Headers:          headers,
 			}
 
 			if flags.dryRun {

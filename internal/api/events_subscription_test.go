@@ -98,6 +98,8 @@ func TestCreateSubscription(t *testing.T) {
 
 	client := model.NewClient(ts.URL)
 
+	headerValue := "bar"
+
 	t.Run("valid headers value", func(t *testing.T) {
 		testCases := []struct {
 			createRequest model.CreateSubscriptionRequest
@@ -107,8 +109,11 @@ func TestCreateSubscription(t *testing.T) {
 					OwnerID:   ownerID,
 					EventType: model.ResourceStateChangeEventType,
 					URL:       "http://valid.com/1",
-					Headers: model.StringMap{
-						"Foo": "bar",
+					Headers: model.Headers{
+						{
+							Key:   "foo",
+							Value: &headerValue,
+						},
 					},
 				},
 			},

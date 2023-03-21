@@ -71,6 +71,7 @@ func TestCreateWebhook(t *testing.T) {
 	})
 
 	t.Run("valid headers value", func(t *testing.T) {
+		value := "bar"
 		testCases := []struct {
 			createRequest model.CreateWebhookRequest
 		}{
@@ -78,8 +79,11 @@ func TestCreateWebhook(t *testing.T) {
 				createRequest: model.CreateWebhookRequest{
 					OwnerID: "owner",
 					URL:     "http://valid.com/1",
-					Headers: model.StringMap{
-						"Foo": "bar",
+					Headers: []model.WebhookHeader{
+						{
+							Key:   "foo",
+							Value: &value,
+						},
 					},
 				},
 			},

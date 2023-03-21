@@ -10,23 +10,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStringMap(t *testing.T) {
+func TestHeaders(t *testing.T) {
+	headerValue := "bar"
+
 	t.Run("value", func(t *testing.T) {
 		testCases := []struct {
-			input *StringMap
+			input *Headers
 			value any
 			err   bool
 		}{
 			{
-				input: &StringMap{
-					"foo": "bar",
-				},
-				value: []byte(`{"foo":"bar"}`),
+				input: &Headers{{
+					Key: "foo", Value: &headerValue,
+				}},
+				value: []byte(`[{"key":"foo","value":"bar"}]`),
 				err:   false,
 			},
 			{
-				input: &StringMap{},
-				value: []byte(`{}`),
+				input: &Headers{},
+				value: []byte(`[]`),
 				err:   false,
 			},
 		}
@@ -45,29 +47,29 @@ func TestStringMap(t *testing.T) {
 	t.Run("scan", func(t *testing.T) {
 		testCases := []struct {
 			input any
-			scan  StringMap
+			scan  Headers
 			err   bool
 		}{
 			{
-				input: []byte(`{"foo":"bar"}`),
-				scan: StringMap{
-					"foo": "bar",
-				},
+				input: []byte(`[{"key":"foo", "value": "bar"}]`),
+				scan: Headers{{
+					Key: "foo", Value: &headerValue,
+				}},
 				err: false,
 			},
 			{
-				input: `{"foo":"bar"}`,
-				scan: StringMap{
-					"foo": "bar",
-				},
+				input: `[{"key": "foo", "value": "bar"}]`,
+				scan: Headers{{
+					Key: "foo", Value: &headerValue,
+				}},
 				err: false,
 			},
 		}
 
 		for _, test := range testCases {
-			stringMap := StringMap{}
-			err := stringMap.Scan(test.input)
-			require.Equal(t, test.scan, stringMap)
+			headers := Headers{}
+			err := headers.Scan(test.input)
+			require.Equal(t, test.scan, headers)
 			if test.err {
 				require.Error(t, err)
 			} else {

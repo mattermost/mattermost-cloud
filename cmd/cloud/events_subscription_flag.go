@@ -19,6 +19,7 @@ type subscriptionCreateFlags struct {
 	eventType        string
 	failureThreshold time.Duration
 	headers          map[string]string
+	headersFromEnv   map[string]string
 }
 
 func (flags *subscriptionCreateFlags) addFlags(command *cobra.Command) {
@@ -27,7 +28,8 @@ func (flags *subscriptionCreateFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.owner, "owner", "", "OwnerID of the subscription.")
 	command.Flags().StringVar(&flags.eventType, "event-type", string(model.ResourceStateChangeEventType), "Event type of the subscription.")
 	command.Flags().DurationVar(&flags.failureThreshold, "failure-threshold", 0, "Failure threshold of the subscription.")
-	command.Flags().StringToStringVar(&flags.headers, "headers", nil, "headers that should be sent with the request")
+	command.Flags().StringToStringVar(&flags.headers, "header", nil, "a header that should be sent with the request")
+	command.Flags().StringToStringVar(&flags.headersFromEnv, "header-from-env", nil, "a header that should be sent with the request, with values read from environment variables")
 	_ = command.MarkFlagRequired("url")
 	_ = command.MarkFlagRequired("owner")
 	_ = command.MarkFlagRequired("event-type")
