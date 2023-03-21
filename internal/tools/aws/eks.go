@@ -131,36 +131,36 @@ func (a *Client) InstallEKSAddons(cluster *model.Cluster) error {
 	return nil
 }
 
-func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
+func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Update, error) {
 	clusterName := cluster.ProvisionerMetadataEKS.Name
 	eksCluster, err := c.getEKSCluster(clusterName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if eksCluster == nil {
-		return errors.Errorf("cluster %s does not exist", clusterName)
+		return nil, errors.Errorf("cluster %s does not exist", clusterName)
 	}
 
 	if eksCluster.Status != eksTypes.ClusterStatusActive {
-		return errors.Errorf("cluster %s is not active", clusterName)
+		return nil, errors.Errorf("cluster %s is not active", clusterName)
 	}
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata.ChangeRequest.Version == "" {
-		return nil
+		return nil, nil
 	}
 
-	_, err = c.Service().eks.UpdateClusterVersion(context.TODO(), &eks.UpdateClusterVersionInput{
+	output, err := c.Service().eks.UpdateClusterVersion(context.TODO(), &eks.UpdateClusterVersionInput{
 		Name:    aws.String(clusterName),
 		Version: aws.String(eksMetadata.ChangeRequest.Version),
 	})
 
 	if err != nil {
-		return errors.Wrap(err, "failed to update EKS cluster version")
+		return nil, errors.Wrap(err, "failed to update EKS cluster version")
 	}
 
-	return nil
+	return output.Update, nil
 }
 
 func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
@@ -207,6 +207,11 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup
 		}
 	}
 
+	launchTemplateVersion := "$Latest"
+	if changeRequest.LaunchTemplateVersion != nil && *changeRequest.LaunchTemplateVersion > 0 {
+		launchTemplateVersion = fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion)
+	}
+
 	nodeGroupReq := eks.CreateNodegroupInput{
 		ClusterName:   aws.String(clusterName),
 		InstanceTypes: []string{changeRequest.NodeInstanceType},
@@ -221,7 +226,7 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup
 		Subnets: subnetsIDs,
 		LaunchTemplate: &eksTypes.LaunchTemplateSpecification{
 			Name:    aws.String(launchTemplate),
-			Version: aws.String(fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion)),
+			Version: aws.String(launchTemplateVersion),
 		},
 		Tags: map[string]string{
 			fmt.Sprintf("kubernetes.io/cluster/%s", clusterName): "owned",
@@ -309,6 +314,40 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 			*nodeGroup.LaunchTemplate.Version != fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion) {
 			isUpdateRequired = true
 		}
+	} else {
+		if nodeGroup.LaunchTemplate != nil && nodeGroup.LaunchTemplate.Version != nil {
+			version, err2 := strconv.Atoi(*nodeGroup.LaunchTemplate.Version)
+			if err2 != nil {
+				logger.Errorln("failed to convert launch template version to int", err2)
+			}
+			changeRequest.LaunchTemplateVersion = ptr.Int64(int64(version))
+		}
+	}
+
+	if changeRequest.NodeInstanceType != "" {
+		if nodeGroup.InstanceTypes != nil && len(nodeGroup.InstanceTypes) > 0 &&
+			nodeGroup.InstanceTypes[0] != changeRequest.NodeInstanceType {
+			isUpdateRequired = true
+		}
+	} else {
+		changeRequest.NodeInstanceType = eksMetadata.NodeInstanceType
+	}
+
+	scalingInfo := nodeGroup.ScalingConfig
+	if changeRequest.NodeMinCount != 0 {
+		if *scalingInfo.MinSize != int32(changeRequest.NodeMinCount) {
+			isUpdateRequired = true
+		}
+	} else {
+		changeRequest.NodeMinCount = eksMetadata.NodeMinCount
+	}
+
+	if changeRequest.NodeMaxCount != 0 {
+		if *scalingInfo.MaxSize != int32(changeRequest.NodeMaxCount) {
+			isUpdateRequired = true
+		}
+	} else {
+		changeRequest.NodeMaxCount = eksMetadata.NodeMaxCount
 	}
 
 	if !isUpdateRequired {
@@ -323,23 +362,14 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 		return errors.Wrap(err, "failed to convert worker sequence to int")
 	}
 
-	eksMetadata.ChangeRequest.WorkerName = fmt.Sprintf("worker-%d", workerSeqInt+1)
+	changeRequest.WorkerName = fmt.Sprintf("worker-%d", workerSeqInt+1)
 
-	eksMetadata.ChangeRequest.VPC = eksMetadata.VPC
-	eksMetadata.ChangeRequest.NodeInstanceType = eksMetadata.NodeInstanceType
-	eksMetadata.ChangeRequest.NodeMinCount = eksMetadata.NodeMinCount
-	eksMetadata.ChangeRequest.NodeMaxCount = eksMetadata.NodeMaxCount
-	eksMetadata.ChangeRequest.NodeRoleARN = eksMetadata.NodeRoleARN
+	changeRequest.VPC = eksMetadata.VPC
+	changeRequest.NodeRoleARN = eksMetadata.NodeRoleARN
 
-	nodeGroup, err = c.createEKSNodeGroup(cluster)
+	_, err = c.createEKSNodeGroup(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to create a new NodeGroup")
-	}
-
-	eksMetadata.NodeInstanceGroups[*nodeGroup.NodegroupName] = model.EKSInstanceGroupMetadata{
-		NodeInstanceType: nodeGroup.InstanceTypes[0],
-		NodeMinCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
-		NodeMaxCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
 	}
 
 	wait := 600 // seconds
@@ -356,15 +386,11 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 		return errors.Wrap(err, "failed to delete the old NodeGroup")
 	}
 
-	delete(eksMetadata.NodeInstanceGroups, workerName)
-
 	logger.Infof("Waiting up to %d seconds for NodeGroup to be deleted...", wait)
 	err = c.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, eksMetadata.WorkerName, wait)
 	if err != nil {
 		return err
 	}
-
-	eksMetadata.WorkerName = eksMetadata.ChangeRequest.WorkerName
 
 	return nil
 }
@@ -566,4 +592,43 @@ func (c *Client) WaitForEKSClusterToBeDeleted(clusterName string, timeout int) e
 			}
 		}
 	}
+}
+
+func (c *Client) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID string, timeout int) error {
+	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timeoutTimer.Stop()
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-timeoutTimer.C:
+			return errors.New("timed out waiting for EKS cluster update to be completed")
+		case <-tick.C:
+			updateStatus, err := c.getEKSClusterUpdateStatus(clusterName, updateID)
+			if err != nil {
+				return errors.Wrap(err, "failed to describe EKS cluster")
+			}
+
+			if updateStatus == eksTypes.UpdateStatusFailed {
+				return errors.New("EKS cluster update failed")
+			}
+
+			if updateStatus == eksTypes.UpdateStatusSuccessful {
+				return nil
+			}
+		}
+	}
+}
+
+func (c *Client) getEKSClusterUpdateStatus(clusterName, updateID string) (eksTypes.UpdateStatus, error) {
+	output, err := c.Service().eks.DescribeUpdate(context.TODO(), &eks.DescribeUpdateInput{
+		Name:     ptr.String(clusterName),
+		UpdateId: ptr.String(updateID),
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "failed to describe EKS cluster update")
+	}
+
+	return output.Update.Status, nil
 }
