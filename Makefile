@@ -27,6 +27,7 @@ MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
 BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
 BUILD_HASH := $(shell git rev-parse HEAD)
+TEST_FLAGS ?= -v
 
 ################################################################################
 
@@ -202,7 +203,7 @@ goverall: $(GOVERALLS_GEN) ## Runs goveralls
 
 .PHONY: unittest
 unittest:
-	$(GO) test -failfast ./... -v -covermode=count -coverprofile=coverage.out
+	$(GO) test -failfast ./... ${TEST_FLAGS} -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
 verify-mocks: mocks
