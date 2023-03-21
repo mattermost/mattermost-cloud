@@ -4,11 +4,6 @@
 
 package model
 
-import (
-	"encoding/json"
-	"io"
-)
-
 // InstallationDTO represents a Mattermost installation. DTO stands for Data Transfer Object.
 type InstallationDTO struct {
 	*Installation
@@ -16,29 +11,4 @@ type InstallationDTO struct {
 	// Deprecated: This is for backward compatibility until we switch all clients, as DNS was removed from Installation.
 	DNS        string
 	DNSRecords []*InstallationDNS
-}
-
-// InstallationDTOFromReader decodes a json-encoded installation DTO from the given io.Reader.
-func InstallationDTOFromReader(reader io.Reader) (*InstallationDTO, error) {
-	installationDTO := InstallationDTO{}
-	decoder := json.NewDecoder(reader)
-	err := decoder.Decode(&installationDTO)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-
-	return &installationDTO, nil
-}
-
-// InstallationDTOsFromReader decodes a json-encoded list of installation DTOs from the given io.Reader.
-func InstallationDTOsFromReader(reader io.Reader) ([]*InstallationDTO, error) {
-	installationDTOs := []*InstallationDTO{}
-	decoder := json.NewDecoder(reader)
-
-	err := decoder.Decode(&installationDTOs)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-
-	return installationDTOs, nil
 }
