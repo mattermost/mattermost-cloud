@@ -80,20 +80,20 @@ jobs:
   pull_request:
     if: ${{ github.event_name == 'pull_request' }}
     needs: [test]
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/cd.yml
     with:
       tag: ${GITHUB_SHA:0:7}
 
   master:
     if: ${{ github.ref_name  == 'master' }}
     needs: [test]
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/cd.yml
     with:
       tag: ${GITHUB_SHA:0:7}
 
   tag:
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
     needs: [test]
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/cd.yml
     with:
       tag: ${GITHUB_REF_NAME}
