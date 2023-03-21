@@ -19,10 +19,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: ci/build-docker
+      - name: cd/build-docker
         run: make build-image
 
-      - name: ci/scan-docker-security
+      - name: cd/scan-docker-security
         uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
         with:
           image-ref: "mattermost/mattermost-cloud"
@@ -31,10 +31,10 @@ jobs:
           vuln-type: "os,library"
           severity: "CRITICAL"
 
-      - name: ci/build-docker-e2e
+      - name: cd/build-docker-e2e
         run: make build-image-e2e
 
-      - name: ci/scan-docker-security-e2e
+      - name: cd/scan-docker-security-e2e
         uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
         with:
           image-ref: "mattermost/mattermost-cloud-e2e"
@@ -43,7 +43,7 @@ jobs:
           vuln-type: "os,library"
           severity: "CRITICAL"
 
-      - name: ci/docker-push
+      - name: cd/docker-push
         run: |
           TAG=${{ inputs.tag }} ./scripts/push-docker.sh
         env:
