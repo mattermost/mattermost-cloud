@@ -1,12 +1,11 @@
 name: cd
 
 on:
-  push:
-    branches:
-      - master
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
-  pull_request:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,26 +18,34 @@ jobs:
         uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v3.2.0
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref }}
 
-      - name: cd/build-docker
-        run: make build-image build-image-e2e
+      - name: ci/build-docker
+        run: make build-image
 
-      - name: Set TAG variable
+      - name: ci/scan-docker-security
+        uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
+        with:
+          image-ref: "mattermost/mattermost-cloud"
+          format: "table"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL"
+
+      - name: ci/build-docker-e2e
+        run: make build-image-e2e
+
+      - name: ci/scan-docker-security-e2e
+        uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
+        with:
+          image-ref: "mattermost/mattermost-cloud-e2e"
+          format: "table"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL"
+
+      - name: ci/docker-push
         run: |
-          if [[ "$GITHUB_REF" =~ ^refs/heads/ ]]; then
-            # If the GITHUB_REF variable starts with "refs/heads/", set the TAG to the branch name
-            export TAG=${GITHUB_REF#refs/heads/}
-          else
-            # Otherwise, set the TAG to the tag name
-            export TAG=${GITHUB_REF#refs/tags/}
-          fi
-
-          # Display the value of the TAG variable for debugging purposes
-          echo "TAG=$TAG"
-
-      - name: cd/docker-push
-        run: TAG=${TAG} ./scripts/push-docker.sh
+          TAG=${{ inputs.tag }} ./scripts/push-docker.sh
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
