@@ -95,7 +95,7 @@ jobs:
           else [ "${{ github.event_name }}"  == 'push' ]
             SHA=${GITHUB_SHA}
           fi
-          echo "TAG=${SHA}" >> $GITHUB_ENV
+          echo "TAG=${SHA:0:7}" >> $GITHUB_ENV
 
       - name: ci/build-docker
         env:
