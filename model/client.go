@@ -122,7 +122,7 @@ func (c *Client) CreateCluster(request *CreateClusterRequest) (*ClusterDTO, erro
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterDTOFromReader(resp.Body)
+		return DTOFromReader[ClusterDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -157,7 +157,7 @@ func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterReq
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterDTOFromReader(resp.Body)
+		return DTOFromReader[ClusterDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -174,7 +174,7 @@ func (c *Client) GetCluster(clusterID string) (*ClusterDTO, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return ClusterDTOFromReader(resp.Body)
+		return DTOFromReader[ClusterDTO](resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -201,7 +201,7 @@ func (c *Client) GetClusters(request *GetClustersRequest) ([]*ClusterDTO, error)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return ClusterDTOsFromReader(resp.Body)
+		return DTOsFromReader[ClusterDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -235,7 +235,7 @@ func (c *Client) UpdateCluster(clusterID string, request *UpdateClusterRequest) 
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterDTOFromReader(resp.Body)
+		return DTOFromReader[ClusterDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -252,7 +252,7 @@ func (c *Client) UpgradeCluster(clusterID string, request *PatchUpgradeClusterRe
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterDTOFromReader(resp.Body)
+		return DTOFromReader[ClusterDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -269,7 +269,7 @@ func (c *Client) ResizeCluster(clusterID string, request *PatchClusterSizeReques
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterDTOFromReader(resp.Body)
+		return DTOFromReader[ClusterDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -303,7 +303,7 @@ func (c *Client) AddClusterAnnotations(clusterID string, annotationsRequest *Add
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return ClusterDTOFromReader(resp.Body)
+		return DTOFromReader[ClusterDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -337,7 +337,7 @@ func (c *Client) CreateInstallation(request *CreateInstallationRequest) (*Instal
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationDTOFromReader(resp.Body)
+		return DTOFromReader[InstallationDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -378,7 +378,7 @@ func (c *Client) GetInstallation(installationID string, request *GetInstallation
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return InstallationDTOFromReader(resp.Body)
+		return DTOFromReader[InstallationDTO](resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -432,7 +432,7 @@ func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installa
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return InstallationDTOsFromReader(resp.Body)
+		return DTOsFromReader[InstallationDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -473,7 +473,7 @@ func (c *Client) UpdateInstallation(installationID string, request *PatchInstall
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationDTOFromReader(resp.Body)
+		return DTOFromReader[InstallationDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -490,7 +490,7 @@ func (c *Client) HibernateInstallation(installationID string) (*InstallationDTO,
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationDTOFromReader(resp.Body)
+		return DTOFromReader[InstallationDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -507,7 +507,7 @@ func (c *Client) WakeupInstallation(installationID string, request *PatchInstall
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationDTOFromReader(resp.Body)
+		return DTOFromReader[InstallationDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -562,7 +562,7 @@ func (c *Client) UpdateInstallationDeletion(installationID string, request *Patc
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return InstallationDTOFromReader(resp.Body)
+		return DTOFromReader[InstallationDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -597,7 +597,7 @@ func (c *Client) AddInstallationDNS(installationID string, request *AddDNSRecord
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationDTOFromReader(resp.Body)
+		return DTOFromReader[InstallationDTO](resp.Body)
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
@@ -613,7 +613,7 @@ func (c *Client) SetInstallationDomainPrimary(installationID, installationDNSID 
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationDTOFromReader(resp.Body)
+		return DTOFromReader[InstallationDTO](resp.Body)
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
@@ -779,7 +779,7 @@ func (c *Client) AddInstallationAnnotations(installationID string, annotationsRe
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return InstallationDTOFromReader(resp.Body)
+		return DTOFromReader[InstallationDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -995,7 +995,7 @@ func (c *Client) CreateGroup(request *CreateGroupRequest) (*GroupDTO, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return GroupDTOFromReader(resp.Body)
+		return DTOFromReader[GroupDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -1012,7 +1012,7 @@ func (c *Client) UpdateGroup(request *PatchGroupRequest) (*GroupDTO, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return GroupDTOFromReader(resp.Body)
+		return DTOFromReader[GroupDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -1046,7 +1046,7 @@ func (c *Client) GetGroup(groupID string) (*GroupDTO, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return GroupDTOFromReader(resp.Body)
+		return DTOFromReader[GroupDTO](resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -1073,7 +1073,7 @@ func (c *Client) GetGroups(request *GetGroupsRequest) ([]*GroupDTO, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return GroupDTOsFromReader(resp.Body)
+		return DTOsFromReader[GroupDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -1188,7 +1188,7 @@ func (c *Client) AddGroupAnnotations(groupID string, annotationsRequest *AddAnno
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return GroupDTOFromReader(resp.Body)
+		return DTOFromReader[GroupDTO](resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
