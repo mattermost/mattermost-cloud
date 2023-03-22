@@ -120,12 +120,18 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		request.Provisioner = model.ProvisionerEKS
 		request.ClusterRoleARN = flags.clusterRoleARN
 		request.NodeRoleARN = flags.nodeRoleARN
-
+		request.NodeGroupWithPublicSubnet = flags.nodegroupWithPublicSubnet
 	}
 
 	if flags.additionalNodeGroups != nil {
 		if _, f := flags.additionalNodeGroups[model.NodeGroupWorker]; f {
 			return errors.New("worker nodegroup can only be specified with --size flag")
+		}
+	}
+
+	for _, ng := range flags.nodegroupWithPublicSubnet {
+		if _, f := flags.additionalNodeGroups[ng]; !f {
+			return fmt.Errorf("nodegroup %s not provided as additional nodegroups", ng)
 		}
 	}
 

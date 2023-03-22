@@ -21,26 +21,27 @@ const (
 
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
-	Provider               string                         `json:"provider,omitempty"`
-	Zones                  []string                       `json:"zones,omitempty"`
-	Version                string                         `json:"version,omitempty"`
-	AMI                    string                         `json:"ami,omitempty"`
-	MasterInstanceType     string                         `json:"master-instance-type,omitempty"`
-	MasterCount            int64                          `json:"master-count,omitempty"`
-	NodeInstanceType       string                         `json:"node-instance-type,omitempty"`
-	NodeMinCount           int64                          `json:"node-min-count,omitempty"`
-	NodeMaxCount           int64                          `json:"node-max-count,omitempty"`
-	AllowInstallations     bool                           `json:"allow-installations,omitempty"`
-	APISecurityLock        bool                           `json:"api-security-lock,omitempty"`
-	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
-	Annotations            []string                       `json:"annotations,omitempty"`
-	Networking             string                         `json:"networking,omitempty"`
-	VPC                    string                         `json:"vpc,omitempty"`
-	MaxPodsPerNode         int64                          `json:"max-pods-per-node,omitempty"`
-	ClusterRoleARN         string                         `json:"cluster-role-arn,omitempty"`
-	NodeRoleARN            string                         `json:"node-role-arn,omitempty"`
-	Provisioner            string                         `json:"provisioner,omitempty"`
-	AdditionalNodeGroups   map[string]NodeGroupMetadata   `json:"additional-node-groups,omitempty"`
+	Provider                  string                         `json:"provider,omitempty"`
+	Zones                     []string                       `json:"zones,omitempty"`
+	Version                   string                         `json:"version,omitempty"`
+	AMI                       string                         `json:"ami,omitempty"`
+	MasterInstanceType        string                         `json:"master-instance-type,omitempty"`
+	MasterCount               int64                          `json:"master-count,omitempty"`
+	NodeInstanceType          string                         `json:"node-instance-type,omitempty"`
+	NodeMinCount              int64                          `json:"node-min-count,omitempty"`
+	NodeMaxCount              int64                          `json:"node-max-count,omitempty"`
+	AllowInstallations        bool                           `json:"allow-installations,omitempty"`
+	APISecurityLock           bool                           `json:"api-security-lock,omitempty"`
+	DesiredUtilityVersions    map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
+	Annotations               []string                       `json:"annotations,omitempty"`
+	Networking                string                         `json:"networking,omitempty"`
+	VPC                       string                         `json:"vpc,omitempty"`
+	MaxPodsPerNode            int64                          `json:"max-pods-per-node,omitempty"`
+	ClusterRoleARN            string                         `json:"cluster-role-arn,omitempty"`
+	NodeRoleARN               string                         `json:"node-role-arn,omitempty"`
+	Provisioner               string                         `json:"provisioner,omitempty"`
+	AdditionalNodeGroups      map[string]NodeGroupMetadata   `json:"additional-node-groups,omitempty"`
+	NodeGroupWithPublicSubnet []string                       `json:"nodegroup-with-public-subnet,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -182,6 +183,12 @@ func (request *CreateClusterRequest) Validate() error {
 				if ng.MaxCount != ng.MinCount {
 					return errors.Errorf("node min (%d) and max (%d) counts must match for node group %s", ng.MinCount, ng.MaxCount, name)
 				}
+			}
+		}
+
+		for _, ng := range request.NodeGroupWithPublicSubnet {
+			if _, f := request.AdditionalNodeGroups[ng]; !f {
+				return errors.Errorf("invalid nodegroup %s to use public subnets", ng)
 			}
 		}
 	}

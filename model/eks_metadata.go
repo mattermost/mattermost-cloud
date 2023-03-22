@@ -34,10 +34,11 @@ type EKSMetadata struct {
 
 // NodeGroupMetadata is the metadata of an instance group.
 type NodeGroupMetadata struct {
-	Name         string
-	InstanceType string `json:"InstanceType,omitempty"`
-	MinCount     int64  `json:"MinCount,omitempty"`
-	MaxCount     int64  `json:"MaxCount,omitempty"`
+	Name             string
+	InstanceType     string `json:"InstanceType,omitempty"`
+	MinCount         int64  `json:"MinCount,omitempty"`
+	MaxCount         int64  `json:"MaxCount,omitempty"`
+	WithPublicSubnet bool   `json:"WithPublicSubnet,omitempty"`
 }
 
 // EKSMetadataRequestedState is the requested state for eks metadata.
@@ -77,12 +78,19 @@ func (em *EKSMetadata) ApplyClusterCreateRequest(createRequest *CreateClusterReq
 		MaxCount:     createRequest.NodeMaxCount,
 	}
 
+	for _, ng := range createRequest.NodeGroupWithPublicSubnet {
+		nodeGroup := nodeGroups[ng]
+		nodeGroup.WithPublicSubnet = true
+		nodeGroups[ng] = nodeGroup
+	}
+
 	for name, ng := range nodeGroups {
 		em.ChangeRequest.NodeGroups[name] = NodeGroupMetadata{
-			Name:         fmt.Sprintf("%s-%s", name, NewNodeGroupSuffix()),
-			InstanceType: ng.InstanceType,
-			MinCount:     ng.MinCount,
-			MaxCount:     ng.MaxCount,
+			Name:             fmt.Sprintf("%s-%s", name, NewNodeGroupSuffix()),
+			InstanceType:     ng.InstanceType,
+			MinCount:         ng.MinCount,
+			MaxCount:         ng.MaxCount,
+			WithPublicSubnet: ng.WithPublicSubnet,
 		}
 	}
 

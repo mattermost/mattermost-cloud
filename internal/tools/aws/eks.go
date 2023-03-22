@@ -177,8 +177,15 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 	clusterName := eksMetadata.Name
 	launchTemplate := getLaunchTemplateName(clusterName)
 
+	ngChangeRequest := changeRequest.NodeGroups[ngPrefix]
+
+	subnets := clusterResource.PrivateSubnetIDs
+	if ngChangeRequest.WithPublicSubnet {
+		subnets = clusterResource.PublicSubnetsIDs
+	}
+
 	subnetsOut, err := a.Service().ec2.DescribeSubnets(context.TODO(), &ec2.DescribeSubnetsInput{
-		SubnetIds: clusterResource.PrivateSubnetIDs,
+		SubnetIds: subnets,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe subnets")
@@ -208,8 +215,6 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 		launchTemplateVersion = *changeRequest.LaunchTemplateVersion
 	}
 
-	ngChangeRequest := changeRequest.NodeGroups[ngPrefix]
-
 	nodeGroupReq := eks.CreateNodegroupInput{
 		ClusterName:   aws.String(clusterName),
 		InstanceTypes: []string{ngChangeRequest.InstanceType},
@@ -228,6 +233,9 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 		},
 		Tags: map[string]string{
 			fmt.Sprintf("kubernetes.io/cluster/%s", clusterName): "owned",
+		},
+		Labels: map[string]string{
+			"type": ngPrefix,
 		},
 	}
 
