@@ -282,6 +282,8 @@ func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bo
 
 	wg.Wait()
 
+	logger.Debugf("All EKS NodeGroups are active")
+
 	if errOccurred {
 		return false, errors.New("one of the EKS NodeGroups failed to become active")
 	}
@@ -512,7 +514,15 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 	var wg sync.WaitGroup
 	var errOccurred bool
 
-	for _, ng := range eksMetadata.NodeGroups {
+	nodeGroups := eksMetadata.NodeGroups
+	if len(nodeGroups) == 0 {
+		nodeGroups = make(map[string]model.NodeGroupMetadata)
+		for _, ng := range eksMetadata.ChangeRequest.NodeGroups {
+			nodeGroups[ng.Name] = ng
+		}
+	}
+
+	for _, ng := range nodeGroups {
 		wg.Add(1)
 		go func(ngMetadata model.NodeGroupMetadata) {
 			defer wg.Done()
@@ -532,6 +542,8 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 				errOccurred = true
 				return
 			}
+
+			logger.Debugf("Successfully deleted EKS NodeGroup %s", ngMetadata.Name)
 		}(ng)
 	}
 
