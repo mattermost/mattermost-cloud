@@ -179,9 +179,11 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 
 	ngChangeRequest := changeRequest.NodeGroups[ngPrefix]
 
-	subnets := clusterResource.PrivateSubnetIDs
+	var subnets []string
 	if ngChangeRequest.WithPublicSubnet {
 		subnets = clusterResource.PublicSubnetsIDs
+	} else {
+		subnets = clusterResource.PrivateSubnetIDs
 	}
 
 	subnetsOut, err := a.Service().ec2.DescribeSubnets(context.TODO(), &ec2.DescribeSubnetsInput{
@@ -375,6 +377,8 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 	} else {
 		ngChangeRequest.MaxCount = oldNodeGroupMeta.MaxCount
 	}
+
+	ngChangeRequest.WithPublicSubnet = oldNodeGroupMeta.WithPublicSubnet
 
 	if !isUpdateRequired {
 		return nil

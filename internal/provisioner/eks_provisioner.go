@@ -272,10 +272,11 @@ func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bo
 			}
 
 			eksMetadata.NodeGroups[ngPrefix] = model.NodeGroupMetadata{
-				Name:         ngMetadata.Name,
-				InstanceType: nodeGroup.InstanceTypes[0],
-				MinCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
-				MaxCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
+				Name:             ngMetadata.Name,
+				InstanceType:     nodeGroup.InstanceTypes[0],
+				MinCount:         int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
+				MaxCount:         int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
+				WithPublicSubnet: ngMetadata.WithPublicSubnet,
 			}
 		}(ng, meta)
 	}

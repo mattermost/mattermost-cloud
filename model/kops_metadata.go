@@ -348,11 +348,9 @@ func (km *KopsMetadata) GetCommonMetadata() ProvisionerMetadata {
 }
 
 func (em *KopsMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRequest) error {
-	nodeMinCount := em.NodeMinCount
-
 	// One more check that can't be done without both the request and the cluster.
 	if patchRequest.NodeMinCount == nil && patchRequest.NodeMaxCount != nil &&
-		*patchRequest.NodeMaxCount < nodeMinCount {
+		*patchRequest.NodeMaxCount < em.NodeMinCount {
 		return errors.New("resize patch would set max node count lower than min node count")
 	}
 
