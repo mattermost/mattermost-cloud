@@ -5,6 +5,9 @@
 package api_test
 
 import (
+	"bytes"
+	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -76,6 +79,85 @@ func TestCreateGetDeleteSubscriptions(t *testing.T) {
 	fetchedSub, err = client.GetSubscription(sub.ID)
 	require.NoError(t, err)
 	assert.True(t, fetchedSub.DeleteAt > 0)
+}
+
+func TestCreateSubscription(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	ownerID := "owner"
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	headerValue := "bar"
+
+	t.Run("valid headers value", func(t *testing.T) {
+		testCases := []struct {
+			createRequest model.CreateSubscriptionRequest
+		}{
+			{
+				createRequest: model.CreateSubscriptionRequest{
+					OwnerID:   ownerID,
+					EventType: model.ResourceStateChangeEventType,
+					URL:       "http://valid.com/1",
+					Headers: model.Headers{
+						{
+							Key:   "foo",
+							Value: &headerValue,
+						},
+					},
+				},
+			},
+			{
+				createRequest: model.CreateSubscriptionRequest{
+					OwnerID:   ownerID,
+					EventType: model.ResourceStateChangeEventType,
+					URL:       "http://valid.com/2",
+					Headers:   nil,
+				},
+			},
+		}
+
+		for _, testCase := range testCases {
+			wh, err := client.CreateSubscription(&testCase.createRequest)
+			require.NoError(t, err)
+			if testCase.createRequest.Headers == nil {
+				require.Nil(t, wh.Headers)
+			} else {
+				require.NotNil(t, wh.Headers)
+			}
+		}
+	})
+
+	t.Run("invalid headers", func(t *testing.T) {
+		testCases := []struct {
+			payload string
+		}{
+			{
+				payload: fmt.Sprintf(`{"url": "https://valid.com/1","owner":"%s","eventType": "%s", "headers":"invalid"}`, ownerID, model.ResourceStateChangeEventType),
+			},
+			{
+				payload: fmt.Sprintf(`{"url": "https://valid.com/2","owner":"%s","eventType": "%s","headers":{"valid": "header","invalid": 1}}`, ownerID, model.ResourceStateChangeEventType),
+			},
+			{
+				payload: fmt.Sprintf(`{"url": "https://valid.com/3","owner":"%s","eventType": "%s","headers": 1}`, ownerID, model.ResourceStateChangeEventType),
+			},
+		}
+		for _, testCase := range testCases {
+			resp, err := http.Post(fmt.Sprintf("%s/api/subscriptions", ts.URL), "application/json", bytes.NewReader([]byte(testCase.payload)))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		}
+	})
 }
 
 func TestListSubscriptions(t *testing.T) {

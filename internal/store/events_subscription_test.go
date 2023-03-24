@@ -19,8 +19,16 @@ func TestCountSubscriptionsForEvent(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
+	value := "bar"
+
 	sub1 := &model.Subscription{
 		EventType: model.ResourceStateChangeEventType,
+		Headers: model.Headers{
+			{
+				Key:   "foo",
+				Value: &value,
+			},
+		},
 	}
 	err := sqlStore.CreateSubscription(sub1)
 	require.NoError(t, err)

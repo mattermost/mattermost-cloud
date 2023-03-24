@@ -59,6 +59,9 @@ func sendWebhook(hook *model.Webhook, payload *model.WebhookPayload, logger *log
 		return errors.Wrap(err, "unable to create request from payload")
 	}
 	req.Header.Set("Content-Type", "application/json")
+	for key, value := range hook.Headers.GetHeaders() {
+		req.Header.Set(key, value)
+	}
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	_, err = client.Do(req)

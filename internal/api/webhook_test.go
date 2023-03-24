@@ -70,6 +70,64 @@ func TestCreateWebhook(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
+	t.Run("valid headers value", func(t *testing.T) {
+		value := "bar"
+		testCases := []struct {
+			createRequest model.CreateWebhookRequest
+		}{
+			{
+				createRequest: model.CreateWebhookRequest{
+					OwnerID: "owner",
+					URL:     "http://valid.com/1",
+					Headers: []model.WebhookHeader{
+						{
+							Key:   "foo",
+							Value: &value,
+						},
+					},
+				},
+			},
+			{
+				createRequest: model.CreateWebhookRequest{
+					OwnerID: "owner",
+					URL:     "http://valid.com/2",
+					Headers: nil,
+				},
+			},
+		}
+
+		for _, testCase := range testCases {
+			wh, err := client.CreateWebhook(&testCase.createRequest)
+			require.NoError(t, err)
+			if testCase.createRequest.Headers == nil {
+				require.Nil(t, wh.Headers)
+			} else {
+				require.NotNil(t, wh.Headers)
+			}
+		}
+	})
+
+	t.Run("invalid headers", func(t *testing.T) {
+		testCases := []struct {
+			payload string
+		}{
+			{
+				payload: `{"url": "https://valid.com/1","owner":"unittest","headers":"invalid"}`,
+			},
+			{
+				payload: `{"url": "https://valid.com/2","owner":"unittest","headers":{"valid": "header","invalid": 1}}`,
+			},
+			{
+				payload: `{"url": "https://valid.com/3","owner":"unittest","headers": 1}`,
+			},
+		}
+		for _, testCase := range testCases {
+			resp, err := http.Post(fmt.Sprintf("%s/api/webhooks", ts.URL), "application/json", bytes.NewReader([]byte(testCase.payload)))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		}
+	})
+
 	t.Run("valid", func(t *testing.T) {
 		webhook, err := client.CreateWebhook(&model.CreateWebhookRequest{
 			OwnerID: "owner",
