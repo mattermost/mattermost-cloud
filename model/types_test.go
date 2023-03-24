@@ -64,6 +64,11 @@ func TestHeaders(t *testing.T) {
 				}},
 				err: false,
 			},
+			{
+				input: nil,
+				scan:  Headers{},
+				err:   false,
+			},
 		}
 
 		for _, test := range testCases {

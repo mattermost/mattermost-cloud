@@ -29,6 +29,8 @@ func (wh *Headers) Scan(databaseValue interface{}) error {
 		return json.Unmarshal([]byte(value), wh)
 	case []byte: // psqls jsonb
 		return json.Unmarshal(value, wh)
+	case nil:
+		return nil
 	default:
 		return fmt.Errorf("cannot scan type %t into Headers", databaseValue)
 	}
