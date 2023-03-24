@@ -51,9 +51,9 @@ func (wh Headers) Validate() error {
 	return nil
 }
 
-func (wh *Headers) GetHeaders() map[string]string {
-	headers := make(map[string]string, len(*wh))
-	for _, header := range *wh {
+func (wh Headers) GetHeaders() map[string]string {
+	headers := make(map[string]string, len(wh))
+	for _, header := range wh {
 		if header.Value != nil {
 			headers[header.Key] = *header.Value
 		} else if header.ValueFromEnv != nil {
