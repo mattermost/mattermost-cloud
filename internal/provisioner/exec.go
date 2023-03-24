@@ -144,6 +144,7 @@ func execClusterInstallationCLI(k8sClient *k8s.KubeClient, clusterInstallation *
 	ctx := context.TODO()
 	podList, err := k8sClient.Clientset.CoreV1().Pods(clusterInstallation.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "app=mattermost",
+		FieldSelector: "status.phase=Running",
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to query mattermost pods")
