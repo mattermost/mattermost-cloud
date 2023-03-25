@@ -16,7 +16,7 @@ var webhookSelect sq.SelectBuilder
 
 func init() {
 	webhookSelect = sq.
-		Select("ID", "OwnerID", "URL", "CreateAt", "DeleteAt").From("Webhooks")
+		Select("ID", "OwnerID", "URL", "Headers", "CreateAt", "DeleteAt").From("Webhooks")
 }
 
 // GetWebhook fetches the given webhook by id.
@@ -67,6 +67,7 @@ func (sqlStore *SQLStore) CreateWebhook(webhook *model.Webhook) error {
 			"URL":      webhook.URL,
 			"CreateAt": webhook.CreateAt,
 			"DeleteAt": 0,
+			"Headers":  webhook.Headers,
 		}),
 	)
 	if err != nil {

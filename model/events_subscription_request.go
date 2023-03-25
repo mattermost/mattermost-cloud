@@ -20,6 +20,7 @@ type CreateSubscriptionRequest struct {
 	OwnerID          string
 	EventType        EventType
 	FailureThreshold time.Duration
+	Headers          Headers
 }
 
 // ToSubscription validates request and converts it to subscription
@@ -28,7 +29,6 @@ func (r CreateSubscriptionRequest) ToSubscription() (Subscription, error) {
 	if err != nil {
 		return Subscription{}, errors.Wrap(err, "failed to parse subscription URL")
 	}
-
 	if r.EventType == "" {
 		return Subscription{}, errors.New("event type is required when registering subscription")
 	}
@@ -47,6 +47,7 @@ func (r CreateSubscriptionRequest) ToSubscription() (Subscription, error) {
 		LastDeliveryStatus:    SubscriptionDeliveryNone,
 		LastDeliveryAttemptAt: 0,
 		FailureThreshold:      r.FailureThreshold,
+		Headers:               r.Headers,
 	}, nil
 }
 
