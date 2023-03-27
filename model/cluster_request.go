@@ -173,7 +173,7 @@ func (request *CreateClusterRequest) Validate() error {
 
 		if request.AdditionalNodeGroups != nil {
 			if _, f := request.AdditionalNodeGroups[NodeGroupWorker]; f {
-				return errors.New("additional node group name cannot be worker")
+				return errors.New("additional node group name cannot be named worker")
 			}
 
 			for name, ng := range request.AdditionalNodeGroups {
