@@ -516,7 +516,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 	var errOccurred bool
 
 	nodeGroups := eksMetadata.NodeGroups
-	if len(nodeGroups) == 0 {
+	if len(nodeGroups) == 0 && eksMetadata.ChangeRequest != nil {
 		nodeGroups = make(map[string]model.NodeGroupMetadata)
 		for _, ng := range eksMetadata.ChangeRequest.NodeGroups {
 			nodeGroups[ng.Name] = ng
