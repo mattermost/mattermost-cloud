@@ -1710,3 +1710,18 @@ func (c *Client) DeleteSubscription(subID string) error {
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+func (c *Client) GetClusterInstallationStatus(clusterInstallationID string) (*ClusterInstallationStatus, error) {
+	resp, err := c.doGet(c.buildURL("/api/cluster_installation/%s/status", clusterInstallationID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewClusterInstallationStatusFromReader(resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}

@@ -166,23 +166,8 @@ func execClusterInstallationCLI(k8sClient *k8s.KubeClient, clusterInstallation *
 	container := pod.Spec.Containers[0]
 	logger.Debugf("Executing `%s` on pod %s: container=%s, image=%s, phase=%s", strings.Join(args, " "), pod.Name, container.Name, container.Image, pod.Status.Phase)
 
-	execRequest := k8sClient.Clientset.CoreV1().RESTClient().Post().
-		Resource("pods").
-		Name(pod.Name).
-		Namespace(clusterInstallation.Namespace).
-		SubResource("exec").
-		VersionedParams(&corev1.PodExecOptions{
-			Container: container.Name,
-			Command:   args,
-			Stdin:     false,
-			Stdout:    true,
-			Stderr:    true,
-			TTY:       false,
-		}, scheme.ParameterCodec)
-
 	now := time.Now()
-	output, execErr := k8sClient.RemoteCommand("POST", execRequest.URL())
-
+	output, execErr := execCLI(k8sClient, clusterInstallation.Namespace, pod.Name, container.Name, args...)
 	if execErr != nil {
 		logger.WithError(execErr).Warnf("Command `%s` on pod %s finished in %.0f seconds, but encountered an error", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
 	} else {
@@ -190,4 +175,23 @@ func execClusterInstallationCLI(k8sClient *k8s.KubeClient, clusterInstallation *
 	}
 
 	return output, execErr, nil
+}
+
+func execCLI(k8sClient *k8s.KubeClient, namespace, podName, containerName string, args ...string) ([]byte, error) {
+
+	execRequest := k8sClient.Clientset.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(podName).
+		Namespace(namespace).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Container: containerName,
+			Command:   args,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+
+	return k8sClient.RemoteCommand("POST", execRequest.URL())
 }

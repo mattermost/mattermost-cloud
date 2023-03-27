@@ -117,6 +117,10 @@ func (w *InstallationSuite) GetCI(ctx context.Context) error {
 	return nil
 }
 
+func (w *InstallationSuite) CheckClusterInstallationStatus(ctx context.Context) error {
+	return pkg.WaitForClusterInstallationReadyStatus(w.client, w.Meta.ClusterInstallationID, w.logger)
+}
+
 // GetConnectionStrAndExport saves db connection string currently configured for installation and export statistics.
 func (w *InstallationSuite) GetConnectionStrAndExport(ctx context.Context) error {
 	connectionString, err := pkg.GetConnectionString(w.client, w.Meta.ClusterInstallationID)

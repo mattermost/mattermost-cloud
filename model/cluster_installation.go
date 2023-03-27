@@ -7,6 +7,8 @@ package model
 import (
 	"encoding/json"
 	"io"
+
+	"github.com/pkg/errors"
 )
 
 // ClusterInstallation is a single namespace within a cluster composing a potentially larger installation.
@@ -31,6 +33,16 @@ type ClusterInstallationFilter struct {
 	InstallationID string
 	ClusterID      string
 	IsActive       *bool
+}
+
+type ClusterInstallationStatus struct {
+	InstallationFound *bool  `json:"installation_found,omitempty"`
+	Replicas          *int32 `json:"replicas,omitempty"`
+	PodCount          *int32 `json:"pod_count,omitempty"`
+	PodRunningCount   *int32 `json:"pod_running_count,omitempty"`
+	PodReadyCount     *int32 `json:"pod_ready_count,omitempty"`
+	PodStartedCount   *int32 `json:"pod_started_count,omitempty"`
+	MmctlSuccessCount *int32 `json:"mmctl_success_count,omitempty"`
 }
 
 // MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.
@@ -123,4 +135,14 @@ func MigrateClusterInstallationResponseFromReader(reader io.Reader) (*MigrateClu
 	}
 
 	return &migrateClusterInstallationResponse, nil
+}
+
+func NewClusterInstallationStatusFromReader(reader io.Reader) (*ClusterInstallationStatus, error) {
+	var status ClusterInstallationStatus
+	err := json.NewDecoder(reader).Decode(&status)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode ClusterInstallationStatus")
+	}
+
+	return &status, nil
 }
