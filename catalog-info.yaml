@@ -3,7 +3,7 @@ kind: Component
 metadata:
   name: mattermost-cloud
   annotations:
-    github.com/project-slug: mattermost-cloud
+    github.com/project-slug: mattermost/mattermost-cloud
     backstage.io/adr-location: docs/adrs
 spec:
   type: "service"
