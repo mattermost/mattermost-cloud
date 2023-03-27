@@ -42,7 +42,7 @@ type ClusterInstallationStatus struct {
 	PodRunningCount   *int32 `json:"pod_running_count,omitempty"`
 	PodReadyCount     *int32 `json:"pod_ready_count,omitempty"`
 	PodStartedCount   *int32 `json:"pod_started_count,omitempty"`
-	MmctlSuccessCount *int32 `json:"mmctl_success_count,omitempty"`
+	MMCTLSuccessCount *int32 `json:"mmctl_success_count,omitempty"`
 }
 
 // MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.

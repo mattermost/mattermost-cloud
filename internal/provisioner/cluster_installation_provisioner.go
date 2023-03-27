@@ -599,7 +599,7 @@ func (provisioner Provisioner) GetClusterInstallationStatus(cluster *model.Clust
 	status.PodRunningCount = &podRunningCount
 	status.PodReadyCount = &podReadyCount
 	status.PodStartedCount = &podStartedCount
-	status.MmctlSuccessCount = mmctlSuccessCount
+	status.MMCTLSuccessCount = mmctlSuccessCount
 
 	return &status, nil
 }
