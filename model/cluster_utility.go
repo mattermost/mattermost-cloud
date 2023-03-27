@@ -70,7 +70,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// FluentbitCanonicalName defines the default version and values path for the Helm chart
 	FluentbitCanonicalName: {Chart: "0.20.1", ValuesPath: ""},
 	// TeleportCanonicalName defines the default version and values path for the Helm chart
-	TeleportCanonicalName: {Chart: "6.2.8", ValuesPath: ""},
+	TeleportCanonicalName: {Chart: "7.3.26", ValuesPath: ""},
 	// PgbouncerCanonicalName defines the default version and values path for the Helm chart
 	PgbouncerCanonicalName: {Chart: "1.2.0", ValuesPath: ""},
 	// PromtailCanonicalName defines the default version and values path for the Helm chart
