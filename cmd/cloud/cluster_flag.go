@@ -120,7 +120,7 @@ type sizeOptions struct {
 }
 
 func (flags *sizeOptions) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.size, "size", "SizeAlef500", "The size constant describing the master &  worker nodegroups.")
+	command.Flags().StringVar(&flags.size, "size", "SizeAlef500", "The size constant describing the master & worker nodegroups.")
 	command.Flags().StringVar(&flags.masterInstanceType, "size-master-instance-type", "", "The instance type describing the k8s master nodes. Overwrites value from 'size'.")
 	command.Flags().Int64Var(&flags.masterCount, "size-master-count", 0, "The number of k8s master nodes. Overwrites value from 'size'.")
 	command.Flags().StringVar(&flags.nodeInstanceType, "size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
