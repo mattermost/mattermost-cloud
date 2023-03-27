@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mattermost-cloud
+  annotations:
+    github.com/project-slug: mattermost-cloud
+    backstage.io/adr-location: docs/adrs
+spec:
+  type: "service"
+  system: "cloud-services"
+  lifecycle: "production"
+  owner: "cloud"
