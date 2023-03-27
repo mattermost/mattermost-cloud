@@ -352,6 +352,10 @@ func executeClusterResizeCmd(flags clusterResizeFlags) error {
 
 	rotatorConfig := getRotatorConfigFromFlags(flags.rotatorConfig)
 
+	if len(flags.nodeGroups) == 0 {
+		return errors.New("must specify at least one node group")
+	}
+
 	request := &model.PatchClusterSizeRequest{
 		RotatorConfig: &rotatorConfig,
 		NodeGroups:    flags.nodeGroups,

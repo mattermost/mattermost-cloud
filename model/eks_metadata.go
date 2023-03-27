@@ -131,7 +131,9 @@ func (em *EKSMetadata) ApplyUpgradePatch(patchRequest *PatchUpgradeClusterReques
 }
 
 func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRequest) error {
-	for _, ngToResize := range patchRequest.NodeGroups {
+	nodeGroups := patchRequest.NodeGroups
+
+	for _, ngToResize := range nodeGroups {
 		if _, f := em.NodeGroups[ngToResize]; !f {
 			return errors.Errorf("nodegroup %s not found to resize", ngToResize)
 		}
@@ -142,14 +144,6 @@ func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRe
 			return errors.New("min node count cannot be greater than max node count")
 		}
 		return nil
-	}
-
-	nodeGroups := patchRequest.NodeGroups
-	if len(nodeGroups) == 0 {
-		nodeGroups = make([]string, 0, len(em.NodeGroups))
-		for ng := range em.NodeGroups {
-			nodeGroups = append(nodeGroups, ng)
-		}
 	}
 
 	if patchRequest.NodeMinCount != nil {
