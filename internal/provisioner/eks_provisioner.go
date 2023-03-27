@@ -320,6 +320,11 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 			return errors.Wrap(err, "failed to migrate EKS NodeGroup")
 		}
 
+		workerName := eksMetadata.ChangeRequest.WorkerName
+		eksMetadata.NodeInstanceGroups[workerName] = eksMetadata.NodeInstanceGroups[eksMetadata.WorkerName]
+		delete(eksMetadata.NodeInstanceGroups, eksMetadata.WorkerName)
+		eksMetadata.WorkerName = workerName
+
 		err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 		if err != nil {
 			return errors.Wrap(err, "failed to store cluster")
@@ -327,17 +332,19 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 	}
 
 	if changeRequest.Version != "" {
-		err = provisioner.awsClient.EnsureEKSClusterUpdated(cluster)
+		clusterUpdateRequest, err := provisioner.awsClient.EnsureEKSClusterUpdated(cluster)
 		if err != nil {
 			return errors.Wrap(err, "failed to update EKS cluster")
 		}
-	}
 
-	wait := 3600 // seconds
-	logger.Infof("Waiting up to %d seconds for EKS cluster to become active...", wait)
-	_, err = provisioner.awsClient.WaitForActiveEKSCluster(eksMetadata.Name, wait)
-	if err != nil {
-		return err
+		if clusterUpdateRequest != nil && clusterUpdateRequest.Id != nil {
+			wait := 3600 // seconds
+			logger.Infof("Waiting up to %d seconds for EKS cluster to be updated...", wait)
+			err = provisioner.awsClient.WaitForEKSClusterUpdateToBeCompleted(eksMetadata.Name, *clusterUpdateRequest.Id, wait)
+			if err != nil {
+				return errors.Wrap(err, "failed to update EKS cluster")
+			}
+		}
 	}
 
 	return nil
@@ -350,6 +357,41 @@ func (provisioner *EKSProvisioner) RotateClusterNodes(cluster *model.Cluster) er
 
 // ResizeCluster resizes cluster - not implemented.
 func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
+	eksMetadata := cluster.ProvisionerMetadataEKS
+
+	err := eksMetadata.ValidateChangeRequest()
+	if err != nil {
+		return errors.Wrap(err, "eks Metadata ChangeRequest failed validation")
+	}
+
+	err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to resize EKS NodeGroup")
+	}
+
+	workerName := eksMetadata.ChangeRequest.WorkerName
+	nodeGroup, err := provisioner.awsClient.GetActiveEKSNodeGroup(eksMetadata.Name, workerName)
+	if err != nil {
+		return errors.Wrap(err, "failed to get EKS NodeGroup")
+	}
+
+	delete(eksMetadata.NodeInstanceGroups, eksMetadata.WorkerName)
+	eksMetadata.NodeInstanceGroups[*nodeGroup.NodegroupName] = model.EKSInstanceGroupMetadata{
+		NodeInstanceType: nodeGroup.InstanceTypes[0],
+		NodeMinCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
+		NodeMaxCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
+	}
+	eksMetadata.NodeInstanceType = nodeGroup.InstanceTypes[0]
+	eksMetadata.NodeMinCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize))
+	eksMetadata.NodeMaxCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize))
+
+	eksMetadata.WorkerName = *nodeGroup.NodegroupName
+
+	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to store cluster")
+	}
+
 	return nil
 }
 

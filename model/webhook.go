@@ -40,6 +40,7 @@ type Webhook struct {
 	URL      string
 	CreateAt int64
 	DeleteAt int64
+	Headers  Headers
 }
 
 // WebhookFilter describes the parameters used to constrain a set of webhooks.

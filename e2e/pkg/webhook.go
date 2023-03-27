@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,6 +17,27 @@ import (
 	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
 	"github.com/pkg/errors"
 )
+
+const (
+	e2eTestGrafanaLogsURLTmpl     = `https://grafana.internal.mattermost.com/explore?orgId=1&left={"datasource":"PFB2D5CACEC34D62E","queries":[{"refId":"A","datasource":{"type":"loki","uid":"PFB2D5CACEC34D62E"},"editorMode":"code","expr":"{cluster=\"cnc\", namespace=\"e2e-mattermost-cloud-test\"} |= %60{{.ID}}%60","queryType":"range"}],"range":{"from":"now-24h","to":"now"}}'`
+	provisionerGrafanaLogsURLTmpl = `https://grafana.internal.mattermost.com/explore?orgId=1&left={"datasource":"PFB2D5CACEC34D62E","queries":[{"refId":"A","datasource":{"type":"loki","uid":"PFB2D5CACEC34D62E"},"editorMode":"code","expr":"{namespace=\"mattermost-cloud-test\", component=\"provisioner\"} |= %60{{.ID}}%60","queryType":"range"}],"range":{"from":"now-24h","to":"now"}}`
+)
+
+// getStringFromTemplate returns a string from a template and data provided.
+func getStringFromTemplate(tmpl string, data any) (string, error) {
+	t, err := template.New("tmpl").Parse(tmpl)
+	if err != nil {
+		return "", errors.Wrap(err, "error parsing template")
+	}
+
+	var result bytes.Buffer
+	err = t.Execute(&result, data)
+	if err != nil {
+		return "", errors.Wrap(err, "error executing template")
+	}
+
+	return result.String(), nil
+}
 
 type webhookPayloadAttachmentField struct {
 	Short bool   `json:"short"`
@@ -66,6 +89,22 @@ func sendWebhook(ctx context.Context, webhookURL string, payload *webhookPayload
 	return nil
 }
 
+func linkToGrafanaLogs(tmpl, id string) string {
+	if len(id) == 0 {
+		return "not set"
+	}
+
+	url, err := getStringFromTemplate(tmpl, struct {
+		ID string
+	}{
+		ID: id,
+	})
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("[`%s`](%s)", id, url)
+}
+
 // SendE2EResult sends the webhook with the provided icon and message. Errors on trying to send a
 // message or if the webhook URL is not provided properly.
 func SendE2EResult(ctx context.Context, icon, text, color string) error {
@@ -87,12 +126,17 @@ func SendE2EResult(ctx context.Context, icon, text, color string) error {
 				{
 					Short: true,
 					Title: "TestID",
-					Value: "`" + state.TestID + "`",
+					Value: linkToGrafanaLogs(e2eTestGrafanaLogsURLTmpl, state.TestID),
 				},
 				{
 					Short: true,
 					Title: "ClusterID",
-					Value: "`" + state.ClusterID + "`",
+					Value: linkToGrafanaLogs(provisionerGrafanaLogsURLTmpl, state.ClusterID),
+				},
+				{
+					Short: true,
+					Title: "InstallationID",
+					Value: linkToGrafanaLogs(provisionerGrafanaLogsURLTmpl, state.InstallationID),
 				},
 				{
 					Short: true,

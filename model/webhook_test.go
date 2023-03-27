@@ -5,11 +5,75 @@
 package model
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestParseHeaders(t *testing.T) {
+	envName := "DUMMY_ENV"
+	envNameNonExistant := "NON_EXISTANT_ENV_VAR"
+	os.Setenv(envName, "mattermost")
+	t.Cleanup(func() {
+		os.Unsetenv(envName)
+	})
+	headerValue := "Bar"
+	testCases := []struct {
+		name          string
+		input         *Headers
+		outputHeaders map[string]string
+		outputErr     bool
+	}{
+		{
+			name: "proper headers (plain)",
+			input: &Headers{{
+				Key: "Foo", Value: &headerValue,
+			}},
+			outputHeaders: map[string]string{
+				"Foo": "Bar",
+			},
+			outputErr: false,
+		},
+		{
+			name:          "no headers (empty)",
+			input:         &Headers{},
+			outputHeaders: map[string]string{},
+			outputErr:     false,
+		},
+		{
+			name: "proper headers (with environment)",
+			input: &Headers{
+				{Key: "Foo", Value: &headerValue},
+				{Key: "Env", ValueFromEnv: &envName},
+			},
+			outputHeaders: map[string]string{
+				"Foo": "Bar",
+				"Env": os.Getenv(envName),
+			},
+			outputErr: false,
+		},
+		{
+			name: "proper headers (with environment error)",
+			input: &Headers{
+				{Key: "Foo", Value: &headerValue},
+				{Key: "Env", ValueFromEnv: &envNameNonExistant},
+			},
+			outputHeaders: map[string]string{
+				"Foo": "Bar",
+				"Env": "",
+			},
+			outputErr: true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.outputHeaders, testCase.input.GetHeaders())
+		})
+	}
+}
 
 func TestWebhookIsDeleted(t *testing.T) {
 	webhook := &Webhook{
