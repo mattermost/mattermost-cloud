@@ -7,8 +7,9 @@ package state
 import "time"
 
 var (
-	ClusterID string
-	TestID    string
-	StartTime time.Time
-	EndTime   time.Time
+	ClusterID      string
+	InstallationID string
+	TestID         string
+	StartTime      time.Time
+	EndTime        time.Time
 )
