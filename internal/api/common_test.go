@@ -5,7 +5,6 @@
 package api_test
 
 import (
-	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -35,7 +34,7 @@ func (s *mockProvisioner) ProvisionerType() string {
 }
 
 func (s *mockProvisioner) GetClusterInstallationStatus(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (*model.ClusterInstallationStatus, error) {
-	return &model.ClusterInstallationStatus{InstallationFound: ptr.Bool(true)}, nil
+	return &model.ClusterInstallationStatus{}, nil
 }
 
 func (s *mockProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
