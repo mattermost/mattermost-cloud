@@ -618,7 +618,12 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 			}
 		} else if cluster.Provisioner == model.ProvisionerEKS {
 			cluster.ProvisionerMetadataEKS.ChangeRequest = &model.EKSMetadataRequestedState{
-				NodeMinCount: newWorkerCount,
+				NodeGroups: map[string]model.NodeGroupMetadata{
+					model.NodeGroupWorker: {
+						Name:     fmt.Sprintf("%s-%s", model.NodeGroupWorker, model.NewNodeGroupSuffix()),
+						MinCount: newWorkerCount,
+					},
+				},
 			}
 		}
 

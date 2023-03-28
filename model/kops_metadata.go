@@ -287,6 +287,22 @@ func (km *KopsMetadata) AddWarning(warning string) {
 	km.Warnings = append(km.Warnings, warning)
 }
 
+func (km *KopsMetadata) ApplyClusterCreateRequest(createRequest *CreateClusterRequest) bool {
+	km.ChangeRequest = &KopsMetadataRequestedState{
+		Version:            createRequest.Version,
+		AMI:                createRequest.AMI,
+		MasterInstanceType: createRequest.MasterInstanceType,
+		MasterCount:        createRequest.MasterCount,
+		NodeInstanceType:   createRequest.NodeInstanceType,
+		NodeMinCount:       createRequest.NodeMinCount,
+		NodeMaxCount:       createRequest.NodeMaxCount,
+		MaxPodsPerNode:     createRequest.MaxPodsPerNode,
+		Networking:         createRequest.Networking,
+		VPC:                createRequest.VPC,
+	}
+	return true
+}
+
 // ApplyUpgradePatch applies the patch to the given cluster's metadata.
 func (km *KopsMetadata) ApplyUpgradePatch(patchRequest *PatchUpgradeClusterRequest) bool {
 	changes := &KopsMetadataRequestedState{}
@@ -329,6 +345,16 @@ func (km *KopsMetadata) GetCommonMetadata() ProvisionerMetadata {
 		VPC:              km.VPC,
 		Networking:       km.Networking,
 	}
+}
+
+func (em *KopsMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRequest) error {
+	// One more check that can't be done without both the request and the cluster.
+	if patchRequest.NodeMinCount == nil && patchRequest.NodeMaxCount != nil &&
+		*patchRequest.NodeMaxCount < em.NodeMinCount {
+		return errors.New("resize patch would set max node count lower than min node count")
+	}
+
+	return nil
 }
 
 func (km *KopsMetadata) ApplyClusterSizePatch(patchRequest *PatchClusterSizeRequest) bool {

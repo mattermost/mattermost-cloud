@@ -118,35 +118,11 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if createClusterRequest.Provisioner == model.ProvisionerEKS {
-		cluster.ProvisionerMetadataEKS = &model.EKSMetadata{
-			ChangeRequest: &model.EKSMetadataRequestedState{
-				Version:          createClusterRequest.Version,
-				VPC:              createClusterRequest.VPC,
-				ClusterRoleARN:   createClusterRequest.ClusterRoleARN,
-				NodeRoleARN:      createClusterRequest.NodeRoleARN,
-				NodeInstanceType: createClusterRequest.NodeInstanceType,
-				NodeMinCount:     createClusterRequest.NodeMinCount,
-				NodeMaxCount:     createClusterRequest.NodeMaxCount,
-				MaxPodsPerNode:   createClusterRequest.MaxPodsPerNode,
-				AMI:              createClusterRequest.AMI,
-			},
-			NodeInstanceGroups: make(map[string]model.EKSInstanceGroupMetadata),
-		}
+		cluster.ProvisionerMetadataEKS = &model.EKSMetadata{}
+		cluster.ProvisionerMetadataEKS.ApplyClusterCreateRequest(createClusterRequest)
 	} else {
-		cluster.ProvisionerMetadataKops = &model.KopsMetadata{
-			ChangeRequest: &model.KopsMetadataRequestedState{
-				Version:            createClusterRequest.Version,
-				AMI:                createClusterRequest.AMI,
-				MasterInstanceType: createClusterRequest.MasterInstanceType,
-				MasterCount:        createClusterRequest.MasterCount,
-				NodeInstanceType:   createClusterRequest.NodeInstanceType,
-				NodeMinCount:       createClusterRequest.NodeMinCount,
-				NodeMaxCount:       createClusterRequest.NodeMaxCount,
-				MaxPodsPerNode:     createClusterRequest.MaxPodsPerNode,
-				Networking:         createClusterRequest.Networking,
-				VPC:                createClusterRequest.VPC,
-			},
-		}
+		cluster.ProvisionerMetadataKops = &model.KopsMetadata{}
+		cluster.ProvisionerMetadataKops.ApplyClusterCreateRequest(createClusterRequest)
 	}
 
 	cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)
@@ -402,20 +378,20 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
-	var nodeMinCount int64
 	if clusterDTO.Provisioner == model.ProvisionerEKS {
-		nodeMinCount = clusterDTO.ProvisionerMetadataEKS.NodeMinCount
+		err = clusterDTO.ProvisionerMetadataEKS.ValidateClusterSizePatch(resizeClusterRequest)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to validate cluster size patch")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	} else if clusterDTO.Provisioner == model.ProvisionerKops {
-		nodeMinCount = clusterDTO.ProvisionerMetadataKops.NodeMinCount
-	}
-
-	// One more check that can't be done without both the request and the cluster.
-	if resizeClusterRequest.NodeMinCount == nil &&
-		resizeClusterRequest.NodeMaxCount != nil &&
-		*resizeClusterRequest.NodeMaxCount < nodeMinCount {
-		c.Logger.Error("resize patch would set max node count lower than min node count")
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		err = clusterDTO.ProvisionerMetadataKops.ValidateClusterSizePatch(resizeClusterRequest)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to validate cluster size patch")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	oldState := clusterDTO.State
