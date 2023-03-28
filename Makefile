@@ -10,7 +10,7 @@ GOLANG_VERSION := $(shell cat go.mod | grep "^go " | cut -d " " -f 2)
 ALPINE_VERSION = 3.16
 TERRAFORM_VERSION=1.0.7
 KOPS_VERSION=v1.23.4
-HELM_VERSION=v3.5.3
+HELM_VERSION=v3.7.2
 KUBECTL_VERSION=v1.24.4
 
 ## Docker Build Versions
@@ -27,6 +27,7 @@ MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
 BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
 BUILD_HASH := $(shell git rev-parse HEAD)
+TEST_FLAGS ?= -v
 
 ################################################################################
 
@@ -202,7 +203,7 @@ goverall: $(GOVERALLS_GEN) ## Runs goveralls
 
 .PHONY: unittest
 unittest:
-	$(GO) test -failfast ./... -v -covermode=count -coverprofile=coverage.out
+	$(GO) test -failfast ./... ${TEST_FLAGS} -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
 verify-mocks: mocks

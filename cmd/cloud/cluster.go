@@ -120,12 +120,42 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		request.Provisioner = model.ProvisionerEKS
 		request.ClusterRoleARN = flags.clusterRoleARN
 		request.NodeRoleARN = flags.nodeRoleARN
+		request.NodeGroupWithPublicSubnet = flags.nodegroupWithPublicSubnet
+		request.NodeGroupWithSecurityGroup = flags.nodegroupWithSecurityGroup
+	}
 
+	if flags.additionalNodeGroups != nil {
+		if _, f := flags.additionalNodeGroups[model.NodeGroupWorker]; f {
+			return errors.New("worker nodegroup can only be specified with --size flag")
+		}
+	}
+
+	for _, ng := range flags.nodegroupWithPublicSubnet {
+		if ng == model.NodeGroupWorker {
+			continue
+		}
+		if _, f := flags.additionalNodeGroups[ng]; !f {
+			return fmt.Errorf("nodegroup %s not provided as additional nodegroups", ng)
+		}
+	}
+
+	for _, ng := range flags.nodegroupWithSecurityGroup {
+		if ng == model.NodeGroupWorker {
+			continue
+		}
+		if _, f := flags.additionalNodeGroups[ng]; !f {
+			return fmt.Errorf("nodegroup %s not provided as additional nodegroups", ng)
+		}
 	}
 
 	err := clusterdictionary.ApplyToCreateClusterRequest(flags.size, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to apply size values")
+	}
+
+	err = clusterdictionary.AddToCreateClusterRequest(flags.additionalNodeGroups, request)
+	if err != nil {
+		return errors.Wrap(err, "failed to apply size values for additional nodegroups")
 	}
 
 	if len(flags.masterInstanceType) != 0 {
@@ -337,6 +367,7 @@ func executeClusterResizeCmd(flags clusterResizeFlags) error {
 
 	request := &model.PatchClusterSizeRequest{
 		RotatorConfig: &rotatorConfig,
+		NodeGroups:    flags.nodeGroups,
 	}
 
 	// Apply values from 'size' constant and then apply overrides.

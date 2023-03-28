@@ -26,15 +26,28 @@ func TestWebhooks(t *testing.T) {
 	t.Run("get webhooks", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := MakeTestSQLStore(t, logger)
+		value := "bar"
 
 		webhook1 := &model.Webhook{
 			OwnerID: "owner1",
 			URL:     "https://url1.com",
+			Headers: []model.WebhookHeader{
+				{
+					Key:   "foo",
+					Value: &value,
+				},
+			},
 		}
 
 		webhook2 := &model.Webhook{
 			OwnerID: "owner2",
 			URL:     "https://url2.com",
+			Headers: []model.WebhookHeader{
+				{
+					Key:   "foo",
+					Value: &value,
+				},
+			},
 		}
 
 		err := sqlStore.CreateWebhook(webhook1)

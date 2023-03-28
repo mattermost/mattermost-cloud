@@ -12,6 +12,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
+	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -75,12 +76,14 @@ func (w *InstallationSuite) CreateInstallation(ctx context.Context) error {
 		w.logger.Infof("Installation created: %s", installation.ID)
 		w.Meta.InstallationID = installation.ID
 		w.Meta.InstallationDNS = installation.DNS
+		state.InstallationID = installation.ID
 	} else {
 		installation, err := w.client.GetInstallation(w.Meta.InstallationID, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to get installation")
 		}
 		w.Meta.InstallationDNS = installation.DNS
+		state.InstallationID = w.Meta.InstallationID
 
 		if installation.State == model.InstallationStateStable {
 			return nil
@@ -88,7 +91,6 @@ func (w *InstallationSuite) CreateInstallation(ctx context.Context) error {
 		if installation.State == model.InstallationStateCreationFailed {
 			return errors.Errorf("installation creation failed: %s", installation.State)
 		}
-
 	}
 
 	err := pkg.WaitForInstallationToBeStable(ctx, w.Meta.InstallationID, w.whChan, w.logger)

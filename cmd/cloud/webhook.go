@@ -39,9 +39,31 @@ func newCmdWebhookCreate() *cobra.Command {
 			command.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
+			var headers model.Headers
+			for key, value := range flags.headers {
+				valueInner := value
+				headers = append(headers, model.WebhookHeader{
+					Key:   key,
+					Value: &valueInner,
+				})
+			}
+
+			for key, value := range flags.headersFromEnv {
+				valueInner := value
+				headers = append(headers, model.WebhookHeader{
+					Key:          key,
+					ValueFromEnv: &valueInner,
+				})
+			}
+
+			if err := headers.Validate(); err != nil {
+				return errors.Wrap(err, "failed to validate webhook headers")
+			}
+
 			webhook, err := client.CreateWebhook(&model.CreateWebhookRequest{
 				OwnerID: flags.ownerID,
 				URL:     flags.url,
+				Headers: headers,
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to create webhook")
