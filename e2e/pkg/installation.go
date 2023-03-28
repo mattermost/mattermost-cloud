@@ -134,12 +134,12 @@ func WaitForClusterInstallationReadyStatus(client *model.Client, clusterInstalla
 			return false, errors.Wrap(err, "while waiting for cluster installation to be ready")
 		}
 
-		if status.Replicas != nil && status.MMCTLSuccessCount != nil {
-			if *status.Replicas == *status.MMCTLSuccessCount {
+		if status.Replicas != nil && status.ReadyLocalServer != nil {
+			if *status.Replicas == *status.ReadyLocalServer {
 				return true, nil
 			}
 
-			log.Infof("Cluster installation %s not ready: %d/%d", clusterInstallationID, *status.MMCTLSuccessCount, *status.Replicas)
+			log.Infof("Cluster installation %s not ready: %d/%d", clusterInstallationID, *status.ReadyLocalServer, *status.Replicas)
 			statusByte, _ := json.Marshal(status)
 			log.Debug(string(statusByte))
 		}

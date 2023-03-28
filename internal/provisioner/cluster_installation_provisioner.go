@@ -538,11 +538,11 @@ func (provisioner Provisioner) GetClusterInstallationStatus(cluster *model.Clust
 			return nil, errors.Wrap(err, "failed to query mattermost deployment")
 		}
 
-		status.InstallationFound = ptr.Bool(false)
+		status.InstallationFound = false
 		return &status, nil
 	}
 
-	status.InstallationFound = ptr.Bool(true)
+	status.InstallationFound = true
 	status.Replicas = deployment.Spec.Replicas
 
 	if status.Replicas == nil || *status.Replicas == 0 {
@@ -556,7 +556,7 @@ func (provisioner Provisioner) GetClusterInstallationStatus(cluster *model.Clust
 		return nil, errors.Wrap(err, "failed to query mattermost pods")
 	}
 
-	status.PodCount = ptr.Int32(int32(len(podList.Items)))
+	status.TotalPod = ptr.Int32(int32(len(podList.Items)))
 
 	args := []string{"./bin/mmctl", "--local", "system", "status", "--json"}
 
@@ -596,10 +596,10 @@ func (provisioner Provisioner) GetClusterInstallationStatus(cluster *model.Clust
 
 	wg.Wait()
 
-	status.PodRunningCount = &podRunningCount
-	status.PodReadyCount = &podReadyCount
-	status.PodStartedCount = &podStartedCount
-	status.MMCTLSuccessCount = mmctlSuccessCount
+	status.RunningPod = &podRunningCount
+	status.ReadyPod = &podReadyCount
+	status.StartedPod = &podStartedCount
+	status.ReadyLocalServer = mmctlSuccessCount
 
 	return &status, nil
 }

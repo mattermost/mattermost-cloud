@@ -36,13 +36,13 @@ type ClusterInstallationFilter struct {
 }
 
 type ClusterInstallationStatus struct {
-	InstallationFound *bool  `json:"installation_found,omitempty"`
+	InstallationFound bool   `json:"installation_found"`
 	Replicas          *int32 `json:"replicas,omitempty"`
-	PodCount          *int32 `json:"pod_count,omitempty"`
-	PodRunningCount   *int32 `json:"pod_running_count,omitempty"`
-	PodReadyCount     *int32 `json:"pod_ready_count,omitempty"`
-	PodStartedCount   *int32 `json:"pod_started_count,omitempty"`
-	MMCTLSuccessCount *int32 `json:"mmctl_success_count,omitempty"`
+	TotalPod          *int32 `json:"total_pod,omitempty"`
+	RunningPod        *int32 `json:"running_pod,omitempty"`
+	ReadyPod          *int32 `json:"ready_pod,omitempty"`
+	StartedPod        *int32 `json:"started_pod,omitempty"`
+	ReadyLocalServer  *int32 `json:"ready_local_server,omitempty"`
 }
 
 // MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.
