@@ -313,9 +313,6 @@ type PatchClusterSizeRequest struct {
 
 // Validate validates the values of a PatchClusterSizeRequest.
 func (p *PatchClusterSizeRequest) Validate() error {
-	if len(p.NodeGroups) == 0 {
-		return errors.New("node groups cannot be empty")
-	}
 	if p.NodeInstanceType != nil && len(*p.NodeInstanceType) == 0 {
 		return errors.New("node instance type cannot be a blank value")
 	}

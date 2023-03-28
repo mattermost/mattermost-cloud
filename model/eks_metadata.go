@@ -133,6 +133,19 @@ func (em *EKSMetadata) ApplyUpgradePatch(patchRequest *PatchUpgradeClusterReques
 func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRequest) error {
 	nodeGroups := patchRequest.NodeGroups
 
+	if len(em.NodeGroups) == 0 {
+		return errors.New("no nodegroups available to resize")
+	}
+
+	if len(nodeGroups) == 0 {
+		if len(em.NodeGroups) > 1 {
+			return errors.New("must specify nodegroups to resize")
+		}
+		for ng := range em.NodeGroups {
+			nodeGroups = append(nodeGroups, ng)
+		}
+	}
+
 	for _, ngToResize := range nodeGroups {
 		if _, f := em.NodeGroups[ngToResize]; !f {
 			return errors.Errorf("nodegroup %s not found to resize", ngToResize)
