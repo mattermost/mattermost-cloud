@@ -594,9 +594,10 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 				return
 			}
 
-			err = provisioner.awsClient.EnsureLaunchTemplateDeleted(fmt.Sprintf("%s-%s", eksMetadata.Name, ngPrefix))
+			launchTemplateName := fmt.Sprintf("%s-%s", eksMetadata.Name, ngPrefix)
+			err = provisioner.awsClient.EnsureLaunchTemplateDeleted(launchTemplateName)
 			if err != nil {
-				logger.WithError(err).Errorf("failed to delete EKS LaunchTemplate %s", ngMetadata.Name)
+				logger.WithError(err).Errorf("failed to delete EKS LaunchTemplate %s", launchTemplateName)
 				errOccurred = true
 				return
 			}
