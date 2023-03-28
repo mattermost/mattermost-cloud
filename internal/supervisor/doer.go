@@ -4,6 +4,12 @@
 
 package supervisor
 
+import (
+	"fmt"
+
+	log "github.com/sirupsen/logrus"
+)
+
 // Doer describes an action to be done.
 type Doer interface {
 	Do() error
@@ -11,15 +17,31 @@ type Doer interface {
 }
 
 // MultiDoer is a slice of doers.
-type MultiDoer []Doer
+type MultiDoer struct {
+	doers  []Doer
+	logger log.FieldLogger
+}
+
+func NewMultiDoer(logger log.FieldLogger) MultiDoer {
+	return MultiDoer{
+		logger: logger,
+		doers:  make([]Doer, 0),
+	}
+}
 
 // Do executes each doer in turn, returning the first error.
 func (md MultiDoer) Do() error {
-	for _, doer := range md {
+	var doerFailed bool
+	for _, doer := range md.doers {
 		err := doer.Do()
 		if err != nil {
-			return err
+			doerFailed = true
+			md.logger.WithError(err).Error("doer failed")
 		}
+	}
+
+	if doerFailed {
+		return fmt.Errorf("doers failed, check previous logs for details")
 	}
 
 	return nil
@@ -27,7 +49,12 @@ func (md MultiDoer) Do() error {
 
 // Shutdown tells each doer to perform shutdown tasks.
 func (md MultiDoer) Shutdown() {
-	for _, doer := range md {
+	for _, doer := range md.doers {
 		doer.Shutdown()
 	}
+}
+
+// Append appends a doer to the list.
+func (md *MultiDoer) Append(doers ...Doer) {
+	md.doers = append(md.doers, doers...)
 }

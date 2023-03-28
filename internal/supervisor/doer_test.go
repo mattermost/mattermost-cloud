@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
+	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,15 +35,17 @@ func (fd *failDoer) Do() error {
 func (td *failDoer) Shutdown() {}
 
 func TestMultiDoer(t *testing.T) {
+	logger := testlib.MakeLogger(t)
 	t.Run("failure", func(t *testing.T) {
 		d1 := &testDoer{calls: make(chan bool, 1)}
 		d2 := &failDoer{}
-		d3 := &testDoer{calls: make(chan bool)}
+		d3 := &testDoer{calls: make(chan bool, 1)}
 
-		doer := supervisor.MultiDoer{d1, d2, d3}
+		doer := supervisor.NewMultiDoer(logger)
+		doer.Append(d1, d2, d3)
 
 		err := doer.Do()
-		require.EqualError(t, err, "failed")
+		require.EqualError(t, err, "doers failed, check previous logs for details")
 
 		select {
 		case <-d1.calls:
@@ -52,8 +55,8 @@ func TestMultiDoer(t *testing.T) {
 
 		select {
 		case <-d3.calls:
-			require.Fail(t, "doer3 should not be invoked")
 		default:
+			require.Fail(t, "doer3 not invoked")
 		}
 	})
 
@@ -62,7 +65,8 @@ func TestMultiDoer(t *testing.T) {
 		d2 := &testDoer{calls: make(chan bool, 1)}
 		d3 := &testDoer{calls: make(chan bool, 1)}
 
-		doer := supervisor.MultiDoer{d1, d2, d3}
+		doer := supervisor.NewMultiDoer(logger)
+		doer.Append(d1, d2, d3)
 
 		err := doer.Do()
 		require.NoError(t, err)

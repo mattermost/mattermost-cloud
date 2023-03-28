@@ -339,33 +339,33 @@ func executeServerCmd(flags serverFlags) error {
 		return errors.Wrap(err, "invalid DNS providers configuration")
 	}
 
-	var multiDoer supervisor.MultiDoer
+	multiDoer := supervisor.NewMultiDoer(logger)
 	if supervisorsEnabled.clusterSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerObj.ClusterProvisionerOption, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer.Append(supervisor.NewClusterSupervisor(sqlStore, provisionerObj.ClusterProvisionerOption, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.groupSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
+		multiDoer.Append(supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, provisionerObj, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
+		multiDoer.Append(supervisor.NewInstallationSupervisor(sqlStore, provisionerObj, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
 	}
 	if supervisorsEnabled.clusterInstallationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerObj, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer.Append(supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerObj, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.backupSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, provisionerObj, awsClient, instanceID, logger))
+		multiDoer.Append(supervisor.NewBackupSupervisor(sqlStore, provisionerObj, awsClient, instanceID, logger))
 	}
 	if supervisorsEnabled.importSupervisor {
 		if flags.awatAddress == "" {
 			return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 		}
-		multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(flags.awatAddress), sqlStore, provisionerObj, eventsProducer, logger))
+		multiDoer.Append(supervisor.NewImportSupervisor(awsClient, awat.NewClient(flags.awatAddress), sqlStore, provisionerObj, eventsProducer, logger))
 	}
 	if supervisorsEnabled.installationDBRestorationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, provisionerObj, eventsProducer, instanceID, logger))
+		multiDoer.Append(supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, provisionerObj, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationDBMigrationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerObj, eventsProducer, logger))
+		multiDoer.Append(supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerObj, eventsProducer, logger))
 	}
 
 	// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -382,8 +382,8 @@ func executeServerCmd(flags serverFlags) error {
 		logger.WithField("slow-poll", flags.slowPoll).Info("Slow scheduler is disabled")
 	}
 	if supervisorsEnabled.installationDeletionSupervisor {
-		var slowMultiDoer supervisor.MultiDoer
-		slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, flags.installationDeletionPendingTime, flags.installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
+		slowMultiDoer := supervisor.NewMultiDoer(logger)
+		slowMultiDoer.Append(supervisor.NewInstallationDeletionSupervisor(instanceID, flags.installationDeletionPendingTime, flags.installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
 		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(flags.slowPoll)*time.Second, logger)
 		defer slowSupervisor.Close()
 	}
