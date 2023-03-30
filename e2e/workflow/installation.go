@@ -117,6 +117,7 @@ func (w *InstallationSuite) GetCI(ctx context.Context) error {
 	return nil
 }
 
+// CheckClusterInstallationStatus checks if ClusterInstallation is in a good condition.
 func (w *InstallationSuite) CheckClusterInstallationStatus(ctx context.Context) error {
 	return pkg.WaitForClusterInstallationReadyStatus(w.client, w.Meta.ClusterInstallationID, w.logger)
 }
