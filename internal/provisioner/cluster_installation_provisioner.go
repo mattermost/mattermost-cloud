@@ -538,7 +538,6 @@ func (provisioner Provisioner) GetClusterInstallationStatus(cluster *model.Clust
 			return nil, errors.Wrap(err, "failed to query mattermost deployment")
 		}
 
-		status.InstallationFound = false
 		return &status, nil
 	}
 
