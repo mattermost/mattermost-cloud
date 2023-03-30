@@ -326,7 +326,7 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 	wait := 600 // seconds
 	logger.Infof("Waiting up to %d seconds for EKS NodeGroup %s to become active...", wait, ngChangeRequest.Name)
 
-	_, err = c.WaitForActiveEKSNodeGroup(clusterName, ngChangeRequest.Name, wait)
+	_, err = c.WaitForActiveEKSNodeGroup(eksMetadata.Name, ngChangeRequest.Name, wait)
 	if err != nil {
 		return err
 	}
@@ -339,7 +339,7 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 	}
 
 	logger.Infof("Waiting up to %d seconds for EKS NodeGroup %s to be deleted...", wait, oldNodeGroupName)
-	err = c.WaitForEKSNodeGroupToBeDeleted(clusterName, oldNodeGroupName, wait)
+	err = c.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, oldNodeGroupName, wait)
 	if err != nil {
 		return err
 	}

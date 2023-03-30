@@ -54,8 +54,8 @@ type EKSMetadataRequestedState struct {
 	NodeGroups     map[string]NodeGroupMetadata `json:"NodeGroups,omitempty"`
 }
 
-// CopyEmptyFieldsFrom copy empty fields from the given NodeGroupMetadata to the current metadata.
-func (ng *NodeGroupMetadata) CopyEmptyFieldsFrom(other NodeGroupMetadata) {
+// CopyMissingFieldsFrom copy empty fields from the given NodeGroupMetadata to the current metadata.
+func (ng *NodeGroupMetadata) CopyMissingFieldsFrom(other NodeGroupMetadata) {
 	if len(ng.Type) == 0 {
 		ng.Type = other.Type
 	}

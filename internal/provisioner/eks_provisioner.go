@@ -417,7 +417,7 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 				logger.Debugf("Migrating EKS NodeGroup for %s", ngPrefix)
 
 				oldMetadata := eksMetadata.NodeGroups[ngPrefix]
-				ngMetadata.CopyEmptyFieldsFrom(oldMetadata)
+				ngMetadata.CopyMissingFieldsFrom(oldMetadata)
 				changeRequest.NodeGroups[ngPrefix] = ngMetadata
 
 				err = provisioner.prepareLaunchTemplate(cluster, ngPrefix, ngMetadata.WithSecurityGroup, logger)
@@ -547,7 +547,7 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 			logger.Debugf("Migrating EKS NodeGroup for %s", ngPrefix)
 
 			oldMetadata := eksMetadata.NodeGroups[ngPrefix]
-			ngMetadata.CopyEmptyFieldsFrom(oldMetadata)
+			ngMetadata.CopyMissingFieldsFrom(oldMetadata)
 			changeRequest.NodeGroups[ngPrefix] = ngMetadata
 
 			oldEKSNodeGroup, err2 := provisioner.awsClient.GetActiveEKSNodeGroup(eksMetadata.Name, oldMetadata.Name)

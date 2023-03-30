@@ -185,7 +185,7 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 	userData := getLaunchTemplateUserData(eksCluster, data)
 	encodedUserData := base64.StdEncoding.EncodeToString([]byte(userData))
 
-	launchTemplateOutput, err := a.Service().ec2.CreateLaunchTemplate(context.TODO(), &ec2.CreateLaunchTemplateInput{
+	launchTemplate, err := a.Service().ec2.CreateLaunchTemplate(context.TODO(), &ec2.CreateLaunchTemplateInput{
 		LaunchTemplateData: &ec2Types.RequestLaunchTemplateData{
 			ImageId:          aws.String(data.AMI),
 			UserData:         aws.String(encodedUserData),
@@ -201,7 +201,7 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 		return errors.Wrap(err, "failed to create eks launch template")
 	}
 
-	if launchTemplateOutput == nil || launchTemplateOutput.LaunchTemplate == nil {
+	if launchTemplate == nil || launchTemplate.LaunchTemplate == nil {
 		return errors.New("failed to create eks launch template")
 	}
 
