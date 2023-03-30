@@ -40,7 +40,7 @@ type AWS interface {
 	ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error
 	AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error
 	DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error
-	GetSecurityGroups(cluster *model.Cluster, ngNames string, vpcID string, logger log.FieldLogger) ([]string, error)
+	ClaimSecurityGroups(cluster *model.Cluster, ngNames string, vpcID string, logger log.FieldLogger) ([]string, error)
 
 	GetPrivateZoneDomainName(logger log.FieldLogger) (string, error)
 

@@ -206,7 +206,7 @@ func (provisioner *EKSProvisioner) prepareLaunchTemplate(cluster *model.Cluster,
 		if vpc == "" {
 			vpc = eksMetadata.VPC
 		}
-		securityGroups, err = provisioner.awsClient.GetSecurityGroups(cluster, ngPrefix, vpc, logger)
+		securityGroups, err = provisioner.awsClient.ClaimSecurityGroups(cluster, ngPrefix, vpc, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to get security groups")
 		}

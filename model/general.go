@@ -15,11 +15,3 @@ const (
 	// NonApplicableState represents constant use for StateChangeEvents when resource did not have a previous state.
 	NonApplicableState = "n/a"
 )
-
-type LaunchTemplateData struct {
-	Name           string
-	ClusterName    string
-	AMI            string
-	MaxPodsPerNode int64
-	SecurityGroups []string
-}

@@ -416,7 +416,7 @@ type mockAWS struct{}
 
 var _ aws.AWS = (*mockAWS)(nil)
 
-func (a *mockAWS) GetSecurityGroups(cluster *model.Cluster, ngNames string, vpcID string, logger log.FieldLogger) ([]string, error) {
+func (a *mockAWS) ClaimSecurityGroups(cluster *model.Cluster, ngNames string, vpcID string, logger log.FieldLogger) ([]string, error) {
 	return []string{}, nil
 }
 

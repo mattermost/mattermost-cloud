@@ -230,7 +230,7 @@ func (a *Client) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, lo
 	return clusterResources, nil
 }
 
-func (a *Client) GetSecurityGroups(cluster *model.Cluster, nodeGroup string, vpcID string, logger log.FieldLogger) ([]string, error) {
+func (a *Client) ClaimSecurityGroups(cluster *model.Cluster, nodeGroup string, vpcID string, logger log.FieldLogger) ([]string, error) {
 
 	baseFilter := []ec2Types.Filter{
 		{

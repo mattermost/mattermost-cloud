@@ -141,19 +141,19 @@ func (mr *MockAWSMockRecorder) DetachPolicyFromRole(roleName, policyName, logger
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachPolicyFromRole", reflect.TypeOf((*MockAWS)(nil).DetachPolicyFromRole), roleName, policyName, logger)
 }
 
-// GetSecurityGroups mocks base method
-func (m *MockAWS) GetSecurityGroups(cluster *model.Cluster, ngNames, vpcID string, logger logrus.FieldLogger) ([]string, error) {
+// ClaimSecurityGroups mocks base method
+func (m *MockAWS) ClaimSecurityGroups(cluster *model.Cluster, ngNames, vpcID string, logger logrus.FieldLogger) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSecurityGroups", cluster, ngNames, vpcID, logger)
+	ret := m.ctrl.Call(m, "ClaimSecurityGroups", cluster, ngNames, vpcID, logger)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetSecurityGroups indicates an expected call of GetSecurityGroups
-func (mr *MockAWSMockRecorder) GetSecurityGroups(cluster, ngNames, vpcID, logger interface{}) *gomock.Call {
+// ClaimSecurityGroups indicates an expected call of ClaimSecurityGroups
+func (mr *MockAWSMockRecorder) ClaimSecurityGroups(cluster, ngNames, vpcID, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroups", reflect.TypeOf((*MockAWS)(nil).GetSecurityGroups), cluster, ngNames, vpcID, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimSecurityGroups", reflect.TypeOf((*MockAWS)(nil).ClaimSecurityGroups), cluster, ngNames, vpcID, logger)
 }
 
 // GetPrivateZoneDomainName mocks base method
