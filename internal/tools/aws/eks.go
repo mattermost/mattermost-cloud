@@ -305,14 +305,6 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	changeRequest := eksMetadata.ChangeRequest
 
-	if eksMetadata.ChangeRequest == nil {
-		return errors.New("change request is nil")
-	}
-
-	if changeRequest.NodeGroups == nil {
-		return errors.New("nodegroups are nil")
-	}
-
 	ngChangeRequest, found := changeRequest.NodeGroups[ngPrefix]
 	if !found {
 		return errors.Errorf("nodegroup meta for %s not found in change request", ngPrefix)
@@ -322,63 +314,11 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 
 	oldNodeGroupMeta := eksMetadata.NodeGroups[ngPrefix]
 	oldNodeGroupName := oldNodeGroupMeta.Name
-	oldNodeGroup, err := c.getEKSNodeGroup(clusterName, oldNodeGroupName)
-	if err != nil {
-		return errors.Wrapf(err, "failed to describe EKS NodeGroup %s", oldNodeGroupName)
-	}
-
-	if oldNodeGroup == nil {
-		return errors.Errorf("EKS NodeGroup %s does not exist", oldNodeGroupName)
-	}
-
-	if oldNodeGroup.Status != eksTypes.NodegroupStatusActive {
-		return errors.Errorf("EKS NodeGroup %s is not active", oldNodeGroupName)
-	}
-
-	var isUpdateRequired bool
-
-	if changeRequest.MaxPodsPerNode > 0 || changeRequest.AMI != "" {
-		isUpdateRequired = true
-	}
-
-	if ngChangeRequest.InstanceType != "" {
-		if oldNodeGroup.InstanceTypes != nil && len(oldNodeGroup.InstanceTypes) > 0 &&
-			oldNodeGroup.InstanceTypes[0] != ngChangeRequest.InstanceType {
-			isUpdateRequired = true
-		}
-	} else {
-		ngChangeRequest.InstanceType = oldNodeGroupMeta.InstanceType
-	}
-
-	scalingInfo := oldNodeGroup.ScalingConfig
-	if ngChangeRequest.MinCount != 0 {
-		if *scalingInfo.MinSize != int32(ngChangeRequest.MinCount) {
-			isUpdateRequired = true
-		}
-	} else {
-		ngChangeRequest.MinCount = oldNodeGroupMeta.MinCount
-	}
-
-	if ngChangeRequest.MaxCount != 0 {
-		if *scalingInfo.MaxSize != int32(ngChangeRequest.MaxCount) {
-			isUpdateRequired = true
-		}
-	} else {
-		ngChangeRequest.MaxCount = oldNodeGroupMeta.MaxCount
-	}
-
-	ngChangeRequest.WithPublicSubnet = oldNodeGroupMeta.WithPublicSubnet
-
-	if !isUpdateRequired {
-		return nil
-	}
-
-	changeRequest.NodeGroups[ngPrefix] = ngChangeRequest
 
 	changeRequest.VPC = eksMetadata.VPC
 	changeRequest.NodeRoleARN = eksMetadata.NodeRoleARN
 
-	_, err = c.createEKSNodeGroup(cluster, ngPrefix)
+	_, err := c.createEKSNodeGroup(cluster, ngPrefix)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create a new EKS NodeGroup %s", ngChangeRequest.Name)
 	}
@@ -386,7 +326,7 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 	wait := 600 // seconds
 	logger.Infof("Waiting up to %d seconds for EKS NodeGroup %s to become active...", wait, ngChangeRequest.Name)
 
-	_, err = c.WaitForActiveEKSNodeGroup(eksMetadata.Name, ngChangeRequest.Name, wait)
+	_, err = c.WaitForActiveEKSNodeGroup(clusterName, ngChangeRequest.Name, wait)
 	if err != nil {
 		return err
 	}
@@ -399,7 +339,7 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 	}
 
 	logger.Infof("Waiting up to %d seconds for EKS NodeGroup %s to be deleted...", wait, oldNodeGroupName)
-	err = c.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, oldNodeGroupName, wait)
+	err = c.WaitForEKSNodeGroupToBeDeleted(clusterName, oldNodeGroupName, wait)
 	if err != nil {
 		return err
 	}

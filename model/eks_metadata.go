@@ -34,6 +34,7 @@ type EKSMetadata struct {
 // NodeGroupMetadata is the metadata of an instance group.
 type NodeGroupMetadata struct {
 	Name              string
+	Type              string `json:"Type,omitempty"`
 	InstanceType      string `json:"InstanceType,omitempty"`
 	MinCount          int64  `json:"MinCount,omitempty"`
 	MaxCount          int64  `json:"MaxCount,omitempty"`
@@ -51,6 +52,28 @@ type EKSMetadataRequestedState struct {
 	ClusterRoleARN string                       `json:"ClusterRoleARN,omitempty"`
 	NodeRoleARN    string                       `json:"NodeRoleARN,omitempty"`
 	NodeGroups     map[string]NodeGroupMetadata `json:"NodeGroups,omitempty"`
+}
+
+// CopyEmptyFieldsFrom copy empty fields from the given NodeGroupMetadata to the current metadata.
+func (ng *NodeGroupMetadata) CopyEmptyFieldsFrom(other NodeGroupMetadata) {
+	if len(ng.Type) == 0 {
+		ng.Type = other.Type
+	}
+	if ng.InstanceType == "" {
+		ng.InstanceType = other.InstanceType
+	}
+	if ng.MinCount == 0 {
+		ng.MinCount = other.MinCount
+	}
+	if ng.MaxCount == 0 {
+		ng.MaxCount = other.MaxCount
+	}
+	if !ng.WithPublicSubnet {
+		ng.WithPublicSubnet = other.WithPublicSubnet
+	}
+	if !ng.WithSecurityGroup {
+		ng.WithSecurityGroup = other.WithSecurityGroup
+	}
 }
 
 func (em *EKSMetadata) ApplyClusterCreateRequest(createRequest *CreateClusterRequest) bool {
@@ -92,6 +115,7 @@ func (em *EKSMetadata) ApplyClusterCreateRequest(createRequest *CreateClusterReq
 	for name, ng := range nodeGroups {
 		em.ChangeRequest.NodeGroups[name] = NodeGroupMetadata{
 			Name:              fmt.Sprintf("%s-%s", name, NewNodeGroupSuffix()),
+			Type:              name,
 			InstanceType:      ng.InstanceType,
 			MinCount:          ng.MinCount,
 			MaxCount:          ng.MaxCount,

@@ -168,21 +168,13 @@ func (a *Client) getLaunchTemplate(launchTemplateName string) (*ec2Types.LaunchT
 		}
 	}
 
+	a.logger.Debugf("Launch template %s does not exist", launchTemplateName)
 	return nil, nil
 }
 
-func (a *Client) EnsureLaunchTemplate(data *model.LaunchTemplateData) error {
+func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 	if data == nil {
 		return errors.New("launch template data is nil")
-	}
-
-	launchTemplate, err := a.getLaunchTemplate(data.Name)
-	if err != nil {
-		return errors.Wrap(err, "failed to get launch template")
-	}
-
-	if launchTemplate != nil {
-		return nil
 	}
 
 	eksCluster, err := a.getEKSCluster(data.ClusterName)
@@ -195,13 +187,17 @@ func (a *Client) EnsureLaunchTemplate(data *model.LaunchTemplateData) error {
 
 	launchTemplateOutput, err := a.Service().ec2.CreateLaunchTemplate(context.TODO(), &ec2.CreateLaunchTemplateInput{
 		LaunchTemplateData: &ec2Types.RequestLaunchTemplateData{
-			ImageId:        aws.String(data.AMI),
-			UserData:       aws.String(encodedUserData),
-			SecurityGroups: data.SecurityGroups,
+			ImageId:          aws.String(data.AMI),
+			UserData:         aws.String(encodedUserData),
+			SecurityGroupIds: data.SecurityGroups,
 		},
 		LaunchTemplateName: aws.String(data.Name),
 	})
 	if err != nil {
+		if IsErrorCode(err, "InvalidLaunchTemplateName.AlreadyExistsException") {
+			a.logger.Debugf("Launch template %s already exists", data.Name)
+			return nil
+		}
 		return errors.Wrap(err, "failed to create eks launch template")
 	}
 
@@ -212,7 +208,7 @@ func (a *Client) EnsureLaunchTemplate(data *model.LaunchTemplateData) error {
 	return nil
 }
 
-func (a *Client) EnsureLaunchTemplateUpdated(data *model.LaunchTemplateData) error {
+func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 	if data == nil {
 		return errors.New("launch template data is nil")
 	}
@@ -227,13 +223,16 @@ func (a *Client) EnsureLaunchTemplateUpdated(data *model.LaunchTemplateData) err
 
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplateVersion(context.TODO(), &ec2.CreateLaunchTemplateVersionInput{
 		LaunchTemplateData: &ec2Types.RequestLaunchTemplateData{
-			ImageId:        aws.String(data.AMI),
-			UserData:       aws.String(encodedUserData),
-			SecurityGroups: data.SecurityGroups,
+			ImageId:          aws.String(data.AMI),
+			UserData:         aws.String(encodedUserData),
+			SecurityGroupIds: data.SecurityGroups,
 		},
 		LaunchTemplateName: aws.String(data.Name),
 	})
 	if err != nil {
+		if IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
+			return a.CreateLaunchTemplate(data)
+		}
 		return errors.Wrap(err, "failed to create eks launch template version")
 	}
 
@@ -244,13 +243,14 @@ func (a *Client) EnsureLaunchTemplateUpdated(data *model.LaunchTemplateData) err
 	return nil
 }
 
-func (a *Client) EnsureLaunchTemplateDeleted(launchTemplateName string) error {
+func (a *Client) DeleteLaunchTemplate(launchTemplateName string) error {
 	launchTemplate, err := a.getLaunchTemplate(launchTemplateName)
 	if err != nil {
 		return err
 	}
 
 	if launchTemplate == nil {
+		a.logger.Debugf("launch template %s not found, assuming deleted", launchTemplateName)
 		return nil
 	}
 
@@ -258,6 +258,10 @@ func (a *Client) EnsureLaunchTemplateDeleted(launchTemplateName string) error {
 		LaunchTemplateId: launchTemplate.LaunchTemplateId,
 	})
 	if err != nil {
+		if IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
+			a.logger.Debugf("launch template %s not found, assuming deleted", launchTemplateName)
+			return nil
+		}
 		return errors.Wrap(err, "failed to delete eks launch template")
 	}
 

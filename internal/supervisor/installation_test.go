@@ -416,7 +416,7 @@ type mockAWS struct{}
 
 var _ aws.AWS = (*mockAWS)(nil)
 
-func (a *mockAWS) GetSecurityGroups(vpcID string, ngNames string, cluster *model.Cluster, logger log.FieldLogger) ([]string, error) {
+func (a *mockAWS) GetSecurityGroups(cluster *model.Cluster, ngNames string, vpcID string, logger log.FieldLogger) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -460,11 +460,11 @@ func (a *mockAWS) GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, er
 	return &eksTypes.Cluster{}, nil
 }
 
-func (a *mockAWS) EnsureLaunchTemplateUpdated(data *model.LaunchTemplateData) error {
+func (a *mockAWS) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 	return nil
 }
 
-func (a *mockAWS) EnsureLaunchTemplate(data *model.LaunchTemplateData) error {
+func (a *mockAWS) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 	return nil
 }
 
@@ -472,7 +472,7 @@ func (a *mockAWS) IsLaunchTemplateAvailable(launchTemplateName string) (bool, er
 	return true, nil
 }
 
-func (a *mockAWS) EnsureLaunchTemplateDeleted(clusterName string) error {
+func (a *mockAWS) DeleteLaunchTemplate(clusterName string) error {
 	return nil
 }
 
