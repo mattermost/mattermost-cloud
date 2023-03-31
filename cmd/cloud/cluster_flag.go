@@ -20,17 +20,20 @@ func (flags *clusterFlags) addFlags(command *cobra.Command) {
 }
 
 type createRequestOptions struct {
-	provider           string
-	version            string
-	ami                string
-	zones              string
-	allowInstallations bool
-	annotations        []string
-	networking         string
-	vpc                string
-	clusterRoleARN     string
-	nodeRoleARN        string
-	useEKS             bool
+	provider                    string
+	version                     string
+	ami                         string
+	zones                       string
+	allowInstallations          bool
+	annotations                 []string
+	networking                  string
+	vpc                         string
+	clusterRoleARN              string
+	nodeRoleARN                 string
+	useEKS                      bool
+	additionalNodegroups        map[string]string
+	nodegroupsWithPublicSubnet  []string
+	nodegroupsWithSecurityGroup []string
 }
 
 func (flags *createRequestOptions) addFlags(command *cobra.Command) {
@@ -46,6 +49,9 @@ func (flags *createRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.clusterRoleARN, "cluster-role-arn", "", "AWS role ARN for cluster.")
 	command.Flags().StringVar(&flags.nodeRoleARN, "node-role-arn", "", "AWS role ARN for node.")
 	command.Flags().BoolVar(&flags.useEKS, "eks", false, "Create EKS cluster.")
+	command.Flags().StringToStringVar(&flags.additionalNodegroups, "additional-nodegroups", nil, "Additional nodegroups to create. The key is the name of the nodegroup and the value is the size constant.")
+	command.Flags().StringSliceVar(&flags.nodegroupsWithPublicSubnet, "nodegroups-with-public-subnet", nil, "Nodegroups to create with public subnet. The value is the name of the nodegroup.")
+	command.Flags().StringSliceVar(&flags.nodegroupsWithSecurityGroup, "nodegroups-with-sg", nil, "Nodegroups to create with dedicated security group. The value is the name of the nodegroup.")
 }
 
 type utilityFlags struct {
@@ -116,7 +122,7 @@ type sizeOptions struct {
 }
 
 func (flags *sizeOptions) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.size, "size", "SizeAlef500", "The size constant describing the cluster")
+	command.Flags().StringVar(&flags.size, "size", "SizeAlef500", "The size constant describing the master & worker nodegroups.")
 	command.Flags().StringVar(&flags.masterInstanceType, "size-master-instance-type", "", "The instance type describing the k8s master nodes. Overwrites value from 'size'.")
 	command.Flags().Int64Var(&flags.masterCount, "size-master-count", 0, "The number of k8s master nodes. Overwrites value from 'size'.")
 	command.Flags().StringVar(&flags.nodeInstanceType, "size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
@@ -230,6 +236,7 @@ type clusterResizeFlags struct {
 	nodeInstanceType string
 	nodeMinCount     int64
 	nodeMaxCount     int64
+	nodegroups       []string
 }
 
 func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
@@ -240,6 +247,7 @@ func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.nodeInstanceType, "size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
 	command.Flags().Int64Var(&flags.nodeMinCount, "size-node-min-count", 0, "The minimum number of k8s worker nodes. Overwrites value from 'size'.")
 	command.Flags().Int64Var(&flags.nodeMaxCount, "size-node-max-count", 0, "The maximum number of k8s worker nodes. Overwrites value from 'size'.")
+	command.Flags().StringSliceVar(&flags.nodegroups, "nodegroups", nil, "The list of nodegroups to resize. Must specify if the cluster has multiple nodegroups.")
 
 	_ = command.MarkFlagRequired("cluster")
 }
