@@ -39,3 +39,8 @@ func ClusterNewID() string {
 	}
 	return strID
 }
+
+// NewNodeGroupSuffix is a globally unique identifier for nodegroup ID which start with a letter.  It is a [a-z0-9] string 6
+func NewNodeGroupSuffix() string {
+	return NewID()[:6]
+}

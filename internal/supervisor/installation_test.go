@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/store"
@@ -437,7 +436,7 @@ func (a *mockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Upd
 	return nil, nil
 }
 
-func (a *mockAWS) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
+func (a *mockAWS) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix string) error {
 	return nil
 }
 
@@ -457,12 +456,12 @@ func (a *mockAWS) GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, er
 	return &eksTypes.Cluster{}, nil
 }
 
-func (a *mockAWS) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error) {
-	return ptr.Int64(2), nil
+func (a *mockAWS) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
+	return "$Latest", nil
 }
 
-func (a *mockAWS) EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error) {
-	return ptr.Int64(1), nil
+func (a *mockAWS) EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
+	return "$Latest", nil
 }
 
 func (a *mockAWS) EnsureLaunchTemplateDeleted(clusterName string) error {
@@ -494,7 +493,7 @@ func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.Cluster
 	return &eksTypes.Cluster{}, nil
 }
 
-func (a *mockAWS) EnsureEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
+func (a *mockAWS) EnsureEKSNodeGroup(cluster *model.Cluster, nodeGroupPrefix string) (*eksTypes.Nodegroup, error) {
 	return &eksTypes.Nodegroup{}, nil
 }
 
