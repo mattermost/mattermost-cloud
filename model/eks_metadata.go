@@ -18,40 +18,62 @@ const (
 
 // EKSMetadata is metadata for EKS cluster and node groups.
 type EKSMetadata struct {
-	Name                  string
-	Version               string
-	AMI                   string
-	VPC                   string
-	Networking            string
-	ClusterRoleARN        string
-	NodeRoleARN           string
-	MaxPodsPerNode        int64
-	NodeGroups            map[string]NodeGroupMetadata
-	ChangeRequest         *EKSMetadataRequestedState `json:"ChangeRequest,omitempty"`
-	Warnings              []string                   `json:"Warnings,omitempty"`
-	LaunchTemplateVersion *string
+	Name           string
+	Version        string
+	AMI            string
+	VPC            string
+	Networking     string
+	ClusterRoleARN string
+	NodeRoleARN    string
+	MaxPodsPerNode int64
+	NodeGroups     map[string]NodeGroupMetadata
+	ChangeRequest  *EKSMetadataRequestedState `json:"ChangeRequest,omitempty"`
+	Warnings       []string                   `json:"Warnings,omitempty"`
 }
 
 // NodeGroupMetadata is the metadata of an instance group.
 type NodeGroupMetadata struct {
-	Name             string
-	InstanceType     string `json:"InstanceType,omitempty"`
-	MinCount         int64  `json:"MinCount,omitempty"`
-	MaxCount         int64  `json:"MaxCount,omitempty"`
-	WithPublicSubnet bool   `json:"WithPublicSubnet,omitempty"`
+	Name              string
+	Type              string `json:"Type,omitempty"`
+	InstanceType      string `json:"InstanceType,omitempty"`
+	MinCount          int64  `json:"MinCount,omitempty"`
+	MaxCount          int64  `json:"MaxCount,omitempty"`
+	WithPublicSubnet  bool   `json:"WithPublicSubnet,omitempty"`
+	WithSecurityGroup bool   `json:"WithSecurityGroup,omitempty"`
 }
 
 // EKSMetadataRequestedState is the requested state for eks metadata.
 type EKSMetadataRequestedState struct {
-	Version               string                       `json:"Version,omitempty"`
-	AMI                   string                       `json:"AMI,omitempty"`
-	MaxPodsPerNode        int64                        `json:"MaxPodsPerNode,omitempty"`
-	Networking            string                       `json:"Networking,omitempty"`
-	VPC                   string                       `json:"VPC,omitempty"`
-	ClusterRoleARN        string                       `json:"ClusterRoleARN,omitempty"`
-	NodeRoleARN           string                       `json:"NodeRoleARN,omitempty"`
-	LaunchTemplateVersion *string                      `json:"LaunchTemplateVersion,omitempty"`
-	NodeGroups            map[string]NodeGroupMetadata `json:"NodeGroups,omitempty"`
+	Version        string                       `json:"Version,omitempty"`
+	AMI            string                       `json:"AMI,omitempty"`
+	MaxPodsPerNode int64                        `json:"MaxPodsPerNode,omitempty"`
+	Networking     string                       `json:"Networking,omitempty"`
+	VPC            string                       `json:"VPC,omitempty"`
+	ClusterRoleARN string                       `json:"ClusterRoleARN,omitempty"`
+	NodeRoleARN    string                       `json:"NodeRoleARN,omitempty"`
+	NodeGroups     map[string]NodeGroupMetadata `json:"NodeGroups,omitempty"`
+}
+
+// CopyMissingFieldsFrom copy empty fields from the given NodeGroupMetadata to the current metadata.
+func (ng *NodeGroupMetadata) CopyMissingFieldsFrom(other NodeGroupMetadata) {
+	if len(ng.Type) == 0 {
+		ng.Type = other.Type
+	}
+	if ng.InstanceType == "" {
+		ng.InstanceType = other.InstanceType
+	}
+	if ng.MinCount == 0 {
+		ng.MinCount = other.MinCount
+	}
+	if ng.MaxCount == 0 {
+		ng.MaxCount = other.MaxCount
+	}
+	if !ng.WithPublicSubnet {
+		ng.WithPublicSubnet = other.WithPublicSubnet
+	}
+	if !ng.WithSecurityGroup {
+		ng.WithSecurityGroup = other.WithSecurityGroup
+	}
 }
 
 func (em *EKSMetadata) ApplyClusterCreateRequest(createRequest *CreateClusterRequest) bool {
@@ -84,13 +106,21 @@ func (em *EKSMetadata) ApplyClusterCreateRequest(createRequest *CreateClusterReq
 		nodeGroups[ng] = nodeGroup
 	}
 
+	for _, ng := range createRequest.NodeGroupWithSecurityGroup {
+		nodeGroup := nodeGroups[ng]
+		nodeGroup.WithSecurityGroup = true
+		nodeGroups[ng] = nodeGroup
+	}
+
 	for name, ng := range nodeGroups {
 		em.ChangeRequest.NodeGroups[name] = NodeGroupMetadata{
-			Name:             fmt.Sprintf("%s-%s", name, NewNodeGroupSuffix()),
-			InstanceType:     ng.InstanceType,
-			MinCount:         ng.MinCount,
-			MaxCount:         ng.MaxCount,
-			WithPublicSubnet: ng.WithPublicSubnet,
+			Name:              fmt.Sprintf("%s-%s", name, NewNodeGroupSuffix()),
+			Type:              name,
+			InstanceType:      ng.InstanceType,
+			MinCount:          ng.MinCount,
+			MaxCount:          ng.MaxCount,
+			WithPublicSubnet:  ng.WithPublicSubnet,
+			WithSecurityGroup: ng.WithSecurityGroup,
 		}
 	}
 

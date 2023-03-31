@@ -40,6 +40,7 @@ type AWS interface {
 	ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error
 	AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error
 	DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error
+	ClaimSecurityGroups(cluster *model.Cluster, ngNames string, vpcID string, logger log.FieldLogger) ([]string, error)
 
 	GetPrivateZoneDomainName(logger log.FieldLogger) (string, error)
 
@@ -80,9 +81,10 @@ type AWS interface {
 	WaitForEKSClusterToBeDeleted(clusterName string, timeout int) error
 	WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID string, timeout int) error
 
-	EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error)
-	UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error)
-	EnsureLaunchTemplateDeleted(clusterName string) error
+	CreateLaunchTemplate(data *model.LaunchTemplateData) error
+	IsLaunchTemplateAvailable(launchTemplateName string) (bool, error)
+	UpdateLaunchTemplate(data *model.LaunchTemplateData) error
+	DeleteLaunchTemplate(launchTemplateName string) error
 
 	GetRegion() string
 	GetAccountID() (string, error)

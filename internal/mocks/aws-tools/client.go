@@ -141,6 +141,21 @@ func (mr *MockAWSMockRecorder) DetachPolicyFromRole(roleName, policyName, logger
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachPolicyFromRole", reflect.TypeOf((*MockAWS)(nil).DetachPolicyFromRole), roleName, policyName, logger)
 }
 
+// ClaimSecurityGroups mocks base method
+func (m *MockAWS) ClaimSecurityGroups(cluster *model.Cluster, ngNames, vpcID string, logger logrus.FieldLogger) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClaimSecurityGroups", cluster, ngNames, vpcID, logger)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClaimSecurityGroups indicates an expected call of ClaimSecurityGroups
+func (mr *MockAWSMockRecorder) ClaimSecurityGroups(cluster, ngNames, vpcID, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimSecurityGroups", reflect.TypeOf((*MockAWS)(nil).ClaimSecurityGroups), cluster, ngNames, vpcID, logger)
+}
+
 // GetPrivateZoneDomainName mocks base method
 func (m *MockAWS) GetPrivateZoneDomainName(logger logrus.FieldLogger) (string, error) {
 	m.ctrl.T.Helper()
@@ -589,48 +604,61 @@ func (mr *MockAWSMockRecorder) WaitForEKSClusterUpdateToBeCompleted(clusterName,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForEKSClusterUpdateToBeCompleted", reflect.TypeOf((*MockAWS)(nil).WaitForEKSClusterUpdateToBeCompleted), clusterName, updateID, timeout)
 }
 
-// EnsureLaunchTemplate mocks base method
-func (m *MockAWS) EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
+// CreateLaunchTemplate mocks base method
+func (m *MockAWS) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureLaunchTemplate", clusterName, eksMetadata)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnsureLaunchTemplate indicates an expected call of EnsureLaunchTemplate
-func (mr *MockAWSMockRecorder) EnsureLaunchTemplate(clusterName, eksMetadata interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLaunchTemplate", reflect.TypeOf((*MockAWS)(nil).EnsureLaunchTemplate), clusterName, eksMetadata)
-}
-
-// UpdateLaunchTemplate mocks base method
-func (m *MockAWS) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateLaunchTemplate", clusterName, eksMetadata)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateLaunchTemplate indicates an expected call of UpdateLaunchTemplate
-func (mr *MockAWSMockRecorder) UpdateLaunchTemplate(clusterName, eksMetadata interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLaunchTemplate", reflect.TypeOf((*MockAWS)(nil).UpdateLaunchTemplate), clusterName, eksMetadata)
-}
-
-// EnsureLaunchTemplateDeleted mocks base method
-func (m *MockAWS) EnsureLaunchTemplateDeleted(clusterName string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureLaunchTemplateDeleted", clusterName)
+	ret := m.ctrl.Call(m, "CreateLaunchTemplate", data)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// EnsureLaunchTemplateDeleted indicates an expected call of EnsureLaunchTemplateDeleted
-func (mr *MockAWSMockRecorder) EnsureLaunchTemplateDeleted(clusterName interface{}) *gomock.Call {
+// CreateLaunchTemplate indicates an expected call of CreateLaunchTemplate
+func (mr *MockAWSMockRecorder) CreateLaunchTemplate(data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLaunchTemplateDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureLaunchTemplateDeleted), clusterName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLaunchTemplate", reflect.TypeOf((*MockAWS)(nil).CreateLaunchTemplate), data)
+}
+
+// IsLaunchTemplateAvailable mocks base method
+func (m *MockAWS) IsLaunchTemplateAvailable(launchTemplateName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsLaunchTemplateAvailable", launchTemplateName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsLaunchTemplateAvailable indicates an expected call of IsLaunchTemplateAvailable
+func (mr *MockAWSMockRecorder) IsLaunchTemplateAvailable(launchTemplateName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLaunchTemplateAvailable", reflect.TypeOf((*MockAWS)(nil).IsLaunchTemplateAvailable), launchTemplateName)
+}
+
+// UpdateLaunchTemplate mocks base method
+func (m *MockAWS) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLaunchTemplate", data)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateLaunchTemplate indicates an expected call of UpdateLaunchTemplate
+func (mr *MockAWSMockRecorder) UpdateLaunchTemplate(data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLaunchTemplate", reflect.TypeOf((*MockAWS)(nil).UpdateLaunchTemplate), data)
+}
+
+// DeleteLaunchTemplate mocks base method
+func (m *MockAWS) DeleteLaunchTemplate(launchTemplateName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteLaunchTemplate", launchTemplateName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteLaunchTemplate indicates an expected call of DeleteLaunchTemplate
+func (mr *MockAWSMockRecorder) DeleteLaunchTemplate(launchTemplateName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteLaunchTemplate", reflect.TypeOf((*MockAWS)(nil).DeleteLaunchTemplate), launchTemplateName)
 }
 
 // GetRegion mocks base method

@@ -120,17 +120,30 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		request.Provisioner = model.ProvisionerEKS
 		request.ClusterRoleARN = flags.clusterRoleARN
 		request.NodeRoleARN = flags.nodeRoleARN
-		request.NodeGroupWithPublicSubnet = flags.nodegroupWithPublicSubnet
+		request.NodeGroupWithPublicSubnet = flags.nodegroupsWithPublicSubnet
+		request.NodeGroupWithSecurityGroup = flags.nodegroupsWithSecurityGroup
 	}
 
-	if flags.additionalNodeGroups != nil {
-		if _, f := flags.additionalNodeGroups[model.NodeGroupWorker]; f {
+	if flags.additionalNodegroups != nil {
+		if _, f := flags.additionalNodegroups[model.NodeGroupWorker]; f {
 			return errors.New("worker nodegroup can only be specified with --size flag")
 		}
 	}
 
-	for _, ng := range flags.nodegroupWithPublicSubnet {
-		if _, f := flags.additionalNodeGroups[ng]; !f {
+	for _, ng := range flags.nodegroupsWithPublicSubnet {
+		if ng == model.NodeGroupWorker {
+			continue
+		}
+		if _, f := flags.additionalNodegroups[ng]; !f {
+			return fmt.Errorf("nodegroup %s not provided as additional nodegroups", ng)
+		}
+	}
+
+	for _, ng := range flags.nodegroupsWithSecurityGroup {
+		if ng == model.NodeGroupWorker {
+			continue
+		}
+		if _, f := flags.additionalNodegroups[ng]; !f {
 			return fmt.Errorf("nodegroup %s not provided as additional nodegroups", ng)
 		}
 	}
@@ -140,7 +153,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		return errors.Wrap(err, "failed to apply size values")
 	}
 
-	err = clusterdictionary.AddToCreateClusterRequest(flags.additionalNodeGroups, request)
+	err = clusterdictionary.AddToCreateClusterRequest(flags.additionalNodegroups, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to apply size values for additional nodegroups")
 	}
@@ -354,7 +367,7 @@ func executeClusterResizeCmd(flags clusterResizeFlags) error {
 
 	request := &model.PatchClusterSizeRequest{
 		RotatorConfig: &rotatorConfig,
-		NodeGroups:    flags.nodeGroups,
+		NodeGroups:    flags.nodegroups,
 	}
 
 	// Apply values from 'size' constant and then apply overrides.

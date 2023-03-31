@@ -230,6 +230,49 @@ func (a *Client) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, lo
 	return clusterResources, nil
 }
 
+func (a *Client) ClaimSecurityGroups(cluster *model.Cluster, nodeGroup string, vpcID string, logger log.FieldLogger) ([]string, error) {
+
+	baseFilter := []ec2Types.Filter{
+		{
+			Name:   aws.String("vpc-id"),
+			Values: []string{vpcID},
+		},
+	}
+
+	sgFilter := append(baseFilter, ec2Types.Filter{
+		Name:   aws.String("tag:NodeType"),
+		Values: []string{nodeGroup},
+	})
+
+	securityGroups, err := a.GetSecurityGroupsWithFilters(sgFilter)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get security groups")
+	}
+
+	var sgIDs []string
+	for _, securityGroup := range securityGroups {
+		sgIDs = append(sgIDs, *securityGroup.GroupId)
+	}
+
+	if len(sgIDs) == 0 {
+		return nil, fmt.Errorf("couldn't find security groups for %s", sgIDs)
+	}
+
+	for _, sg := range sgIDs {
+		err = a.TagResource(sg, fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster)), "shared", logger)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to tag subnet")
+		}
+
+		err = a.TagResource(sg, "KubernetesCluster", getClusterTag(cluster), logger)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to tag subnet")
+		}
+	}
+
+	return sgIDs, nil
+}
+
 // GetAndClaimVpcResources creates ClusterResources from an available VPC and
 // tags them appropriately.
 func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {
