@@ -9,6 +9,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/smithy-go/ptr"
@@ -520,6 +522,85 @@ func (provisioner Provisioner) getMattermostCustomResource(cluster *model.Cluste
 	}
 
 	return getMattermostCustomResource(clusterInstallation, configLocation, logger)
+}
+
+func (provisioner Provisioner) GetClusterInstallationStatus(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (*model.ClusterInstallationStatus, error) {
+	k8sClient, err := provisioner.k8sClient(cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kube client")
+	}
+
+	var status model.ClusterInstallationStatus
+
+	deployment, err := k8sClient.Clientset.AppsV1().Deployments(clusterInstallation.Namespace).Get(context.TODO(), makeClusterInstallationName(clusterInstallation), metav1.GetOptions{})
+	if err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return nil, errors.Wrap(err, "failed to query mattermost deployment")
+		}
+
+		return &status, nil
+	}
+
+	status.InstallationFound = true
+	status.Replicas = deployment.Spec.Replicas
+
+	if status.Replicas == nil || *status.Replicas == 0 {
+		return &status, nil
+	}
+
+	podList, err := k8sClient.Clientset.CoreV1().Pods(clusterInstallation.Namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "app=mattermost",
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query mattermost pods")
+	}
+
+	status.TotalPod = ptr.Int32(int32(len(podList.Items)))
+
+	args := []string{"./bin/mmctl", "--local", "system", "status", "--json"}
+
+	var podRunningCount int32
+	var podReadyCount int32
+	var podStartedCount int32
+	var mmctlSuccessCount = new(int32)
+	var wg sync.WaitGroup
+
+	for _, pod := range podList.Items {
+		if pod.Status.Phase == corev1.PodRunning {
+			podRunningCount++
+		}
+
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if containerStatus.Name == "mattermost" {
+				if containerStatus.Ready {
+					podReadyCount++
+				}
+				if containerStatus.Started != nil && *containerStatus.Started {
+					podStartedCount++
+
+					wg.Add(1)
+					go func(podName string) {
+						defer wg.Done()
+						_, execErr := execCLI(k8sClient, clusterInstallation.Namespace, podName, "mattermost", args...)
+						if execErr == nil {
+							atomic.AddInt32(mmctlSuccessCount, 1)
+						}
+					}(pod.Name)
+
+				}
+				break
+			}
+		}
+	}
+
+	wg.Wait()
+
+	status.RunningPod = &podRunningCount
+	status.ReadyPod = &podReadyCount
+	status.StartedPod = &podStartedCount
+	status.ReadyLocalServer = mmctlSuccessCount
+
+	return &status, nil
 }
 
 func deleteMMSecrets(ns string, mattermost *mmv1beta1.Mattermost, kubeClient *k8s.KubeClient, logger log.FieldLogger) error {

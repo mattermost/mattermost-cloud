@@ -35,6 +35,7 @@ func initClusterInstallation(apiRouter *mux.Router, context *Context) {
 	clusterInstallationRouter.Handle("/config", addContext(handleSetClusterInstallationConfig)).Methods("PUT")
 	clusterInstallationRouter.Handle("/exec/{command}", addContext(handleRunClusterInstallationExecCommand)).Methods("POST")
 	clusterInstallationRouter.Handle("/mattermost_cli", addContext(handleRunClusterInstallationMattermostCLI)).Methods("POST")
+	clusterInstallationRouter.Handle("/status", addContext(handleGetClusterInstallationStatus)).Methods("GET")
 }
 
 // handleGetClusterInstallations responds to GET /api/cluster_installations, returning the specified page of cluster installations.
@@ -649,6 +650,43 @@ func handleSwitchClusterRoles(c *Context, w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, migrateClusterInstallationResponse)
+}
+
+func handleGetClusterInstallationStatus(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterInstallationID := vars["cluster_installation"]
+	c.Logger = c.Logger.WithField("cluster_installation", clusterInstallationID)
+
+	clusterInstallation, err := c.Store.GetClusterInstallation(clusterInstallationID)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to get cluster installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if clusterInstallation == nil {
+		c.Logger.Error("Cluster installation not found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	cluster, err := c.Store.GetCluster(clusterInstallation.ClusterID)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to get cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	status, err := c.Provisioner.GetClusterInstallationStatus(cluster, clusterInstallation)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to get cluster installation status")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, status)
 }
 
 func getSourceAndTargetCluster(c *Context, request model.MigrateClusterInstallationRequest) (*model.Cluster, *model.Cluster, error) {

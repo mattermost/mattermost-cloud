@@ -31,9 +31,14 @@ func clusterLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuit
 			DependsOn: []string{"CreateInstallation"},
 		},
 		{
+			Name:      "CheckClusterInstallationStatus",
+			Func:      installationSuite.CheckClusterInstallationStatus,
+			DependsOn: []string{"GetCI"},
+		},
+		{
 			Name:      "PopulateSampleData",
 			Func:      installationSuite.PopulateSampleData,
-			DependsOn: []string{"GetCI"},
+			DependsOn: []string{"CheckClusterInstallationStatus"},
 		},
 		{
 			Name:              "ProvisionCluster",
