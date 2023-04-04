@@ -8,6 +8,7 @@ import (
 	"time"
 
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -176,6 +177,26 @@ func (flags *serverFlagChanged) addFlags(command *cobra.Command) {
 	flags.isKeepFileStoreDataChanged = command.Flags().Changed("keep-filestore-data")
 }
 
+type crossplaneOptions struct {
+	enableCrossplane      bool
+	k8sUseInClusterConfig bool
+	k8sKubeconfigPath     string
+}
+
+func (flags *crossplaneOptions) addFlags(command *cobra.Command) {
+	command.Flags().BoolVar(&flags.enableCrossplane, "enable-crossplane", false, "Whether to use Crossplane to provision resources.")
+	command.Flags().BoolVar(&flags.k8sUseInClusterConfig, "k8s-use-in-cluster-config", false, "Whether to use in-cluster config for k8s client.")
+	command.Flags().StringVar(&flags.k8sKubeconfigPath, "k8s-kubeconfig-path", "", "Path to kubeconfig file for k8s client.")
+	command.MarkFlagsMutuallyExclusive("k8s-use-in-cluster-config", "k8s-kubeconfig-path")
+}
+
+func (flags *crossplaneOptions) valid(command *cobra.Command) error {
+	if flags.enableCrossplane && !flags.k8sUseInClusterConfig && flags.k8sKubeconfigPath == "" {
+		return errors.New("k8s-kubeconfig-path or k8s-use-in-cluster-config is required when enable-crossplane is set to true")
+	}
+	return nil
+}
+
 type serverFlags struct {
 	supervisorOptions
 	schedulingOptions
@@ -184,6 +205,8 @@ type serverFlags struct {
 	installationOptions
 	dbUtilizationSettings
 	serverFlagChanged
+
+	crossplaneOptions
 
 	listen      string
 	metricsPort int
@@ -211,6 +234,7 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	flags.pgBouncerConfig.addFlags(command)
 	flags.installationOptions.addFlags(command)
 	flags.dbUtilizationSettings.addFlags(command)
+	flags.crossplaneOptions.addFlags(command)
 
 	command.Flags().StringVar(&flags.listen, "listen", ":8075", "The interface and port on which to listen.")
 	command.Flags().IntVar(&flags.metricsPort, "metrics-port", 8076, "Port on which the metrics server should be listening.")

@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package main
 
 import (
@@ -21,6 +25,7 @@ func (flags *clusterFlags) addFlags(command *cobra.Command) {
 
 type createRequestOptions struct {
 	provider                  string
+	provisioner               string
 	version                   string
 	ami                       string
 	zones                     string
@@ -30,7 +35,6 @@ type createRequestOptions struct {
 	vpc                       string
 	clusterRoleARN            string
 	nodeRoleARN               string
-	useEKS                    bool
 	additionalNodeGroups      map[string]string
 	nodegroupWithPublicSubnet []string
 }
@@ -45,9 +49,10 @@ func (flags *createRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.networking, "networking", "calico", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	command.Flags().StringVar(&flags.vpc, "vpc", "", "Set to use a shared VPC")
 
+	command.Flags().StringVar(&flags.provisioner, "provisioner", "kops", "Provisioner to create cluster with.")
+
 	command.Flags().StringVar(&flags.clusterRoleARN, "cluster-role-arn", "", "AWS role ARN for cluster.")
 	command.Flags().StringVar(&flags.nodeRoleARN, "node-role-arn", "", "AWS role ARN for node.")
-	command.Flags().BoolVar(&flags.useEKS, "eks", false, "Create EKS cluster.")
 	command.Flags().StringToStringVar(&flags.additionalNodeGroups, "additional-node-groups", nil, "Additional nodegroups to create. The key is the name of the nodegroup and the value is the size constant.")
 	command.Flags().StringSliceVar(&flags.nodegroupWithPublicSubnet, "nodegroup-with-public-subnet", nil, "Nodegroups to create with public subnet. The value is the name of the nodegroup.")
 }

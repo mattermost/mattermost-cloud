@@ -1,0 +1,33 @@
+apiVersion: cloud.mattermost.io/v1alpha1
+kind: mmK8s
+metadata:
+  name: b07c8248b874b3821af37d81d3
+spec:
+  compositionSelector:
+    matchLabels:
+      provider: aws
+      service: eks
+  id: b07c8248b874b3821af37d81d3
+  parameters:
+    version: "1.23"
+    account_id: "926412419614"
+    region: us-east-1
+    environment: dev
+    cluster_short_name: crossplane-test
+    endpoint_private_access: true
+    endpoint_public_access: false
+    vpc_id: vpc-09d44077df9934f96
+    subnet_ids:
+    - "subnet-0866bf0625a68488a"
+    - "subnet-0f74e2dfcdcdc18b2"
+    - "subnet-0e123b8281481294a"
+    - "subnet-0ccc5bf96d05d2a3a"
+    private_subnet_ids:
+    - "subnet-0e123b8281481294a"
+    - "subnet-0ccc5bf96d05d2a3a"
+    node_count: 1
+    instance_type: t3.large
+    image_id: ami-0bc89720a2e35652e
+    launch_template_version: "2"
+  resourceConfig:
+    providerConfigName: crossplane-provider-config

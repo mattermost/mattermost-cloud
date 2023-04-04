@@ -105,6 +105,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 
 	request := &model.CreateClusterRequest{
 		Provider:               flags.provider,
+		Provisioner:            flags.provisioner,
 		Version:                flags.version,
 		AMI:                    flags.ami,
 		Zones:                  strings.Split(flags.zones, ","),
@@ -113,11 +114,9 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		Annotations:            flags.annotations,
 		Networking:             flags.networking,
 		VPC:                    flags.vpc,
-		Provisioner:            model.ProvisionerKops,
 	}
 
-	if flags.useEKS {
-		request.Provisioner = model.ProvisionerEKS
+	if flags.provisioner == model.ProvisionerEKS {
 		request.ClusterRoleARN = flags.clusterRoleARN
 		request.NodeRoleARN = flags.nodeRoleARN
 		request.NodeGroupWithPublicSubnet = flags.nodegroupWithPublicSubnet
@@ -538,6 +537,10 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 			provisionerMetadata = cluster.ProvisionerMetadataKops.GetCommonMetadata()
 			masterCount = cluster.ProvisionerMetadataKops.MasterCount
 			masterInstanceType = cluster.ProvisionerMetadataKops.MasterInstanceType
+		} else if cluster.Provisioner == model.ProvisionerCrossplane && cluster.ProvisionerMetadataCrossplane != nil {
+			provisionerMetadata = cluster.ProvisionerMetadataCrossplane.GetCommonMetadata()
+			masterCount = cluster.ProvisionerMetadataCrossplane.NodeCount
+			masterInstanceType = cluster.ProvisionerMetadataCrossplane.InstanceType
 		} else if cluster.Provisioner == model.ProvisionerEKS && cluster.ProvisionerMetadataEKS != nil {
 			provisionerMetadata = cluster.ProvisionerMetadataEKS.GetCommonMetadata()
 			masterCount = 1
