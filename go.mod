@@ -2,6 +2,8 @@ module github.com/mattermost/mattermost-cloud
 
 go 1.19
 
+replace github.com/mattermost/mattermost-cloud-crossplane => ../../../.go/src/github.com/mattermost/mattermost-cloud-crossplane
+
 require (
 	github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
 	github.com/Masterminds/squirrel v1.5.3
@@ -33,6 +35,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.7
 	github.com/mattermost/awat v0.2.0
+	github.com/mattermost/mattermost-cloud-crossplane v0.0.0-00010101000000-000000000000
 	github.com/mattermost/mattermost-operator v1.20.0-rc.2
 	github.com/mattermost/rotator v0.2.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
@@ -142,11 +145,11 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/klog/v2 v2.30.0 // indirect
+	k8s.io/klog/v2 v2.40.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
-	sigs.k8s.io/controller-runtime v0.11.0 // indirect
+	sigs.k8s.io/controller-runtime v0.11.1 // indirect
 	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
