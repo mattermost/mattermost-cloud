@@ -44,18 +44,14 @@ func buildRawMetadata(cluster *model.Cluster) (*RawClusterMetadata, error) {
 		return nil, errors.Wrap(err, "unable to marshal ProviderMetadataAWS")
 	}
 
-	var provisionerMetadataJSON []byte
+	provisionerMetadata, err := cluster.GetProvisionerMetadata()
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get ProvisionerMetadata")
+	}
 
-	if cluster.Provisioner == model.ProvisionerKops {
-		provisionerMetadataJSON, err = json.Marshal(cluster.ProvisionerMetadataKops)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataKops")
-		}
-	} else if cluster.Provisioner == model.ProvisionerEKS {
-		provisionerMetadataJSON, err = json.Marshal(cluster.ProvisionerMetadataEKS)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataKops")
-		}
+	provisionerMetadataJSON, err := json.Marshal(provisionerMetadata)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataKops")
 	}
 
 	utilityMetadataJSON, err := json.Marshal(cluster.UtilityMetadata)
@@ -88,6 +84,11 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 		}
 		if r.Cluster.ProvisionerMetadataEKS != nil {
 			r.Cluster.Networking = r.Cluster.ProvisionerMetadataEKS.Networking
+		}
+	} else if r.Provisioner == model.ProvisionerCrossplane {
+		r.Cluster.ProvisionerMetadataCrossplane, err = model.NewCrossplaneMetadataFromJSON(r.ProvisionerMetadataRaw)
+		if err != nil {
+			return nil, err
 		}
 	} else if r.Provisioner == model.ProvisionerKops {
 		r.Cluster.ProvisionerMetadataKops, err = model.NewKopsMetadata(r.ProvisionerMetadataRaw)
