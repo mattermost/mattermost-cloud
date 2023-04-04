@@ -34,6 +34,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
+	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -55,6 +56,12 @@ func newCmdServer() *cobra.Command {
 		},
 		PreRun: func(command *cobra.Command, args []string) {
 			flags.serverFlagChanged.addFlags(command) // To populate flag change variables.
+			if err := flags.crossplaneOptions.valid(command); err != nil {
+				_ = command.Usage()
+				logger.Error(err)
+				os.Exit(1)
+			}
+
 			deprecationWarnings(logger, command)
 
 			if flags.enableLogStacktrace {
@@ -235,6 +242,9 @@ func executeServerCmd(flags serverFlags) error {
 		"disable-db-init-check":                         flags.disableDBInitCheck,
 		"enable-route53":                                flags.enableRoute53,
 		"disable-dns-updates":                           flags.disableDNSUpdates,
+		"enable-crossplane":                             flags.enableCrossplane,
+		"k8s-use-incluster-config":                      flags.k8sUseInClusterConfig,
+		"k8s-kubeconfig-path":                           flags.k8sKubeconfigPath,
 	}).Info("Starting Mattermost Provisioning Server")
 
 	// Warn on settings we consider to be non-production.
@@ -278,6 +288,31 @@ func executeServerCmd(flags serverFlags) error {
 		EtcdManagerEnv:          etcdManagerEnv,
 	}
 
+	// Crossplane provisioner configuration.
+	var crossplaneProvisioner *provisioner.CrossplaneProvisioner
+	if flags.enableCrossplane {
+		var k8sClient *k8s.KubeClient
+		var err error
+		if flags.k8sUseInClusterConfig {
+			k8sClient, err = k8s.NewFromInClusterConfig(logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to build k8s client")
+			}
+		} else if flags.k8sKubeconfigPath != "" {
+			k8sClient, err = k8s.NewFromFile(flags.k8sKubeconfigPath, logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to build k8s client")
+			}
+		}
+		crossplaneProvisioner = provisioner.NewCrossplaneProvisioner(
+			k8sClient,
+			awsClient,
+			provisioningParams,
+			sqlStore,
+			logger,
+		)
+	}
+
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck)
 
 	kopsProvisioner := provisioner.NewKopsProvisioner(
@@ -295,7 +330,7 @@ func executeServerCmd(flags serverFlags) error {
 	)
 
 	provisionerObj := provisioner.NewProvisioner(
-		kopsProvisioner, eksProvisioner,
+		kopsProvisioner, eksProvisioner, crossplaneProvisioner,
 		provisioningParams,
 		awsClient,
 		resourceUtil,

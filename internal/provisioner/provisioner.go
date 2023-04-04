@@ -15,13 +15,18 @@ import (
 )
 
 type ClusterProvisionerOption struct {
-	kopsProvisioner *KopsProvisioner
-	eksProvisioner  *EKSProvisioner
+	kopsProvisioner       *KopsProvisioner
+	eksProvisioner        *EKSProvisioner
+	crossplaneProvisioner *CrossplaneProvisioner
 }
 
 func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supervisor.ClusterProvisioner {
 	if provisioner == model.ProvisionerEKS {
 		return c.eksProvisioner
+	}
+
+	if provisioner == model.ProvisionerCrossplane {
+		return c.crossplaneProvisioner
 	}
 
 	return c.kopsProvisioner
@@ -68,6 +73,7 @@ var _ kube = (*KopsProvisioner)(nil)
 func NewProvisioner(
 	kopsProvisioner *KopsProvisioner,
 	eksProvisioner *EKSProvisioner,
+	crossplaneProvisioner *CrossplaneProvisioner,
 	params ProvisioningParams,
 	awsClient aws.AWS,
 	resourceUtil *utils.ResourceUtil,
@@ -78,8 +84,9 @@ func NewProvisioner(
 
 	return Provisioner{
 		ClusterProvisionerOption: ClusterProvisionerOption{
-			kopsProvisioner: kopsProvisioner,
-			eksProvisioner:  eksProvisioner,
+			kopsProvisioner:       kopsProvisioner,
+			eksProvisioner:        eksProvisioner,
+			crossplaneProvisioner: crossplaneProvisioner,
 		},
 		params:         params,
 		awsClient:      awsClient,
