@@ -22,6 +22,7 @@ const (
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
 	Provider                  string                         `json:"provider,omitempty"`
+	Provisioner               string                         `json:"provisioner,omitempty"`
 	Zones                     []string                       `json:"zones,omitempty"`
 	Version                   string                         `json:"version,omitempty"`
 	AMI                       string                         `json:"ami,omitempty"`
@@ -39,7 +40,6 @@ type CreateClusterRequest struct {
 	MaxPodsPerNode            int64                          `json:"max-pods-per-node,omitempty"`
 	ClusterRoleARN            string                         `json:"cluster-role-arn,omitempty"`
 	NodeRoleARN               string                         `json:"node-role-arn,omitempty"`
-	Provisioner               string                         `json:"provisioner,omitempty"`
 	AdditionalNodeGroups      map[string]NodeGroupMetadata   `json:"additional-node-groups,omitempty"`
 	NodeGroupWithPublicSubnet []string                       `json:"nodegroup-with-public-subnet,omitempty"`
 }
@@ -136,7 +136,7 @@ func (request *CreateClusterRequest) Validate() error {
 	if request.Provider != ProviderAWS {
 		return errors.Errorf("unsupported provider %s", request.Provider)
 	}
-	if request.Provisioner != ProvisionerKops && request.Provisioner != ProvisionerEKS {
+	if request.Provisioner != ProvisionerKops && request.Provisioner != ProvisionerEKS && request.Provisioner != ProvisionerCrossplane {
 		return errors.Errorf("unsupported provisioner %s", request.Provisioner)
 	}
 	if !ValidClusterVersion(request.Version) {

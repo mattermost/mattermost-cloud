@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"io"
 	"regexp"
+
+	"github.com/pkg/errors"
 )
 
 //go:generate provisioner-code-gen generate --out-file=cluster_gen.go --boilerplate-file=../hack/boilerplate/boilerplate.generatego.txt --type=github.com/mattermost/mattermost-cloud/model.Cluster --generator=get_id,get_state,is_deleted,as_resources
@@ -23,21 +25,22 @@ const (
 
 // Cluster represents a Kubernetes cluster.
 type Cluster struct {
-	ID                      string
-	State                   string
-	Provider                string
-	ProviderMetadataAWS     *AWSMetadata
-	Provisioner             string
-	ProvisionerMetadataKops *KopsMetadata
-	ProvisionerMetadataEKS  *EKSMetadata
-	UtilityMetadata         *UtilityMetadata
-	AllowInstallations      bool
-	CreateAt                int64
-	DeleteAt                int64
-	APISecurityLock         bool
-	LockAcquiredBy          *string
-	LockAcquiredAt          int64
-	Networking              string
+	ID                            string
+	State                         string
+	Provider                      string
+	ProviderMetadataAWS           *AWSMetadata
+	Provisioner                   string
+	ProvisionerMetadataCrossplane *CrossplaneMetadata
+	ProvisionerMetadataEKS        *EKSMetadata
+	ProvisionerMetadataKops       *KopsMetadata
+	UtilityMetadata               *UtilityMetadata
+	AllowInstallations            bool
+	CreateAt                      int64
+	DeleteAt                      int64
+	APISecurityLock               bool
+	LockAcquiredBy                *string
+	LockAcquiredAt                int64
+	Networking                    string
 }
 
 // Clone returns a deep copy the cluster.
@@ -54,6 +57,20 @@ func (c *Cluster) ToDTO(annotations []*Annotation) *ClusterDTO {
 	return &ClusterDTO{
 		Cluster:     c,
 		Annotations: annotations,
+	}
+}
+
+// GetProviderMetadata returns the provisioner metadata for the cluster.
+func (c *Cluster) GetProvisionerMetadata() (any, error) {
+	switch c.Provisioner {
+	case ProvisionerCrossplane:
+		return c.ProvisionerMetadataCrossplane, nil
+	case ProvisionerEKS:
+		return c.ProvisionerMetadataEKS, nil
+	case ProvisionerKops:
+		return c.ProvisionerMetadataKops, nil
+	default:
+		return nil, errors.Errorf("unknown provisioner %s", c.Provisioner)
 	}
 }
 

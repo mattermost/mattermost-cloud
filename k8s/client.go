@@ -5,8 +5,10 @@
 package k8s
 
 import (
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	cloudCrossplaneClientV1alpha1 "github.com/mattermost/mattermost-cloud-crossplane/client/clientset/versioned"
 	mmclientv1alpha1 "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned"
 	mmclientv1beta1 "github.com/mattermost/mattermost-operator/pkg/client/v1beta1/clientset/versioned"
 	monitoringclientV1 "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
@@ -23,6 +25,7 @@ type KubeClient struct {
 	config                     *rest.Config
 	Clientset                  kubernetes.Interface
 	ApixClientset              apixclient.Interface
+	CrossplaneClient           cloudCrossplaneClientV1alpha1.Interface
 	MattermostClientsetV1Alpha mmclientv1alpha1.Interface
 	MattermostClientsetV1Beta  mmclientv1beta1.Interface
 	MonitoringClientsetV1      monitoringclientV1.Interface
@@ -33,6 +36,16 @@ type KubeClient struct {
 
 // NewFromConfig takes in an already created Kubernetes config object, and returns a KubeClient for accessing the kubernetes API
 func NewFromConfig(config *rest.Config, logger log.FieldLogger) (*KubeClient, error) {
+	return createKubeClient(config, logger)
+}
+
+// NewFromInClusterConfig returns a new KubeClient for accessing the kubernetes API using the
+// in-cluster configuration.
+func NewFromInClusterConfig(logger log.FieldLogger) (*KubeClient, error) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get in-cluster config")
+	}
 	return createKubeClient(config, logger)
 }
 
@@ -76,7 +89,13 @@ func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient,
 	if err != nil {
 		return nil, err
 	}
+
 	kubeagClientset, err := kubeagclient.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	cloudCrossplaneClient, err := cloudCrossplaneClientV1alpha1.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +103,7 @@ func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient,
 	return &KubeClient{
 			config:                     config,
 			Clientset:                  clientset,
+			CrossplaneClient:           cloudCrossplaneClient,
 			MattermostClientsetV1Alpha: mattermostV1AlphaClientset,
 			MattermostClientsetV1Beta:  mattermostV1BetaClientset,
 			MonitoringClientsetV1:      monitoringV1Clientset,
