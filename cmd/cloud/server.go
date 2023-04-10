@@ -403,6 +403,8 @@ func executeServerCmd(flags serverFlags) error {
 		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerObj, eventsProducer, logger))
 	}
 
+	// TODO: crossplane supervisor
+
 	// Setup the supervisor to effect any requested changes. It is wrapped in a
 	// scheduler to trigger it periodically in addition to being poked by the API
 	// layer.

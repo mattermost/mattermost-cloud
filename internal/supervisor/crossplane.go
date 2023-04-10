@@ -6,17 +6,16 @@ package supervisor
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
+	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
 
-// ClusterSupervisor finds clusters pending work and effects the required changes.
-//
-// The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
-// other clients needing to coordinate background jobs.
+// CrossplaneSupervisor finds clusters and syncs their states with the provisioner.
 type CrossplaneSupervisor struct {
 	store          clusterStore
-	provisioner    ClusterProvisionerOption
+	k8sClient      k8s.KubeClient
+	provisioner    ClusterProvisioner
 	eventsProducer eventProducer
 	instanceID     string
 	metrics        *metrics.CloudMetrics
@@ -25,7 +24,8 @@ type CrossplaneSupervisor struct {
 
 func NewCrossplaneSupervisor(
 	store clusterStore,
-	provisioner ClusterProvisionerOption,
+	k8sClient k8s.KubeClient,
+	provisioner ClusterProvisioner,
 	eventProducer eventProducer,
 	instanceID string,
 	logger log.FieldLogger,
@@ -33,6 +33,7 @@ func NewCrossplaneSupervisor(
 ) *CrossplaneSupervisor {
 	return &CrossplaneSupervisor{
 		store:          store,
+		k8sClient:      k8sClient,
 		provisioner:    provisioner,
 		eventsProducer: eventProducer,
 		instanceID:     instanceID,

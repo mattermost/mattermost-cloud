@@ -121,14 +121,21 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 
 // CheckClusterCreated checks if cluster creation finished.
 func (provisioner *CrossplaneProvisioner) CheckClusterCreated(cluster *model.Cluster) (bool, error) {
-
-	if false {
-		// TODO: check status of the cluster
-		cluster.State = model.ClusterStateStable
-		return true, provisioner.clusterStore.UpdateCluster(cluster)
+	object, err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Get(context.TODO(), cluster.ID, metav1.GetOptions{})
+	if err != nil {
+		return false, errors.Wrap(err, "error getting crossplane resource information")
 	}
 
-	return true, nil
+	ready, err := object.Status.GetReadyCondition()
+	if err != nil && !errors.Is(err, crossplaneV1Alpha1.ErrConditionNotFound) {
+		return false, errors.Wrap(err, "error getting crossplane cluster ready status")
+	}
+
+	if ready == nil {
+		return false, nil
+	}
+
+	return ready.Status == metav1.ConditionTrue, nil
 }
 
 // CreateNodes is no-op.
