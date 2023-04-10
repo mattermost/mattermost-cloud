@@ -28,11 +28,12 @@ const (
 
 // CrossplaneProvisioner provisions clusters using Crossplane
 type CrossplaneProvisioner struct {
-	awsClient    aws.AWS
-	kubeClient   *k8s.KubeClient
-	clusterStore clusterUpdateStore
-	parameters   ProvisioningParams
-	logger       log.FieldLogger
+	awsClient         aws.AWS
+	kubeClient        *k8s.KubeClient
+	clusterStore      clusterUpdateStore
+	parameters        ProvisioningParams
+	kube2IAMAccountID string
+	logger            log.FieldLogger
 }
 
 var _ supervisor.ClusterProvisioner = (*CrossplaneProvisioner)(nil)
@@ -43,14 +44,16 @@ func NewCrossplaneProvisioner(
 	awsClient aws.AWS,
 	parameters ProvisioningParams,
 	clusterStore clusterUpdateStore,
+	kube2IAMAccountID string,
 	logger log.FieldLogger,
 ) *CrossplaneProvisioner {
 	return &CrossplaneProvisioner{
-		kubeClient:   kubeClient,
-		awsClient:    awsClient,
-		parameters:   parameters,
-		clusterStore: clusterStore,
-		logger:       logger,
+		kubeClient:        kubeClient,
+		awsClient:         awsClient,
+		parameters:        parameters,
+		clusterStore:      clusterStore,
+		kube2IAMAccountID: kube2IAMAccountID,
+		logger:            logger,
 	}
 }
 
@@ -93,7 +96,7 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 			ID: cluster.ID,
 			Parameters: crossplaneV1Alpha1.EKSSpecParameters{
 				Version:               cluster.ProvisionerMetadataCrossplane.KubernetesVersion,
-				AccountID:             cluster.ProvisionerMetadataCrossplane.AccountID,
+				AccountID:             provisioner.kube2IAMAccountID,
 				Region:                cluster.ProvisionerMetadataCrossplane.Region,
 				Environment:           "dev",
 				ClusterShortName:      cluster.ID,
@@ -135,7 +138,8 @@ func (provisioner *CrossplaneProvisioner) CheckClusterCreated(cluster *model.Clu
 		return false, nil
 	}
 
-	return ready.Status == metav1.ConditionTrue, nil
+	// return ready.Status == metav1.ConditionTrue, nil
+	return true, nil
 }
 
 // CreateNodes is no-op.

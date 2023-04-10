@@ -181,18 +181,24 @@ type crossplaneOptions struct {
 	enableCrossplane      bool
 	k8sUseInClusterConfig bool
 	k8sKubeconfigPath     string
+	kube2IAMAccountID     string
 }
 
 func (flags *crossplaneOptions) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.enableCrossplane, "enable-crossplane", false, "Whether to use Crossplane to provision resources.")
 	command.Flags().BoolVar(&flags.k8sUseInClusterConfig, "k8s-use-in-cluster-config", false, "Whether to use in-cluster config for k8s client.")
 	command.Flags().StringVar(&flags.k8sKubeconfigPath, "k8s-kubeconfig-path", "", "Path to kubeconfig file for k8s client.")
+	command.Flags().StringVar(&flags.kube2IAMAccountID, "kube2iam-account-id", "", "AWS account ID for kube2iam.")
 	command.MarkFlagsMutuallyExclusive("k8s-use-in-cluster-config", "k8s-kubeconfig-path")
 }
 
 func (flags *crossplaneOptions) valid(command *cobra.Command) error {
 	if flags.enableCrossplane && !flags.k8sUseInClusterConfig && flags.k8sKubeconfigPath == "" {
 		return errors.New("k8s-kubeconfig-path or k8s-use-in-cluster-config is required when enable-crossplane is set to true")
+	}
+
+	if flags.enableCrossplane && flags.kube2IAMAccountID == "" {
+		return errors.New("kube2iam-account-id is required when enable-crossplane is set to true")
 	}
 	return nil
 }

@@ -245,6 +245,7 @@ func executeServerCmd(flags serverFlags) error {
 		"enable-crossplane":                             flags.enableCrossplane,
 		"k8s-use-incluster-config":                      flags.k8sUseInClusterConfig,
 		"k8s-kubeconfig-path":                           flags.k8sKubeconfigPath,
+		"kube2iam-account-id":                           flags.kube2IAMAccountID,
 	}).Info("Starting Mattermost Provisioning Server")
 
 	// Warn on settings we consider to be non-production.
@@ -309,6 +310,7 @@ func executeServerCmd(flags serverFlags) error {
 			awsClient,
 			provisioningParams,
 			sqlStore,
+			flags.kube2IAMAccountID,
 			logger,
 		)
 	}
