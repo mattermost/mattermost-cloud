@@ -23,7 +23,8 @@ const (
 	CrossplaneProvisionerType = "crossplane"
 
 	// crossplaneProvisionerNamespace the namespace where the crossplane resources are created.
-	crossplaneProvisionerNamespace = "mattermost-cloud"
+	// TODO: change to a proper namespace when tests are done.
+	crossplaneProvisionerNamespace = "mm-xplane-eks-01"
 )
 
 // CrossplaneProvisioner provisions clusters using Crossplane
@@ -89,7 +90,7 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 	ctx := context.TODO()
 	obj := &crossplaneV1Alpha1.MMK8S{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.ID,
+			Name:      cluster.ProvisionerMetadataCrossplane.Name,
 			Namespace: crossplaneProvisionerNamespace,
 		},
 		Spec: crossplaneV1Alpha1.EKSSpec{
@@ -98,10 +99,10 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 				Version:               cluster.ProvisionerMetadataCrossplane.KubernetesVersion,
 				AccountID:             provisioner.kube2IAMAccountID,
 				Region:                cluster.ProvisionerMetadataCrossplane.Region,
-				Environment:           "dev",
+				Environment:           "dev", // TODO
 				ClusterShortName:      cluster.ID,
-				EndpointPrivateAccess: true,
-				EndpointPublicAccess:  true,
+				EndpointPrivateAccess: true,  // TODO
+				EndpointPublicAccess:  false, // TODO
 				VpcID:                 cluster.ProvisionerMetadataCrossplane.VPC,
 				SubnetIds:             cluster.ProvisionerMetadataCrossplane.PublicSubnets,
 				PrivateSubnetIds:      cluster.ProvisionerMetadataCrossplane.PrivateSubnets,
@@ -178,7 +179,8 @@ func (provisioner *CrossplaneProvisioner) DeleteCluster(cluster *model.Cluster) 
 
 	err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Delete(context.TODO(), cluster.ID, metav1.DeleteOptions{})
 	if err != nil {
-		return false, errors.Wrap(err, "failed to delete crossplane resource")
+		provisioner.logger.WithError(err).Error("Failed to delete crossplane resource")
+		// return false, errors.Wrap(err, "failed to delete crossplane resource")
 	}
 
 	err = provisioner.awsClient.ReleaseVpc(cluster, logger)
