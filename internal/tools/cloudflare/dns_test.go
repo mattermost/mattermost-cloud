@@ -120,22 +120,22 @@ func TestGetRecordIDs(t *testing.T) {
 	}
 	mockCF := &MockCloudflare{}
 	samples := []struct {
-		description     string
-		zoneID          string
-		customerDNSName string
-		setup           func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
-		expected        Expected
+		description         string
+		zoneID              string
+		customerDNSName     string
+		setupListDNSRecords func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error)
+		expected            Expected
 	}{
 		{
 			description:     "success with 1 zone name in the list",
 			zoneID:          "THISISAZONEIDFROMCLOUDFLARE",
 			customerDNSName: "customer.cloud.mattermost.com",
-			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+			setupListDNSRecords: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
 				return []cf.DNSRecord{
 					{
 						ID: "CLOUDFLARERECORDID",
 					},
-				}, nil
+				}, nil, nil
 			},
 			expected: Expected{[]string{"CLOUDFLARERECORDID"}, nil},
 		},
@@ -143,11 +143,11 @@ func TestGetRecordIDs(t *testing.T) {
 			description:     "success with multiple ids",
 			zoneID:          "THISISAZONEIDFROMCLOUDFLARE",
 			customerDNSName: "customer.cloud.mattermost.com",
-			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+			setupListDNSRecords: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
 				return []cf.DNSRecord{
 					{ID: "CLOUDFLARERECORDID"},
 					{ID: "CLOUDFLARERECORDID2"},
-				}, nil
+				}, nil, nil
 			},
 			expected: Expected{[]string{"CLOUDFLARERECORDID", "CLOUDFLARERECORDID2"}, nil},
 		},
@@ -155,8 +155,8 @@ func TestGetRecordIDs(t *testing.T) {
 			description:     "non existing zone ID at Cloudflare",
 			zoneID:          "NONEXISTINGIDATCLOUDFLARE",
 			customerDNSName: "customer.cloud.mattermost.com",
-			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-				return []cf.DNSRecord{}, nil
+			setupListDNSRecords: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
+				return []cf.DNSRecord{}, nil, nil
 			},
 			expected: Expected{nil, nil},
 		},
@@ -164,8 +164,8 @@ func TestGetRecordIDs(t *testing.T) {
 			description:     "error while calling cloudflare API",
 			zoneID:          "NONEXISTINGIDATCLOUDFLARE",
 			customerDNSName: "customer.cloud.mattermost.com",
-			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-				return []cf.DNSRecord{}, errors.New("Cloudflare API error")
+			setupListDNSRecords: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
+				return []cf.DNSRecord{}, nil, errors.New("Cloudflare API error")
 			},
 			expected: Expected{nil, errors.New("failed to get DNS Record ID from Cloudflare: Cloudflare API error")},
 		},
@@ -173,7 +173,7 @@ func TestGetRecordIDs(t *testing.T) {
 
 	for _, s := range samples {
 		t.Run(s.description, func(t *testing.T) {
-			mockCF.mockDNSRecords = s.setup
+			mockCF.mockListDNSRecords = s.setupListDNSRecords
 			client := NewClientWithToken(mockCF, nil)
 			ids, err := client.getRecordIDs(s.zoneID, s.customerDNSName, logger)
 			result := Expected{ids, err}
@@ -196,9 +196,9 @@ func TestCreateDNSRecord(t *testing.T) {
 		customerDNSName []string
 		dnsEndpoints    []string
 		setupID         func(zoneName string) (zoneID string, err error)
-		setupDNS        func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
-		updateDNS       func(ctx context.Context, zoneID, recordID string, rr cf.DNSRecord) error
-		getDNSRecords   func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
+		createDNS       func(context.Context, *cf.ResourceContainer, cf.CreateDNSRecordParams) (cf.DNSRecord, error)
+		updateDNS       func(ctx context.Context, rc *cf.ResourceContainer, params cf.UpdateDNSRecordParams) (cf.DNSRecord, error)
+		getDNSRecords   func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error)
 		awsZoneNameList func() []string
 		expected        error
 	}{
@@ -209,15 +209,13 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				return &cf.DNSRecordResponse{
-					Result: cf.DNSRecord{
-						ID: "CLOUDFLARERECORDID",
-					},
+			createDNS: func(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error) {
+				return cf.DNSRecord{
+					ID: "CLOUDFLARERECORDID",
 				}, nil
 			},
-			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-				return []cf.DNSRecord{}, nil
+			getDNSRecords: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
+				return []cf.DNSRecord{}, nil, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -231,15 +229,13 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				return &cf.DNSRecordResponse{
-					Result: cf.DNSRecord{
-						ID: "CLOUDFLARERECORDID",
-					},
+			createDNS: func(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error) {
+				return cf.DNSRecord{
+					ID: "CLOUDFLARERECORDID",
 				}, nil
 			},
-			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-				return []cf.DNSRecord{}, nil
+			getDNSRecords: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
+				return []cf.DNSRecord{}, nil, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com", "cloud.test.mattermost.com"}
@@ -253,18 +249,18 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "CLOUDFLAREZONEID", nil
 			},
-			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+			getDNSRecords: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
 				trueVal := true
 				return []cf.DNSRecord{
 					{
-						Name:    rr.Name,
+						Name:    params.Name,
 						ID:      "CLOUDFLARERECORDID",
-						ZoneID:  zoneID,
+						ZoneID:  rc.Identifier,
 						Content: "load.balancer.endpoint",
 						TTL:     1,
 						Proxied: &trueVal,
 					},
-				}, nil
+				}, nil, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -278,23 +274,23 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "CLOUDFLAREZONEID", nil
 			},
-			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+			getDNSRecords: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
 				trueVal := true
 				return []cf.DNSRecord{
 					{
-						Name:    rr.Name,
+						Name:    params.Name,
 						ID:      "CLOUDFLARERECORDID",
-						ZoneID:  zoneID,
+						ZoneID:  rc.Identifier,
 						Content: "load.balancer.endpoint",
 						TTL:     2,
 						Proxied: &trueVal,
 					},
-				}, nil
+				}, nil, nil
 			},
-			updateDNS: func(ctx context.Context, zoneID, recordID string, rr cf.DNSRecord) error {
-				assert.Equal(t, "CLOUDFLARERECORDID", recordID)
-				assert.Equal(t, "CLOUDFLAREZONEID", zoneID)
-				return nil
+			updateDNS: func(ctx context.Context, rc *cf.ResourceContainer, params cf.UpdateDNSRecordParams) (cf.DNSRecord, error) {
+				assert.Equal(t, "CLOUDFLARERECORDID", params.ID)
+				assert.Equal(t, "CLOUDFLAREZONEID", rc.Identifier)
+				return cf.DNSRecord{}, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -309,15 +305,13 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				return &cf.DNSRecordResponse{
-					Result: cf.DNSRecord{
-						ID: "CLOUDFLARERECORDID",
-					},
+			createDNS: func(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error) {
+				return cf.DNSRecord{
+					ID: "CLOUDFLARERECORDID",
 				}, nil
 			},
-			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-				return []cf.DNSRecord{}, nil
+			getDNSRecords: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
+				return []cf.DNSRecord{}, nil, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com", "cloud.mattermost.io"}
@@ -335,7 +329,7 @@ func TestCreateDNSRecord(t *testing.T) {
 			customerDNSName: nil,
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
 			setupID:         nil,
-			setupDNS:        nil,
+			createDNS:       nil,
 			awsZoneNameList: nil,
 			expected:        errors.New("no domain names provided"),
 		},
@@ -346,8 +340,8 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
-			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				return &cf.DNSRecordResponse{}, nil
+			createDNS: func(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error) {
+				return cf.DNSRecord{}, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{""}
@@ -361,8 +355,8 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
-			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				return &cf.DNSRecordResponse{}, nil
+			createDNS: func(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error) {
+				return cf.DNSRecord{}, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -376,8 +370,8 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
-			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				return &cf.DNSRecordResponse{}, nil
+			createDNS: func(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error) {
+				return cf.DNSRecord{}, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -391,8 +385,8 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", errors.New("failed to get zone ID")
 			},
-			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				return &cf.DNSRecordResponse{}, nil
+			createDNS: func(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error) {
+				return cf.DNSRecord{}, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -404,8 +398,8 @@ func TestCreateDNSRecord(t *testing.T) {
 	for _, s := range samples {
 		t.Run(s.description, func(t *testing.T) {
 			mockCF.mockGetZoneID = s.setupID
-			mockCF.mockCreateDNSRecord = s.setupDNS
-			mockCF.mockDNSRecords = s.getDNSRecords
+			mockCF.mockCreateDNSRecord = s.createDNS
+			mockCF.mockListDNSRecords = s.getDNSRecords
 			mockCF.mockUpdateDNSRecord = s.updateDNS
 			MockAWS.mockGetPublicHostedZoneNames = s.awsZoneNameList
 			client := NewClientWithToken(mockCF, MockAWS)
@@ -429,8 +423,8 @@ func TestDeleteDNSRecord(t *testing.T) {
 		customerDNSNames     []string
 		zoneID               string
 		setupZoneID          func(zoneName string) (zoneID string, err error)
-		setupDeleteDNSRecord func(ctx context.Context, zoneID, recordID string) error
-		setupDNSRecord       func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
+		setupDeleteDNSRecord func(ctx context.Context, rc *cf.ResourceContainer, recordID string) error
+		setupListDNSRecord   func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error)
 		awsZoneNameList      func() []string
 		expected             error
 	}{
@@ -441,15 +435,15 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
+			setupDeleteDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, recordID string) error {
 				return nil
 			},
-			setupDNSRecord: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+			setupListDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
 				return []cf.DNSRecord{
 					{
 						ID: "CLOUDFLARERECORDID",
 					},
-				}, nil
+				}, nil, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -463,15 +457,15 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
+			setupDeleteDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, recordID string) error {
 				return nil
 			},
-			setupDNSRecord: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+			setupListDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
 				return []cf.DNSRecord{
 					{
 						ID: "CLOUDFLARERECORDID",
 					},
-				}, nil
+				}, nil, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com", "cloud.test.mattermost.com"}
@@ -485,14 +479,14 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
+			setupDeleteDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, recordID string) error {
 				return nil
 			},
-			setupDNSRecord: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+			setupListDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
 				return []cf.DNSRecord{
 					{ID: "CLOUDFLARERECORDID"},
 					{ID: "CLOUDFLARERECORDID2"},
-				}, nil
+				}, nil, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com", "cloud.mattermost.io"}
@@ -506,11 +500,11 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "", errors.New("failed to get zone ID")
 			},
-			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
+			setupDeleteDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, recordID string) error {
 				return nil
 			},
-			setupDNSRecord: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-				return []cf.DNSRecord{}, nil
+			setupListDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
+				return []cf.DNSRecord{}, nil, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -524,11 +518,11 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
+			setupDeleteDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, recordID string) error {
 				return nil
 			},
-			setupDNSRecord: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-				return []cf.DNSRecord{}, errors.New("failed to get DNS records")
+			setupListDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
+				return []cf.DNSRecord{}, nil, errors.New("failed to get DNS records")
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -542,11 +536,11 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
+			setupDeleteDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, recordID string) error {
 				return errors.New("failed to delete DNS record")
 			},
-			setupDNSRecord: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-				return []cf.DNSRecord{}, errors.New("failed to get DNS records")
+			setupListDNSRecord: func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
+				return []cf.DNSRecord{}, nil, errors.New("failed to get DNS records")
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
@@ -559,7 +553,7 @@ func TestDeleteDNSRecord(t *testing.T) {
 		t.Run(s.description, func(t *testing.T) {
 			mockCF.mockGetZoneID = s.setupZoneID
 			mockCF.mockDeleteDNSRecord = s.setupDeleteDNSRecord
-			mockCF.mockDNSRecords = s.setupDNSRecord
+			mockCF.mockListDNSRecords = s.setupListDNSRecord
 			mockAWS.mockGetPublicHostedZoneNames = s.awsZoneNameList
 			client := NewClientWithToken(mockCF, mockAWS)
 			err := client.DeleteDNSRecords(s.customerDNSNames, logger)
