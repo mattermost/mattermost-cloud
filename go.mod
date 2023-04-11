@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
-	github.com/Masterminds/squirrel v1.5.3
+	github.com/Masterminds/squirrel v1.5.4
 	github.com/agnivade/easy-scrypt v1.0.0
 	github.com/aws/aws-sdk-go-v2 v1.17.3
 	github.com/aws/aws-sdk-go-v2/config v1.18.7
