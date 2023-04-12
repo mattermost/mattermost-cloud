@@ -178,7 +178,6 @@ func AddToCreateNodegroupsRequest(sizes map[string]string, request *model.Create
 		values := ValidSizes[ngSize]
 
 		request.Nodegroups[ng] = model.NodeGroupMetadata{
-			// These values are used in EKS configuration, but not in kops.
 			InstanceType: values.NodeInstanceType,
 			MinCount:     values.NodeMinCount,
 			MaxCount:     values.NodeMaxCount,

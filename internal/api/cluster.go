@@ -503,7 +503,7 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	newState := model.ClusterStateDeletionRequested
+	newState := model.ClusterInstallationStateDeletionRequested
 
 	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
 	if status != 0 {
