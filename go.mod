@@ -25,7 +25,7 @@ require (
 	github.com/aws/smithy-go v1.13.5
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cenkalti/backoff/v4 v4.2.0
-	github.com/cloudflare/cloudflare-go v0.64.0
+	github.com/cloudflare/cloudflare-go v0.65.0
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/mux v1.8.0
