@@ -15,6 +15,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -126,7 +127,7 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 // CheckClusterCreated checks if cluster creation finished.
 func (provisioner *CrossplaneProvisioner) CheckClusterCreated(cluster *model.Cluster) (bool, error) {
 	object, err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Get(context.TODO(), cluster.ID, metav1.GetOptions{})
-	if err != nil {
+	if err != nil && !k8sErrors.IsNotFound(err) {
 		return false, errors.Wrap(err, "error getting crossplane resource information")
 	}
 
@@ -177,7 +178,7 @@ func (provisioner *CrossplaneProvisioner) ResizeCluster(cluster *model.Cluster) 
 func (provisioner *CrossplaneProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Delete(context.TODO(), cluster.ID, metav1.DeleteOptions{})
+	err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Delete(context.TODO(), cluster.ProvisionerMetadataCrossplane.Name, metav1.DeleteOptions{})
 	if err != nil {
 		provisioner.logger.WithError(err).Error("Failed to delete crossplane resource")
 		// return false, errors.Wrap(err, "failed to delete crossplane resource")
