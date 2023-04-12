@@ -289,6 +289,57 @@ func (em *EKSMetadata) ValidateChangeRequest() error {
 func (em *EKSMetadata) ApplyChangeRequest() {
 }
 
+// ValidateNodegroupsCreateRequest ensures that the nodegroups to create do not
+// already exist.
+func (em *EKSMetadata) ValidateNodegroupsCreateRequest(nodegroups map[string]NodeGroupMetadata) error {
+	if len(nodegroups) == 0 {
+		return errors.New("must specify at least one nodegroup to create")
+	}
+
+	for ng := range nodegroups {
+		if _, f := em.NodeGroups[ng]; f {
+			return errors.Errorf("nodegroup %s already exists", ng)
+		}
+	}
+
+	return nil
+}
+
+// ApplyNodegroupsCreateRequest applies the nodegroups to create to the
+// KopsMetadata.
+func (em *EKSMetadata) ApplyNodegroupsCreateRequest(request *CreateNodegroupsRequest) {
+	em.ChangeRequest = &EKSMetadataRequestedState{
+		NodeGroups: map[string]NodeGroupMetadata{},
+	}
+
+	nodeGroups := request.Nodegroups
+
+	for _, ng := range request.NodeGroupWithPublicSubnet {
+		nodeGroup := nodeGroups[ng]
+		nodeGroup.WithPublicSubnet = true
+		nodeGroups[ng] = nodeGroup
+	}
+
+	for _, ng := range request.NodeGroupWithSecurityGroup {
+		nodeGroup := nodeGroups[ng]
+		nodeGroup.WithSecurityGroup = true
+		nodeGroups[ng] = nodeGroup
+	}
+
+	for name, ng := range nodeGroups {
+		em.ChangeRequest.NodeGroups[name] = NodeGroupMetadata{
+			Name:              fmt.Sprintf("%s-%s", name, NewNodeGroupSuffix()),
+			Type:              name,
+			InstanceType:      ng.InstanceType,
+			MinCount:          ng.MinCount,
+			MaxCount:          ng.MaxCount,
+			WithPublicSubnet:  ng.WithPublicSubnet,
+			WithSecurityGroup: ng.WithSecurityGroup,
+		}
+	}
+
+}
+
 func (em *EKSMetadata) GetCommonMetadata() ProvisionerMetadata {
 	workerNodeGroup := em.NodeGroups[NodeGroupWorker]
 	return ProvisionerMetadata{
