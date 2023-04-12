@@ -1057,13 +1057,7 @@ func getIngressAnnotations() map[string]string {
 		"nginx.ingress.kubernetes.io/ssl-redirect":             "true",
 		"nginx.ingress.kubernetes.io/configuration-snippet": `
 				  proxy_force_ranges on;
-				  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-				  proxy_cache mattermost_cache;
-				  proxy_cache_revalidate on;
-				  proxy_cache_min_uses 2;
-				  proxy_cache_use_stale timeout;
-				  proxy_cache_lock on;
-				  proxy_cache_key "$host$request_uri$cookie_user";`,
+				  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
 		"nginx.org/server-snippets": "gzip on;",
 	}
 }
