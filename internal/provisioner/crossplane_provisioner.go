@@ -95,6 +95,12 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 			Namespace: crossplaneProvisionerNamespace,
 		},
 		Spec: crossplaneV1Alpha1.EKSSpec{
+			CompositionSelector: crossplaneV1Alpha1.EKSSpecCompositionSelector{
+				MatchLabels: crossplaneV1Alpha1.EKSSpecCompositionSelectorMatchLabels{
+					Provider: "aws",
+					Service:  "eks",
+				},
+			},
 			ID: cluster.ID,
 			Parameters: crossplaneV1Alpha1.EKSSpecParameters{
 				Version:               cluster.ProvisionerMetadataCrossplane.KubernetesVersion,
@@ -112,7 +118,9 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 				ImageID:               cluster.ProvisionerMetadataCrossplane.AMI,
 				LaunchTemplateVersion: *cluster.ProvisionerMetadataCrossplane.LaunchTemplateVersion,
 			},
-			ResourceConfig: crossplaneV1Alpha1.EKSSpecResourceConfig{},
+			ResourceConfig: crossplaneV1Alpha1.EKSSpecResourceConfig{
+				ProviderConfigName: "crossplane-provider-config",
+			},
 		},
 	}
 
@@ -126,12 +134,12 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 
 // CheckClusterCreated checks if cluster creation finished.
 func (provisioner *CrossplaneProvisioner) CheckClusterCreated(cluster *model.Cluster) (bool, error) {
-	object, err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Get(context.TODO(), cluster.ID, metav1.GetOptions{})
+	resource, err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Get(context.TODO(), cluster.ID, metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return false, errors.Wrap(err, "error getting crossplane resource information")
 	}
 
-	ready, err := object.Status.GetReadyCondition()
+	ready, err := resource.Status.GetReadyCondition()
 	if err != nil && !errors.Is(err, crossplaneV1Alpha1.ErrConditionNotFound) {
 		return false, errors.Wrap(err, "error getting crossplane cluster ready status")
 	}
@@ -140,8 +148,7 @@ func (provisioner *CrossplaneProvisioner) CheckClusterCreated(cluster *model.Clu
 		return false, nil
 	}
 
-	// return ready.Status == metav1.ConditionTrue, nil
-	return true, nil
+	return ready.Status == metav1.ConditionTrue, nil
 }
 
 // CreateNodes is no-op.
