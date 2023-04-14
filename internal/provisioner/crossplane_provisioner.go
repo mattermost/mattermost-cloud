@@ -82,6 +82,7 @@ func (provisioner *CrossplaneProvisioner) PrepareCluster(cluster *model.Cluster)
 	cluster.ProvisionerMetadataCrossplane.VPC = resources.VpcID
 	cluster.ProvisionerMetadataCrossplane.PublicSubnets = resources.PublicSubnetsIDs
 	cluster.ProvisionerMetadataCrossplane.PrivateSubnets = resources.PrivateSubnetIDs
+	cluster.ProvisionerMetadataCrossplane.AccountID = provisioner.kube2IAMAccountID
 
 	return true
 }
