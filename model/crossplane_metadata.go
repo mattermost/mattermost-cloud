@@ -20,7 +20,7 @@ const (
 	defaultKubernetesVersion = "1.23"
 
 	// defaultInstanceType is the default AWS instance type to use.
-	defaultInstanceType = "t3.medium"
+	defaultInstanceType = "t3.large"
 
 	// defaultNodeCount is the default number of nodes to use.
 	defaultNodeCount = 1
@@ -44,9 +44,7 @@ type CrossplaneMetadata struct {
 func (m *CrossplaneMetadata) ApplyClusterCreateRequest(createRequest *CreateClusterRequest) bool {
 	m.ChangeRequest = &CrossplaneMetadataRequestedState{
 		AMI:            createRequest.AMI,
-		ClusterRoleARN: createRequest.ClusterRoleARN,
 		MaxPodsPerNode: createRequest.MaxPodsPerNode,
-		Networking:     createRequest.Networking,
 		Version:        createRequest.Version,
 		VPC:            createRequest.VPC,
 	}
@@ -72,6 +70,7 @@ func (m *CrossplaneMetadata) SetDefaults() {
 		m.LaunchTemplateVersion = ptr.String(defaultLaunchTemplateVersion)
 	}
 
+	// Safeguard, should be set by the cluster creation request.
 	if m.KubernetesVersion == "" {
 		m.KubernetesVersion = defaultKubernetesVersion
 	}
@@ -85,12 +84,38 @@ func (m *CrossplaneMetadata) SetDefaults() {
 	}
 }
 
+// ApplyChangeRequest applies the change request to the metadata if the values are provided.
+func (m *CrossplaneMetadata) ApplyChangeRequest() error {
+	if m.ChangeRequest == nil {
+		return nil
+	}
+
+	if m.ChangeRequest.AMI != "" {
+		m.AMI = m.ChangeRequest.AMI
+	}
+
+	if m.ChangeRequest.Version != "" {
+		m.KubernetesVersion = m.ChangeRequest.Version
+	}
+
+	if m.ChangeRequest.NodeCount != 0 {
+		m.NodeCount = m.ChangeRequest.NodeCount
+	}
+
+	if m.ChangeRequest.VPC != "" {
+		m.VPC = m.ChangeRequest.VPC
+	}
+
+	return nil
+}
+
 // CrossplaneMetadataRequestedState is the requested state for crossplane metadata.
 type CrossplaneMetadataRequestedState struct {
 	AMI                   string
 	ClusterRoleARN        string
 	LaunchTemplateVersion *string
 	MaxPodsPerNode        int64
+	NodeCount             int64
 	Networking            string
 	Version               string
 	VPC                   string
