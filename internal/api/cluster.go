@@ -125,8 +125,8 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			// TODO: Defaults to first zone in the AWS metadata for now.
 			Region: cluster.ProviderMetadataAWS.Zones[0],
 		}
-		cluster.ProvisionerMetadataCrossplane.SetDefaults()
 		cluster.ProvisionerMetadataCrossplane.ApplyClusterCreateRequest(createClusterRequest)
+		cluster.ProvisionerMetadataCrossplane.SetDefaults()
 	} else {
 		cluster.ProvisionerMetadataKops = &model.KopsMetadata{}
 		cluster.ProvisionerMetadataKops.ApplyClusterCreateRequest(createClusterRequest)
