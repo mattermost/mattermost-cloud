@@ -8,8 +8,8 @@
 package mockawstools
 
 import (
-	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	types "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	types0 "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	model "github.com/mattermost/mattermost-cloud/model"
@@ -403,10 +403,10 @@ func (mr *MockAWSMockRecorder) SecretsManagerGetPGBouncerAuthUserPassword(vpcID 
 }
 
 // EnsureEKSCluster mocks base method
-func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources) (*types.Cluster, error) {
+func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources) (*types0.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSCluster", cluster, resources)
-	ret0, _ := ret[0].(*types.Cluster)
+	ret0, _ := ret[0].(*types0.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -418,10 +418,10 @@ func (mr *MockAWSMockRecorder) EnsureEKSCluster(cluster, resources interface{}) 
 }
 
 // EnsureEKSClusterUpdated mocks base method
-func (m *MockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) (*types.Update, error) {
+func (m *MockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) (*types0.Update, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSClusterUpdated", cluster)
-	ret0, _ := ret[0].(*types.Update)
+	ret0, _ := ret[0].(*types0.Update)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -433,10 +433,10 @@ func (mr *MockAWSMockRecorder) EnsureEKSClusterUpdated(cluster interface{}) *gom
 }
 
 // EnsureEKSNodeGroup mocks base method
-func (m *MockAWS) EnsureEKSNodeGroup(cluster *model.Cluster, nodeGroupPrefix string) (*types.Nodegroup, error) {
+func (m *MockAWS) EnsureEKSNodeGroup(cluster *model.Cluster, nodeGroupPrefix string) (*types0.Nodegroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSNodeGroup", cluster, nodeGroupPrefix)
-	ret0, _ := ret[0].(*types.Nodegroup)
+	ret0, _ := ret[0].(*types0.Nodegroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -462,10 +462,10 @@ func (mr *MockAWSMockRecorder) EnsureEKSNodeGroupMigrated(cluster, nodeGroupPref
 }
 
 // GetActiveEKSCluster mocks base method
-func (m *MockAWS) GetActiveEKSCluster(clusterName string) (*types.Cluster, error) {
+func (m *MockAWS) GetActiveEKSCluster(clusterName string) (*types0.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetActiveEKSCluster", clusterName)
-	ret0, _ := ret[0].(*types.Cluster)
+	ret0, _ := ret[0].(*types0.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -477,10 +477,10 @@ func (mr *MockAWSMockRecorder) GetActiveEKSCluster(clusterName interface{}) *gom
 }
 
 // GetActiveEKSNodeGroup mocks base method
-func (m *MockAWS) GetActiveEKSNodeGroup(clusterName, nodeGroupName string) (*types.Nodegroup, error) {
+func (m *MockAWS) GetActiveEKSNodeGroup(clusterName, nodeGroupName string) (*types0.Nodegroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetActiveEKSNodeGroup", clusterName, nodeGroupName)
-	ret0, _ := ret[0].(*types.Nodegroup)
+	ret0, _ := ret[0].(*types0.Nodegroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -534,10 +534,10 @@ func (mr *MockAWSMockRecorder) InstallEKSAddons(cluster interface{}) *gomock.Cal
 }
 
 // WaitForActiveEKSCluster mocks base method
-func (m *MockAWS) WaitForActiveEKSCluster(clusterName string, timeout int) (*types.Cluster, error) {
+func (m *MockAWS) WaitForActiveEKSCluster(clusterName string, timeout int) (*types0.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForActiveEKSCluster", clusterName, timeout)
-	ret0, _ := ret[0].(*types.Cluster)
+	ret0, _ := ret[0].(*types0.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -549,10 +549,10 @@ func (mr *MockAWSMockRecorder) WaitForActiveEKSCluster(clusterName, timeout inte
 }
 
 // WaitForActiveEKSNodeGroup mocks base method
-func (m *MockAWS) WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, timeout int) (*types.Nodegroup, error) {
+func (m *MockAWS) WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, timeout int) (*types0.Nodegroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForActiveEKSNodeGroup", clusterName, nodeGroupName, timeout)
-	ret0, _ := ret[0].(*types.Nodegroup)
+	ret0, _ := ret[0].(*types0.Nodegroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -706,10 +706,10 @@ func (mr *MockAWSMockRecorder) GetLoadBalancerAPIByType(arg0 interface{}) *gomoc
 }
 
 // GetVpcsWithFilters mocks base method
-func (m *MockAWS) GetVpcsWithFilters(filters []ec2types.Filter) ([]ec2types.Vpc, error) {
+func (m *MockAWS) GetVpcsWithFilters(filters []types.Filter) ([]types.Vpc, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetVpcsWithFilters", filters)
-	ret0, _ := ret[0].([]ec2types.Vpc)
+	ret0, _ := ret[0].([]types.Vpc)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
