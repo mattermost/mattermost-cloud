@@ -60,29 +60,47 @@ func NewCrossplaneProvisioner(
 }
 
 // PrepareCluster prepares the cluster for provisioning by assigning it a name (if not manually
-// provided) and claiming the VPC required for the cluster to be provisioned.
+// provided) and claiming the VPC required for the cluster to be provisioned and checking and
+// setting any creation request parameters.
 func (provisioner *CrossplaneProvisioner) PrepareCluster(cluster *model.Cluster) bool {
-	if cluster.ProvisionerMetadataCrossplane.Name == "" {
-		cluster.ProvisionerMetadataCrossplane.Name = fmt.Sprintf("%s-crossplane-k8s-local", cluster.ID)
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+	metadata := cluster.ProvisionerMetadataCrossplane
+
+	if metadata.ChangeRequest.AMI != "" && metadata.ChangeRequest.AMI != "latest" {
+		var isAMIValid bool
+		isAMIValid, err := provisioner.awsClient.IsValidAMI(metadata.ChangeRequest.AMI, logger)
+		if err != nil {
+			logger.WithError(err).Errorf("error checking the AWS AMI image %s", metadata.ChangeRequest.AMI)
+			return false
+		}
+		if !isAMIValid {
+			logger.Errorf("invalid AWS AMI image %s", metadata.ChangeRequest.AMI)
+			return false
+		}
+		metadata.AMI = metadata.ChangeRequest.AMI
+	}
+
+	if metadata.Name == "" {
+		metadata.Name = fmt.Sprintf("%s-crossplane-k8s-local", cluster.ID)
 	}
 
 	var (
 		resources aws.ClusterResources
 		err       error
 	)
-	if cluster.ProvisionerMetadataCrossplane.VPC == "" {
+	if metadata.VPC == "" {
 		resources, err = provisioner.awsClient.GetAndClaimVpcResources(cluster, provisioner.parameters.Owner, provisioner.logger)
 	} else {
-		resources, err = provisioner.awsClient.ClaimVPC(cluster.ProvisionerMetadataCrossplane.VPC, cluster, provisioner.parameters.Owner, provisioner.logger)
+		resources, err = provisioner.awsClient.ClaimVPC(metadata.VPC, cluster, provisioner.parameters.Owner, provisioner.logger)
 	}
 	if err != nil {
-		provisioner.logger.WithError(err).WithField("vpc", cluster.ProvisionerMetadataCrossplane.VPC).Error("Failed to claim VPC resources")
+		provisioner.logger.WithError(err).WithField("vpc", metadata.VPC).Error("Failed to claim VPC resources")
 		return false
 	}
-	cluster.ProvisionerMetadataCrossplane.VPC = resources.VpcID
-	cluster.ProvisionerMetadataCrossplane.PublicSubnets = resources.PublicSubnetsIDs
-	cluster.ProvisionerMetadataCrossplane.PrivateSubnets = resources.PrivateSubnetIDs
-	cluster.ProvisionerMetadataCrossplane.AccountID = provisioner.kube2IAMAccountID
+	metadata.VPC = resources.VpcID
+	metadata.PublicSubnets = resources.PublicSubnetsIDs
+	metadata.PrivateSubnets = resources.PrivateSubnetIDs
+	metadata.AccountID = provisioner.kube2IAMAccountID
 
 	return true
 }
@@ -90,6 +108,8 @@ func (provisioner *CrossplaneProvisioner) PrepareCluster(cluster *model.Cluster)
 // CreateCluster creates the Crossplane cluster resource in the kubernetes CNC cluster.
 func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) error {
 	ctx := context.TODO()
+	// logger := provisioner.logger.WithField("cluster", cluster.ID)
+
 	obj := &crossplaneV1Alpha1.MMK8S{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.ProvisionerMetadataCrossplane.Name,
