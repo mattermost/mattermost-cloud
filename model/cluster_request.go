@@ -73,7 +73,7 @@ func (request *CreateClusterRequest) SetDefaults() {
 		request.Provisioner = ProvisionerKops
 	}
 	if len(request.Version) == 0 {
-		if request.Provisioner == ProvisionerEKS {
+		if request.Provisioner == ProvisionerEKS || request.Provisioner == ProvisionerCrossplane {
 			request.Version = "1.23"
 		} else {
 			request.Version = "latest"
@@ -81,7 +81,7 @@ func (request *CreateClusterRequest) SetDefaults() {
 	}
 
 	if len(request.Zones) == 0 {
-		if request.Provisioner == ProvisionerEKS {
+		if request.Provisioner == ProvisionerEKS || request.Provisioner == ProvisionerCrossplane {
 			request.Zones = []string{"us-east-1a", "us-east-1b"}
 		} else {
 			request.Zones = []string{"us-east-1a"}
