@@ -8,6 +8,7 @@
 package mockawstools
 
 import (
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	types "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -702,4 +703,19 @@ func (m *MockAWS) GetLoadBalancerAPIByType(arg0 string) aws.ELB {
 func (mr *MockAWSMockRecorder) GetLoadBalancerAPIByType(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLoadBalancerAPIByType", reflect.TypeOf((*MockAWS)(nil).GetLoadBalancerAPIByType), arg0)
+}
+
+// GetVpcsWithFilters mocks base method
+func (m *MockAWS) GetVpcsWithFilters(filters []ec2types.Filter) ([]ec2types.Vpc, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVpcsWithFilters", filters)
+	ret0, _ := ret[0].([]ec2types.Vpc)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVpcsWithFilters indicates an expected call of GetVpcsWithFilters
+func (mr *MockAWSMockRecorder) GetVpcsWithFilters(filters interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVpcsWithFilters", reflect.TypeOf((*MockAWS)(nil).GetVpcsWithFilters), filters)
 }
