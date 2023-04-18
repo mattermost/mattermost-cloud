@@ -17,10 +17,13 @@ const (
 	defaultLaunchTemplateVersion = "2"
 
 	// defaultKubernetesVersion is the default Kubernetes version to use.
-	defaultKubernetesVersion = "latest"
+	defaultKubernetesVersion = "1.23"
 
 	// defaultInstanceType is the default AWS instance type to use.
 	defaultInstanceType = "t3.medium"
+
+	// defaultNodeCount is the default number of nodes to use.
+	defaultNodeCount = 1
 )
 
 type CrossplaneMetadata struct {
@@ -75,6 +78,10 @@ func (m *CrossplaneMetadata) SetDefaults() {
 
 	if m.InstanceType == "" {
 		m.InstanceType = defaultInstanceType
+	}
+
+	if m.NodeCount == 0 {
+		m.NodeCount = defaultNodeCount
 	}
 }
 
