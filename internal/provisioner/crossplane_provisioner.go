@@ -66,6 +66,7 @@ func (provisioner *CrossplaneProvisioner) PrepareCluster(cluster *model.Cluster)
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 	metadata := cluster.ProvisionerMetadataCrossplane
 
+	// Validate the cluster request AMI if provided.
 	if metadata.ChangeRequest.AMI != "" && metadata.ChangeRequest.AMI != "latest" {
 		var isAMIValid bool
 		isAMIValid, err := provisioner.awsClient.IsValidAMI(metadata.ChangeRequest.AMI, logger)
@@ -77,11 +78,15 @@ func (provisioner *CrossplaneProvisioner) PrepareCluster(cluster *model.Cluster)
 			logger.Errorf("invalid AWS AMI image %s", metadata.ChangeRequest.AMI)
 			return false
 		}
-		metadata.AMI = metadata.ChangeRequest.AMI
 	}
 
 	if metadata.Name == "" {
 		metadata.Name = fmt.Sprintf("%s-crossplane-k8s-local", cluster.ID)
+	}
+
+	if err := metadata.ApplyChangeRequest(); err != nil {
+		logger.WithError(err).Error("Failed to apply change request")
+		return false
 	}
 
 	var (
@@ -144,6 +149,9 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 			},
 		},
 	}
+
+	// bites, err := json.Marshal(obj)
+	// provisioner.logger.Warnf("obj: %s", string(bites))
 
 	_, err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Create(ctx, obj, metav1.CreateOptions{})
 	if err != nil {
