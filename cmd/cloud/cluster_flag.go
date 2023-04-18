@@ -41,7 +41,7 @@ type createRequestOptions struct {
 
 func (flags *createRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.provider, "provider", "aws", "Cloud provider hosting the cluster.")
-	command.Flags().StringVar(&flags.version, "version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
+	command.Flags().StringVar(&flags.version, "version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
 	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI to use for the cluster hosts.")
 	command.Flags().StringVar(&flags.zones, "zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	command.Flags().BoolVar(&flags.allowInstallations, "allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
