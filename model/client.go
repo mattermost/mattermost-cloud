@@ -276,6 +276,23 @@ func (c *Client) ResizeCluster(clusterID string, request *PatchClusterSizeReques
 	}
 }
 
+// CreateNodegroups requests the creation of new nodegroups in the given cluster.
+func (c *Client) CreateNodegroups(clusterID string, request *CreateNodegroupsRequest) (*ClusterDTO, error) {
+	resp, err := c.doPost(c.buildURL("/api/cluster/%s/nodegroups", clusterID), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return DTOFromReader[ClusterDTO](resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // DeleteCluster deletes the given cluster and all resources contained therein.
 func (c *Client) DeleteCluster(clusterID string) error {
 	resp, err := c.doDelete(c.buildURL("/api/cluster/%s", clusterID))
