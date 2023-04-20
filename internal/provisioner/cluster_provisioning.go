@@ -7,8 +7,6 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
@@ -119,12 +117,6 @@ func provisionCluster(
 		return errors.Wrap(err, "failed to create bifrost secret")
 	}
 
-	err = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(ctx, "k8s-spot-termination-handler", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("DaemonSet k8s-spot-termination-handler not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete DaemonSet k8s-spot-termination-handler")
-	}
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
@@ -152,9 +144,6 @@ func provisionCluster(
 		}, {
 			Path:            "manifests/bifrost/bifrost.yaml",
 			DeployNamespace: bifrostNamespace,
-		}, {
-			Path:            "manifests/k8s-spot-termination-handler/k8s-spot-termination-handler.yaml",
-			DeployNamespace: "kube-system",
 		}, {
 			Path:            "manifests/external-snapshotter/external-snapshotter.yaml",
 			DeployNamespace: "kube-system",
@@ -290,76 +279,6 @@ func provisionCluster(
 				return err
 			}
 			logger.Infof("Successfully deployed service pod %q", podRunning.GetName())
-		}
-	}
-
-	wait = 240
-	supportAppsWithDaemonSets := map[string]string{
-		//"calico-node":                  "kube-system",
-		"k8s-spot-termination-handler": "kube-system",
-	}
-	for daemonSet, namespace := range supportAppsWithDaemonSets {
-		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0) {
-			logger.Infof("Waiting up to %d seconds for %q daemonset to get it...", wait, daemonSet)
-			ctxDomainSets, cancelDomainSets := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancelDomainSets()
-			daemonSetObj, errFor := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctxDomainSets, daemonSet, metav1.GetOptions{})
-			if errFor != nil {
-				return errors.Wrapf(errFor, " failed to get daemonSet %s", daemonSet)
-			}
-			var payload []k8s.PatchStringValue
-			if daemonSetObj.Spec.Selector != nil {
-				for i, envVar := range daemonSetObj.Spec.Template.Spec.Containers[0].Env {
-					if envVar.Name == "CLUSTER" {
-						payload = []k8s.PatchStringValue{{
-							Op:    "replace",
-							Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-							Value: cluster.ID,
-						}}
-					}
-					if envVar.Name == "MATTERMOST_CHANNEL" && len(os.Getenv(model.MattermostChannel)) > 0 {
-						payload = append(payload,
-							k8s.PatchStringValue{
-								Op:    "replace",
-								Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-								Value: os.Getenv(model.MattermostChannel),
-							})
-					}
-					if envVar.Name == "MATTERMOST_WEBHOOK" && len(os.Getenv(model.MattermostWebhook)) > 0 {
-						payload = append(payload,
-							k8s.PatchStringValue{
-								Op:    "replace",
-								Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-								Value: os.Getenv(model.MattermostWebhook),
-							})
-					}
-				}
-
-				errFor = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
-				if errFor != nil {
-					return errFor
-				}
-			}
-		}
-		var pods *v1.PodList
-		pods, err = k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
-		if err != nil {
-			return err
-		}
-		// Pods for k8s-spot-termination-handler do not ment to be schedule in every cluster so doesn't need to fail provision in this case/
-		if len(pods.Items) == 0 && daemonSet != "k8s-spot-termination-handler" {
-			return fmt.Errorf("no pods found from %s/%s daemonSet", namespace, daemonSet)
-		}
-
-		for _, pod := range pods.Items {
-			logger.Infof("Waiting up to %d seconds for %q/%q pod %q to start...", wait, namespace, daemonSet, pod.GetName())
-			contextWait, cancelWait := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancelWait()
-			_, err = k8sClient.WaitForPodRunning(contextWait, namespace, pod.GetName())
-			if err != nil {
-				return err
-			}
-			logger.Infof("Successfully deployed support apps pod %q", pod.GetName())
 		}
 	}
 

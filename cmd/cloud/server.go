@@ -121,14 +121,6 @@ func executeServerCmd(flags serverFlags) error {
 		return errors.New("vpn-list-cidr must have at least one value")
 	}
 
-	if flags.mattermostWebHook != "" {
-		_ = os.Setenv(model.MattermostWebhook, flags.mattermostWebHook)
-	}
-
-	if flags.mattermostChannel != "" {
-		_ = os.Setenv(model.MattermostChannel, flags.mattermostChannel)
-	}
-
 	if flags.utilitiesGitURL == "" {
 		return errors.New("utilities-git-url must be set")
 	}
