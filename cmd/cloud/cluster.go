@@ -40,6 +40,7 @@ func newCmdCluster() *cobra.Command {
 	cmd.AddCommand(newCmdClusterUpdate())
 	cmd.AddCommand(newCmdClusterUpgrade())
 	cmd.AddCommand(newCmdClusterResize())
+	cmd.AddCommand(newCmdClusterNodegroups())
 	cmd.AddCommand(newCmdClusterDelete())
 	cmd.AddCommand(newCmdClusterGet())
 	cmd.AddCommand(newCmdClusterList())

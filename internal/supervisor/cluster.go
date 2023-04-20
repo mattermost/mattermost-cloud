@@ -175,6 +175,8 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		return s.upgradeCluster(cluster, logger)
 	case model.ClusterStateResizeRequested:
 		return s.resizeCluster(cluster, logger)
+	case model.ClusterStateNodegroupsCreationRequested:
+		return s.createNodegroups(cluster, logger)
 	case model.ClusterStateRefreshMetadata:
 		return s.refreshClusterMetadata(cluster, logger)
 	case model.ClusterStateDeletionRequested:
@@ -242,6 +244,23 @@ func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.Fie
 	}
 
 	logger.Info("Finished resizing cluster")
+	return s.refreshClusterMetadata(cluster, logger)
+}
+
+func (s *ClusterSupervisor) createNodegroups(cluster *model.Cluster, logger log.FieldLogger) string {
+	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateNodes(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create nodegroups")
+		return model.ClusterStateNodegroupsCreationFailed
+	}
+
+	_, err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodesCreated(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create nodegroups")
+		return model.ClusterStateNodegroupsCreationFailed
+	}
+
+	logger.Info("Finished creating nodegroups")
 	return s.refreshClusterMetadata(cluster, logger)
 }
 
