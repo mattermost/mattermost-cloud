@@ -11,6 +11,7 @@ import (
 	crossplaneV1Alpha1 "github.com/mattermost/mattermost-cloud-crossplane/apis/crossplane/v1alpha1"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -102,9 +103,19 @@ func (provisioner *CrossplaneProvisioner) PrepareCluster(cluster *model.Cluster)
 		provisioner.logger.WithError(err).WithField("vpc", metadata.VPC).Error("Failed to claim VPC resources")
 		return false
 	}
+
 	metadata.VPC = resources.VpcID
-	metadata.PublicSubnets = resources.PublicSubnetsIDs
-	metadata.PrivateSubnets = resources.PrivateSubnetIDs
+	for _, subnet := range resources.PublicSubnets {
+		if utils.Contains[string](cluster.ProviderMetadataAWS.Zones, *subnet.AvailabilityZone) {
+			metadata.Subnets = append(metadata.Subnets, *subnet.SubnetId)
+		}
+	}
+	for _, subnet := range resources.PrivateSubnets {
+		if utils.Contains[string](cluster.ProviderMetadataAWS.Zones, *subnet.AvailabilityZone) {
+			metadata.Subnets = append(metadata.Subnets, *subnet.SubnetId)
+			metadata.PrivateSubnets = append(metadata.PrivateSubnets, *subnet.SubnetId)
+		}
+	}
 	metadata.AccountID = provisioner.kube2IAMAccountID
 
 	return true
@@ -137,7 +148,7 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 				EndpointPrivateAccess: true,  // TODO
 				EndpointPublicAccess:  false, // TODO
 				VpcID:                 cluster.ProvisionerMetadataCrossplane.VPC,
-				SubnetIds:             cluster.ProvisionerMetadataCrossplane.PublicSubnets,
+				SubnetIds:             cluster.ProvisionerMetadataCrossplane.Subnets,
 				PrivateSubnetIds:      cluster.ProvisionerMetadataCrossplane.PrivateSubnets,
 				NodeCount:             int(cluster.ProvisionerMetadataCrossplane.NodeCount),
 				InstanceType:          cluster.ProvisionerMetadataCrossplane.InstanceType,
@@ -163,15 +174,29 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 
 // CheckClusterCreated checks if cluster creation finished.
 func (provisioner *CrossplaneProvisioner) CheckClusterCreated(cluster *model.Cluster) (bool, error) {
-	resource, err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Get(context.TODO(), cluster.ID, metav1.GetOptions{})
+	resources, err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).List(context.TODO(), metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("metadata.name=%s", cluster.ProvisionerMetadataCrossplane.Name),
+	}) //.Get(context.TODO(), cluster.ID, metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return false, errors.Wrap(err, "error getting crossplane resource information")
 	}
 
+	if len(resources.Items) == 0 {
+		return false, fmt.Errorf("no crossplane resource found")
+	}
+
+	if len(resources.Items) > 1 {
+		return false, fmt.Errorf("expected one eks cluster, found %d", len(resources.Items))
+	}
+
+	resource := resources.Items[0]
 	ready, err := resource.Status.GetReadyCondition()
 	if err != nil && !errors.Is(err, crossplaneV1Alpha1.ErrConditionNotFound) {
 		return false, errors.Wrap(err, "error getting crossplane cluster ready status")
 	}
+
+	provisioner.logger.Warnf("Conditions: %v", resource.Status.Conditions)
+	provisioner.logger.Warnf("Ready: %v", ready)
 
 	if ready == nil {
 		return false, nil

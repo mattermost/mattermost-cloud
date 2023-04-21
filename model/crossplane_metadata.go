@@ -34,7 +34,7 @@ type CrossplaneMetadata struct {
 	KubernetesVersion     string
 	LaunchTemplateVersion *string
 	PrivateSubnets        []string
-	PublicSubnets         []string
+	Subnets               []string
 	Region                string
 	VPC                   string
 	InstanceType          string

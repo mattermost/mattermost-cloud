@@ -21,7 +21,9 @@ import (
 type ClusterResources struct {
 	VpcID                  string
 	VpcCIDR                string
+	PrivateSubnets         []ec2Types.Subnet
 	PrivateSubnetIDs       []string
+	PublicSubnets          []ec2Types.Subnet
 	PublicSubnetsIDs       []string
 	MasterSecurityGroupIDs []string
 	WorkerSecurityGroupIDs []string
@@ -138,6 +140,7 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 	}
 
 	for _, subnet := range privateSubnets {
+		clusterResources.PrivateSubnets = append(clusterResources.PrivateSubnets, subnet)
 		clusterResources.PrivateSubnetIDs = append(clusterResources.PrivateSubnetIDs, *subnet.SubnetId)
 	}
 
@@ -152,6 +155,7 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 	}
 
 	for _, subnet := range publicSubnets {
+		clusterResources.PublicSubnets = append(clusterResources.PublicSubnets, subnet)
 		clusterResources.PublicSubnetsIDs = append(clusterResources.PublicSubnetsIDs, *subnet.SubnetId)
 	}
 
