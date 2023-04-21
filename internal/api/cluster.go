@@ -123,7 +123,9 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	} else if createClusterRequest.Provisioner == model.ProvisionerCrossplane {
 		cluster.ProvisionerMetadataCrossplane = &model.CrossplaneMetadata{
 			// TODO: Defaults to first zone in the AWS metadata for now.
-			Region: cluster.ProviderMetadataAWS.Zones[0],
+			// FIXME: It gets the region from the first zone, but it should be inherited from the
+			// VPC or it should use zones instead of regions.
+			Region: cluster.ProviderMetadataAWS.Zones[0][:len(cluster.ProviderMetadataAWS.Zones[0])-1],
 		}
 		cluster.ProvisionerMetadataCrossplane.ApplyClusterCreateRequest(createClusterRequest)
 		cluster.ProvisionerMetadataCrossplane.SetDefaults()
