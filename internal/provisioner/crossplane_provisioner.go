@@ -195,8 +195,7 @@ func (provisioner *CrossplaneProvisioner) CheckClusterCreated(cluster *model.Clu
 		return false, errors.Wrap(err, "error getting crossplane cluster ready status")
 	}
 
-	provisioner.logger.Warnf("Conditions: %v", resource.Status.Conditions)
-	provisioner.logger.Warnf("Ready: %v", ready)
+	// TODO: Check if cluster has been pending creation for too long
 
 	if ready == nil {
 		return false, nil
