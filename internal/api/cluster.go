@@ -33,6 +33,7 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
 	clusterRouter.Handle("/annotations", addContext(handleAddClusterAnnotations)).Methods("POST")
 	clusterRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteClusterAnnotation)).Methods("DELETE")
+	clusterRouter.Handle("/nodegroups", addContext(handleCreateNodegroups)).Methods("POST")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
 
@@ -422,6 +423,73 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	unlockOnce()
 	c.Supervisor.Do()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, clusterDTO)
+}
+
+// handleCreateNodegroups responds to POST /api/cluster/{cluster}/nodegroups, creating
+// the requested nodegroups.
+func handleCreateNodegroups(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	c.Logger = c.Logger.WithField("cluster", clusterID)
+
+	createNodegroupsRequest, err := model.NewCreateNodegroupsRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	newState := model.ClusterStateNodegroupsCreationRequested
+
+	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
+	if status != 0 {
+		c.Logger.Debug("Cluster is not in a valid state for nodegroup creation")
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if clusterDTO.Provisioner == model.ProvisionerKops {
+		c.Logger.Debug("Creating nodegroups for Kops cluster is not supported")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if clusterDTO.Provisioner == model.ProvisionerEKS {
+		err = clusterDTO.ProvisionerMetadataEKS.ValidateNodegroupsCreateRequest(createNodegroupsRequest.Nodegroups)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to validate nodegroups create request")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Set Nodegroups in change request
+		clusterDTO.ProvisionerMetadataEKS.ApplyNodegroupsCreateRequest(createNodegroupsRequest)
+	}
+
+	oldState := clusterDTO.State
+
+	clusterDTO.State = newState
+	err = c.Store.UpdateCluster(clusterDTO.Cluster)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to update cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if oldState != newState {
+		err = c.EventProducer.ProduceClusterStateChangeEvent(clusterDTO.Cluster, oldState)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to create cluster state change event")
+		}
+	}
+
+	unlockOnce()
+	_ = c.Supervisor.Do()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
