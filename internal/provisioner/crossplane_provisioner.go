@@ -241,8 +241,7 @@ func (provisioner *CrossplaneProvisioner) DeleteCluster(cluster *model.Cluster) 
 
 	err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Delete(context.TODO(), cluster.ProvisionerMetadataCrossplane.Name, metav1.DeleteOptions{})
 	if err != nil {
-		provisioner.logger.WithError(err).Error("Failed to delete crossplane resource")
-		// return false, errors.Wrap(err, "failed to delete crossplane resource")
+		return false, errors.Wrap(err, "failed to delete crossplane resource")
 	}
 
 	err = provisioner.awsClient.ReleaseVpc(cluster, logger)
