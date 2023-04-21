@@ -9,18 +9,18 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.17.8
 	github.com/aws/aws-sdk-go-v2/config v1.18.21
 	github.com/aws/aws-sdk-go-v2/service/acm v1.17.9
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.19.4
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.19.5
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.93.2
 	github.com/aws/aws-sdk-go-v2/service/eks v1.27.10
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing v1.15.8
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.19.9
 	github.com/aws/aws-sdk-go-v2/service/iam v1.19.10
-	github.com/aws/aws-sdk-go-v2/service/kms v1.20.10
-	github.com/aws/aws-sdk-go-v2/service/rds v1.42.3
+	github.com/aws/aws-sdk-go-v2/service/kms v1.20.11
+	github.com/aws/aws-sdk-go-v2/service/rds v1.43.1
 	github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.14.9
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.27.7
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.31.3
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.19.3
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.32.0
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.19.4
 	github.com/aws/aws-sdk-go-v2/service/sts v1.18.9
 	github.com/aws/smithy-go v1.13.5
 	github.com/blang/semver v3.5.1+incompatible
