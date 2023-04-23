@@ -238,14 +238,14 @@ func (provisioner *CrossplaneProvisioner) ResizeCluster(cluster *model.Cluster) 
 func (provisioner *CrossplaneProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Delete(context.TODO(), cluster.ProvisionerMetadataCrossplane.Name, metav1.DeleteOptions{})
-	if err != nil {
-		return false, errors.Wrap(err, "failed to delete crossplane resource")
-	}
-
-	err = provisioner.awsClient.ReleaseVpc(cluster, logger)
+	err := provisioner.awsClient.ReleaseVpc(cluster, logger)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to release cluster VPC")
+	}
+
+	err = provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).Delete(context.TODO(), cluster.ProvisionerMetadataCrossplane.Name, metav1.DeleteOptions{})
+	if err != nil {
+		return false, errors.Wrap(err, "failed to delete crossplane resource")
 	}
 
 	logger.Info("Successfully deleted Crossplane cluster")
