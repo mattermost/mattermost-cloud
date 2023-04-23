@@ -174,7 +174,7 @@ func (provisioner *CrossplaneProvisioner) CreateCluster(cluster *model.Cluster) 
 func (provisioner *CrossplaneProvisioner) CheckClusterCreated(cluster *model.Cluster) (bool, error) {
 	resources, err := provisioner.kubeClient.CrossplaneClient.CloudV1alpha1().MMK8Ss(crossplaneProvisionerNamespace).List(context.TODO(), metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("metadata.name=%s", cluster.ProvisionerMetadataCrossplane.Name),
-	}) //.Get(context.TODO(), cluster.ID, metav1.GetOptions{})
+	})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return false, errors.Wrap(err, "error getting crossplane resource information")
 	}
