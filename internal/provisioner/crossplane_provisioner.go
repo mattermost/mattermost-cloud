@@ -29,6 +29,10 @@ const (
 	// crossplaneProvisionerNamespace the namespace where the crossplane resources are created.
 	// TODO: change to a proper namespace when tests are done.
 	crossplaneProvisionerNamespace = "mm-xplane-eks-01"
+
+	// crossplaneEKSClusterNameFormat is the format for the name of the crossplane EKS cluster.
+	// The variable is the cluster ID.
+	crossplaneEKSClusterNameFormat = "cluster-%s"
 )
 
 // CrossplaneProvisioner provisions clusters using Crossplane
@@ -271,7 +275,7 @@ func (provisioner *CrossplaneProvisioner) RefreshClusterMetadata(cluster *model.
 }
 
 func (provisioner *CrossplaneProvisioner) getKubeConfigPath(cluster *model.Cluster) (string, error) {
-	clusterName := "cluster-" + cluster.ID
+	clusterName := fmt.Sprintf(crossplaneEKSClusterNameFormat, cluster.ID)
 	eksCluster, err := provisioner.awsClient.GetActiveEKSCluster(clusterName)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get EKS cluster")
