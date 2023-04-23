@@ -81,9 +81,7 @@ func (provisioner *CrossplaneProvisioner) PrepareCluster(cluster *model.Cluster)
 		}
 	}
 
-	if metadata.Name == "" {
-		metadata.Name = fmt.Sprintf("%s-crossplane-k8s-local", cluster.ID)
-	}
+	metadata.Name = fmt.Sprintf("%s-crossplane-k8s-local", cluster.ID)
 
 	if err := metadata.ApplyChangeRequest(); err != nil {
 		logger.WithError(err).Error("Failed to apply change request")
