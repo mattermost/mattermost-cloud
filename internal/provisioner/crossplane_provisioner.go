@@ -7,6 +7,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"os"
 
 	crossplaneV1Alpha1 "github.com/mattermost/mattermost-cloud-crossplane/apis/crossplane/v1alpha1"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
@@ -18,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -33,7 +35,7 @@ const (
 type CrossplaneProvisioner struct {
 	awsClient         aws.AWS
 	kubeClient        *k8s.KubeClient
-	clusterStore      clusterUpdateStore
+	databaseStore     model.ClusterUtilityDatabaseStoreInterface
 	parameters        ProvisioningParams
 	kube2IAMAccountID string
 	logger            log.FieldLogger
@@ -46,7 +48,7 @@ func NewCrossplaneProvisioner(
 	kubeClient *k8s.KubeClient,
 	awsClient aws.AWS,
 	parameters ProvisioningParams,
-	clusterStore clusterUpdateStore,
+	databaseStore model.ClusterUtilityDatabaseStoreInterface,
 	kube2IAMAccountID string,
 	logger log.FieldLogger,
 ) *CrossplaneProvisioner {
@@ -54,7 +56,7 @@ func NewCrossplaneProvisioner(
 		kubeClient:        kubeClient,
 		awsClient:         awsClient,
 		parameters:        parameters,
-		clusterStore:      clusterStore,
+		databaseStore:     databaseStore,
 		kube2IAMAccountID: kube2IAMAccountID,
 		logger:            logger,
 	}
@@ -214,7 +216,19 @@ func (provisioner *CrossplaneProvisioner) CheckNodesCreated(cluster *model.Clust
 
 // ProvisionCluster
 func (provisioner *CrossplaneProvisioner) ProvisionCluster(cluster *model.Cluster) error {
-	return nil
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	metadata := cluster.ProvisionerMetadataCrossplane
+	if metadata == nil {
+		return errors.New("expected metadata to be present")
+	}
+
+	kubeConfigPath, err := provisioner.getKubeConfigPath(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kubeconfig file path")
+	}
+
+	return provisionCluster(cluster, kubeConfigPath, provisioner.awsClient, provisioner.parameters, provisioner.databaseStore, logger)
 }
 
 // UpgradeCluster is no-op.
@@ -254,4 +268,52 @@ func (provisioner *CrossplaneProvisioner) DeleteCluster(cluster *model.Cluster) 
 // RefreshClusterMetadata is no-op.
 func (provisioner *CrossplaneProvisioner) RefreshClusterMetadata(cluster *model.Cluster) error {
 	return nil
+}
+
+func (provisioner *CrossplaneProvisioner) getKubeConfigPath(cluster *model.Cluster) (string, error) {
+	clusterName := "cluster-" + cluster.ID
+	eksCluster, err := provisioner.awsClient.GetActiveEKSCluster(clusterName)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get EKS cluster")
+	}
+	if eksCluster == nil {
+		return "", errors.New("EKS cluster not ready")
+	}
+
+	kubeconfig, err := newEKSKubeConfig(eksCluster, provisioner.awsClient)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create kubeconfig")
+	}
+
+	kubeconfigFile, err := os.CreateTemp("", clusterName)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create kubeconfig tempfile")
+	}
+	defer kubeconfigFile.Close()
+
+	rawKubeconfig, err := clientcmd.Write(kubeconfig)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to serialize kubeconfig")
+	}
+	_, err = kubeconfigFile.Write(rawKubeconfig)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to write kubeconfig")
+	}
+
+	return kubeconfigFile.Name(), nil
+}
+
+func (provisioner *CrossplaneProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
+	configLocation, err := provisioner.getKubeConfigPath(cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kube config")
+	}
+
+	var k8sClient *k8s.KubeClient
+	k8sClient, err = k8s.NewFromFile(configLocation, provisioner.logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	return k8sClient, nil
 }
