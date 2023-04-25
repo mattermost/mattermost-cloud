@@ -87,7 +87,7 @@ func (p *mockClusterProvisionerOption) GetClusterProvisioner(provisioner string)
 
 type mockClusterProvisioner struct{}
 
-func (p *mockClusterProvisioner) DeleteNodegroup(cluster *model.Cluster) error {
+func (p *mockClusterProvisioner) DeleteNodegroups(cluster *model.Cluster) error {
 	return nil
 }
 

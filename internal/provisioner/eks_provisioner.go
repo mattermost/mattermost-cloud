@@ -362,7 +362,7 @@ func (provisioner *EKSProvisioner) CheckNodegroupsCreated(cluster *model.Cluster
 }
 
 // DeleteNodegroup deletes the EKS nodegroup.
-func (provisioner *EKSProvisioner) DeleteNodegroup(cluster *model.Cluster) error {
+func (provisioner *EKSProvisioner) DeleteNodegroups(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS

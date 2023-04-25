@@ -35,7 +35,7 @@ type ClusterProvisioner interface {
 	CheckClusterCreated(cluster *model.Cluster) (bool, error)
 	CreateNodegroups(cluster *model.Cluster) error
 	CheckNodegroupsCreated(cluster *model.Cluster) (bool, error)
-	DeleteNodegroup(cluster *model.Cluster) error
+	DeleteNodegroups(cluster *model.Cluster) error
 	ProvisionCluster(cluster *model.Cluster) error
 	UpgradeCluster(cluster *model.Cluster) error
 	ResizeCluster(cluster *model.Cluster) error
@@ -268,7 +268,7 @@ func (s *ClusterSupervisor) createNodegroups(cluster *model.Cluster, logger log.
 }
 
 func (s *ClusterSupervisor) deleteNodegroup(cluster *model.Cluster, logger log.FieldLogger) string {
-	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).DeleteNodegroup(cluster)
+	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).DeleteNodegroups(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete nodegroup")
 		return model.ClusterStateNodegroupDeletionFailed
