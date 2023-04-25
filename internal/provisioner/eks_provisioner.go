@@ -256,6 +256,9 @@ func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster) error {
 	if eksMetadata == nil {
 		return errors.New("error: EKS metadata not set when creating EKS NodeGroup")
 	}
+
+	eksMetadata = provisioner.setMissingChangeRequest(eksMetadata)
+
 	changeRequest := eksMetadata.ChangeRequest
 
 	var wg sync.WaitGroup
@@ -696,6 +699,28 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 
 	return nil
 
+}
+
+func (provisioner *EKSProvisioner) setMissingChangeRequest(eksMetadata *model.EKSMetadata) *model.EKSMetadata {
+	changeRequest := eksMetadata.ChangeRequest
+
+	if changeRequest.AMI == "" {
+		changeRequest.AMI = eksMetadata.AMI
+	}
+
+	if changeRequest.MaxPodsPerNode == 0 {
+		changeRequest.MaxPodsPerNode = eksMetadata.MaxPodsPerNode
+	}
+
+	if changeRequest.VPC == "" {
+		changeRequest.VPC = eksMetadata.VPC
+	}
+
+	if changeRequest.NodeRoleARN == "" {
+		changeRequest.NodeRoleARN = eksMetadata.NodeRoleARN
+	}
+
+	return eksMetadata
 }
 
 // DeleteCluster deletes EKS cluster.

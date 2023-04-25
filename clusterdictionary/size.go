@@ -158,3 +158,31 @@ func AddToCreateClusterRequest(sizes map[string]string, request *model.CreateClu
 
 	return nil
 }
+
+// AddToCreateNodegroupsRequest takes a map of size keywords and adds the corresponding
+// values to a CreateNodegroupsRequest.
+func AddToCreateNodegroupsRequest(sizes map[string]string, request *model.CreateNodegroupsRequest) error {
+	if len(sizes) == 0 {
+		return nil
+	}
+
+	if request.Nodegroups == nil {
+		request.Nodegroups = make(map[string]model.NodeGroupMetadata)
+	}
+
+	for ng, ngSize := range sizes {
+		if !IsValidClusterSize(ngSize) {
+			return errors.Errorf("%s is not a valid size", ngSize)
+		}
+
+		values := ValidSizes[ngSize]
+
+		request.Nodegroups[ng] = model.NodeGroupMetadata{
+			InstanceType: values.NodeInstanceType,
+			MinCount:     values.NodeMinCount,
+			MaxCount:     values.NodeMaxCount,
+		}
+	}
+
+	return nil
+}
