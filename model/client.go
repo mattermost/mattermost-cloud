@@ -293,6 +293,22 @@ func (c *Client) CreateNodegroups(clusterID string, request *CreateNodegroupsReq
 	}
 }
 
+func (c *Client) DeleteNodegroup(clusterID string, nodegroup string) (*ClusterDTO, error) {
+	resp, err := c.doDelete(c.buildURL("/api/cluster/%s/nodegroups/%s", clusterID, nodegroup))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return DTOFromReader[ClusterDTO](resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // DeleteCluster deletes the given cluster and all resources contained therein.
 func (c *Client) DeleteCluster(clusterID string) error {
 	resp, err := c.doDelete(c.buildURL("/api/cluster/%s", clusterID))

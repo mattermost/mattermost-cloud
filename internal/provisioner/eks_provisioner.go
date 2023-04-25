@@ -248,8 +248,8 @@ func (provisioner *EKSProvisioner) prepareLaunchTemplate(cluster *model.Cluster,
 	return nil
 }
 
-// CreateNodes creates the EKS nodes.
-func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster) error {
+// CreateNodegroups creates the EKS nodegroups.
+func (provisioner *EKSProvisioner) CreateNodegroups(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -300,8 +300,8 @@ func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster) error {
 	return nil
 }
 
-// CheckNodesCreated provisions EKS cluster.
-func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bool, error) {
+// CheckNodegroupsCreated checks if the EKS nodegroups are created.
+func (provisioner *EKSProvisioner) CheckNodegroupsCreated(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -359,6 +359,80 @@ func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bo
 	}
 
 	return true, nil
+}
+
+// DeleteNodegroup deletes the EKS nodegroup.
+func (provisioner *EKSProvisioner) DeleteNodegroup(cluster *model.Cluster) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	eksMetadata := cluster.ProvisionerMetadataEKS
+	if eksMetadata == nil {
+		return errors.New("error: EKS metadata not set when deleting EKS NodeGroup")
+	}
+
+	if eksMetadata.NodeGroups == nil || len(eksMetadata.NodeGroups) == 0 {
+		logger.Info("No EKS NodeGroup available to delete")
+		return nil
+	}
+
+	nodeGroups := make(map[string]model.NodeGroupMetadata)
+	if eksMetadata.ChangeRequest != nil {
+		for ng := range eksMetadata.ChangeRequest.NodeGroups {
+			if metadata, found := eksMetadata.NodeGroups[ng]; found {
+				nodeGroups[ng] = metadata
+			} else {
+				logger.Warnf("EKS NodeGroup for %s not found in cluster metadata", ng)
+			}
+		}
+	}
+
+	var wg sync.WaitGroup
+	var errOccurred bool
+
+	for ng, meta := range nodeGroups {
+		wg.Add(1)
+		go func(ngPrefix string, ngMetadata model.NodeGroupMetadata) {
+			defer wg.Done()
+
+			err := provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, ngMetadata.Name)
+			if err != nil {
+				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ngMetadata.Name)
+				errOccurred = true
+				return
+			}
+
+			wait := 600
+			logger.Infof("Waiting up to %d seconds for NodeGroup %s to be deleted...", wait, ngMetadata.Name)
+			err = provisioner.awsClient.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, ngMetadata.Name, wait)
+			if err != nil {
+				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ngMetadata.Name)
+				errOccurred = true
+				return
+			}
+
+			launchTemplateName := fmt.Sprintf("%s-%s", eksMetadata.Name, ngPrefix)
+			err = provisioner.awsClient.DeleteLaunchTemplate(launchTemplateName)
+			if err != nil {
+				logger.WithError(err).Errorf("failed to delete EKS LaunchTemplate %s", launchTemplateName)
+				errOccurred = true
+				return
+			}
+
+			logger.Debugf("Successfully deleted EKS NodeGroup %s", ngMetadata.Name)
+		}(ng, meta)
+	}
+
+	wg.Wait()
+
+	if errOccurred {
+		return errors.New("failed to delete one of the nodegroups")
+	}
+
+	for ng := range nodeGroups {
+		delete(eksMetadata.NodeGroups, ng)
+	}
+
+	return nil
 }
 
 // ProvisionCluster provisions EKS cluster.

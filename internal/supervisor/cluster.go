@@ -33,8 +33,9 @@ type ClusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) bool
 	CreateCluster(cluster *model.Cluster) error
 	CheckClusterCreated(cluster *model.Cluster) (bool, error)
-	CreateNodes(cluster *model.Cluster) error
-	CheckNodesCreated(cluster *model.Cluster) (bool, error)
+	CreateNodegroups(cluster *model.Cluster) error
+	CheckNodegroupsCreated(cluster *model.Cluster) (bool, error)
+	DeleteNodegroup(cluster *model.Cluster) error
 	ProvisionCluster(cluster *model.Cluster) error
 	UpgradeCluster(cluster *model.Cluster) error
 	ResizeCluster(cluster *model.Cluster) error
@@ -177,6 +178,8 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		return s.resizeCluster(cluster, logger)
 	case model.ClusterStateNodegroupsCreationRequested:
 		return s.createNodegroups(cluster, logger)
+	case model.ClusterStateNodegroupDeletionRequested:
+		return s.deleteNodegroup(cluster, logger)
 	case model.ClusterStateRefreshMetadata:
 		return s.refreshClusterMetadata(cluster, logger)
 	case model.ClusterStateDeletionRequested:
@@ -248,19 +251,30 @@ func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.Fie
 }
 
 func (s *ClusterSupervisor) createNodegroups(cluster *model.Cluster, logger log.FieldLogger) string {
-	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateNodes(cluster)
+	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateNodegroups(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create nodegroups")
 		return model.ClusterStateNodegroupsCreationFailed
 	}
 
-	_, err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodesCreated(cluster)
+	_, err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodegroupsCreated(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create nodegroups")
 		return model.ClusterStateNodegroupsCreationFailed
 	}
 
 	logger.Info("Finished creating nodegroups")
+	return s.refreshClusterMetadata(cluster, logger)
+}
+
+func (s *ClusterSupervisor) deleteNodegroup(cluster *model.Cluster, logger log.FieldLogger) string {
+	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).DeleteNodegroup(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete nodegroup")
+		return model.ClusterStateNodegroupDeletionFailed
+	}
+
+	logger.Info("Finished deleting nodegroup")
 	return s.refreshClusterMetadata(cluster, logger)
 }
 
@@ -313,7 +327,7 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 		return model.ClusterStateCreationInProgress
 	}
 
-	err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateNodes(cluster)
+	err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateNodegroups(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create cluster nodes")
 		return model.ClusterStateCreationFailed
@@ -324,7 +338,7 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 
 func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log.FieldLogger) string {
 
-	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodesCreated(cluster)
+	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodegroupsCreated(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to check if node creation finished")
 		return model.ClusterStateCreationFailed

@@ -87,7 +87,11 @@ func (p *mockClusterProvisionerOption) GetClusterProvisioner(provisioner string)
 
 type mockClusterProvisioner struct{}
 
-func (p *mockClusterProvisioner) CreateNodes(cluster *model.Cluster) error {
+func (p *mockClusterProvisioner) DeleteNodegroup(cluster *model.Cluster) error {
+	return nil
+}
+
+func (p *mockClusterProvisioner) CreateNodegroups(cluster *model.Cluster) error {
 	return nil
 }
 
@@ -107,7 +111,7 @@ func (p *mockClusterProvisioner) CheckClusterCreated(cluster *model.Cluster) (bo
 	return true, nil
 }
 
-func (p *mockClusterProvisioner) CheckNodesCreated(cluster *model.Cluster) (bool, error) {
+func (p *mockClusterProvisioner) CheckNodegroupsCreated(cluster *model.Cluster) (bool, error) {
 	return true, nil
 }
 
