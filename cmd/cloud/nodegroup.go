@@ -118,7 +118,7 @@ func deleteNodegroup(flags clusterNodegroupDeleteFlags) error {
 
 	cluster, err := client.DeleteNodegroup(flags.clusterID, flags.nodegroup)
 	if err != nil {
-		return errors.Wrap(err, "failed to delete nodegroups")
+		return errors.Wrap(err, "failed to delete nodegroup")
 	}
 
 	if err = printJSON(cluster); err != nil {

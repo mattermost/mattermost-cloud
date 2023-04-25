@@ -352,9 +352,16 @@ func (em *EKSMetadata) ApplyNodegroupsCreateRequest(request *CreateNodegroupsReq
 // ApplyNodegroupDeleteRequest applies the nodegroup to delete to the
 // KopsMetadata.
 func (em *EKSMetadata) ApplyNodegroupDeleteRequest(nodegroup string) {
+
+	if em.NodeGroups == nil {
+		return
+	}
+
 	em.ChangeRequest = &EKSMetadataRequestedState{
 		NodeGroups: map[string]NodeGroupMetadata{
-			nodegroup: {},
+			nodegroup: {
+				Name: em.NodeGroups[nodegroup].Name,
+			},
 		},
 	}
 }

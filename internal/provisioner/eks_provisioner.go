@@ -370,21 +370,12 @@ func (provisioner *EKSProvisioner) DeleteNodegroup(cluster *model.Cluster) error
 		return errors.New("error: EKS metadata not set when deleting EKS NodeGroup")
 	}
 
-	if eksMetadata.NodeGroups == nil || len(eksMetadata.NodeGroups) == 0 {
-		logger.Info("No EKS NodeGroup available to delete")
-		return nil
+	changeRequest := eksMetadata.ChangeRequest
+	if changeRequest == nil || changeRequest.NodeGroups == nil {
+		return errors.New("error: EKS NodeGroup change request not set when deleting EKS NodeGroup")
 	}
 
-	nodeGroups := make(map[string]model.NodeGroupMetadata)
-	if eksMetadata.ChangeRequest != nil {
-		for ng := range eksMetadata.ChangeRequest.NodeGroups {
-			if metadata, found := eksMetadata.NodeGroups[ng]; found {
-				nodeGroups[ng] = metadata
-			} else {
-				logger.Warnf("EKS NodeGroup for %s not found in cluster metadata", ng)
-			}
-		}
-	}
+	nodeGroups := changeRequest.NodeGroups
 
 	var wg sync.WaitGroup
 	var errOccurred bool

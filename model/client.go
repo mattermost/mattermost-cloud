@@ -294,7 +294,7 @@ func (c *Client) CreateNodegroups(clusterID string, request *CreateNodegroupsReq
 }
 
 func (c *Client) DeleteNodegroup(clusterID string, nodegroup string) (*ClusterDTO, error) {
-	resp, err := c.doDelete(c.buildURL("/api/cluster/%s/nodegroups/%s", clusterID, nodegroup))
+	resp, err := c.doDelete(c.buildURL("/api/cluster/%s/nodegroup/%s", clusterID, nodegroup))
 	if err != nil {
 		return nil, err
 	}
