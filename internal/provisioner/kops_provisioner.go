@@ -460,7 +460,7 @@ func (provisioner *KopsProvisioner) CheckNodegroupsCreated(cluster *model.Cluste
 	return true, nil
 }
 
-// DeleteNodegroup is a noop for KopsProvisioner.
+// DeleteNodegroups is a noop for KopsProvisioner.
 func (provisioner *KopsProvisioner) DeleteNodegroups(cluster *model.Cluster) error {
 	return nil
 }
