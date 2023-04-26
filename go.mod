@@ -33,7 +33,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.7
 	github.com/mattermost/awat v0.2.0
-	github.com/mattermost/mattermost-operator v1.20.0-rc.2.0.20230426162946-d0148b88abc7
+	github.com/mattermost/mattermost-operator v1.20.1-rc.0
 	github.com/mattermost/rotator v0.2.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/olekukonko/tablewriter v0.0.5
