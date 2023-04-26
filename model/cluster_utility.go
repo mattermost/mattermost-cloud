@@ -145,13 +145,13 @@ type UtilityGroupVersions struct {
 	Fluentbit           *HelmUtilityVersion
 	Teleport            *HelmUtilityVersion
 	Pgbouncer           *HelmUtilityVersion
+	MysqlOperator       *HelmUtilityVersion
 	Promtail            *HelmUtilityVersion
 	Rtcd                *HelmUtilityVersion
 	NodeProblemDetector *HelmUtilityVersion
 	MetricsServer       *HelmUtilityVersion
 	Velero              *HelmUtilityVersion
 	Cloudprober         *HelmUtilityVersion
-	MysqlOperator       *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -166,13 +166,13 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		FluentbitCanonicalName:           h.Fluentbit,
 		TeleportCanonicalName:            h.Teleport,
 		PgbouncerCanonicalName:           h.Pgbouncer,
+		MysqlOperatorCanonicalName:       h.MysqlOperator,
 		PromtailCanonicalName:            h.Promtail,
 		RtcdCanonicalName:                h.Rtcd,
 		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
 		MetricsServerCanonicalName:       h.MetricsServer,
 		VeleroCanonicalName:              h.Velero,
 		CloudproberCanonicalName:         h.Cloudprober,
-		MysqlOperatorCanonicalName:       h.MysqlOperator,
 	}
 }
 
@@ -297,6 +297,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Teleport = desiredVersion
 	case PgbouncerCanonicalName:
 		versions.Pgbouncer = desiredVersion
+	case MysqlOperatorCanonicalName:
+		versions.MysqlOperator = desiredVersion
 	case PromtailCanonicalName:
 		versions.Promtail = desiredVersion
 	case RtcdCanonicalName:

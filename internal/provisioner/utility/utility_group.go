@@ -67,6 +67,7 @@ var helmRepos = map[string]string{
 	"deliveryhero":         "https://charts.deliveryhero.io/",
 	"metrics-server":       "https://kubernetes-sigs.github.io/metrics-server/",
 	"vmware-tanzu":         "https://vmware-tanzu.github.io/helm-charts/",
+	"bitpoke":              "https://helm-charts.bitpoke.io",
 	"mattermost":           "https://helm.mattermost.com",
 }
 
@@ -126,7 +127,7 @@ func NewUtilityGroupHandle(
 	}
 
 	mysqlOperator, err := newMysqlOperatorHandle(
-		cluster, cluster.DesiredUtilityVersion(model.PgbouncerCanonicalName),
+		cluster, cluster.DesiredUtilityVersion(model.MysqlOperatorCanonicalName),
 		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for mysql operator")

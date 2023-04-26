@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package main
 
 import (
@@ -69,6 +73,8 @@ type utilityFlags struct {
 	teleportValues             string
 	pgbouncerVersion           string
 	pgbouncerValues            string
+	mysqlOperatorVersion       string
+	mysqlOperatorValues        string
 	rtcdVersion                string
 	rtcdValues                 string
 	promtailVersion            string
@@ -98,6 +104,8 @@ func (flags *utilityFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.teleportValues, "teleport-values", "", "The full Git URL of the desired chart values for Teleport")
 	command.Flags().StringVar(&flags.pgbouncerVersion, "pgbouncer-version", "", "The version of Pgbouncer to provision. Use 'stable' to provision the latest stable version published upstream.")
 	command.Flags().StringVar(&flags.pgbouncerValues, "pgbouncer-values", "", "The full Git URL of the desired chart values for PGBouncer")
+	command.Flags().StringVar(&flags.mysqlOperatorVersion, "mysql-operator-version", "", "The version of mysql operator to provision.")
+	command.Flags().StringVar(&flags.mysqlOperatorValues, "mysql-operator-values", "", "The full Git URL of the desired chart values for mysql operator")
 	command.Flags().StringVar(&flags.rtcdVersion, "rtcd-version", "", "The version of RTCD to provision. Use 'stable' to provision the latest stable version published upstream.")
 	command.Flags().StringVar(&flags.rtcdValues, "rtcd-values", "", "The full Git URL of the desired chart values for RTCD")
 	command.Flags().StringVar(&flags.promtailVersion, "promtail-version", "", "The version of Promtail to provision. Use 'stable' to provision the latest stable version published upstream.")

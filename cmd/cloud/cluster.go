@@ -685,6 +685,10 @@ func processUtilityFlags(utilityFlags utilityFlags) map[string]*model.HelmUtilit
 			Chart:      utilityFlags.pgbouncerVersion,
 			ValuesPath: utilityFlags.pgbouncerValues,
 		},
+		model.MysqlOperatorCanonicalName: {
+			Chart:      utilityFlags.mysqlOperatorVersion,
+			ValuesPath: utilityFlags.mysqlOperatorValues,
+		},
 		model.PromtailCanonicalName: {
 			Chart:      utilityFlags.promtailVersion,
 			ValuesPath: utilityFlags.promtailValues,
