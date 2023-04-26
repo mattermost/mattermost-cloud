@@ -67,10 +67,10 @@ func NewSingleTenantDatabaseRequestFromReader(reader io.Reader) (*SingleTenantDa
 // SetDefaults sets the default values for a single tenant database configuration request.
 func (request *SingleTenantDatabaseRequest) SetDefaults() {
 	if len(request.PrimaryInstanceType) == 0 {
-		request.PrimaryInstanceType = "db.r5.large"
+		request.PrimaryInstanceType = "db.t4g.medium"
 	}
 	if len(request.ReplicaInstanceType) == 0 {
-		request.ReplicaInstanceType = "db.r5.large"
+		request.ReplicaInstanceType = "db.t4g.medium"
 	}
 }
 
