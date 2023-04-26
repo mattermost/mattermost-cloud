@@ -18,7 +18,7 @@ import (
 )
 
 func TestCreateInstallationRequestValid(t *testing.T) {
-	model.SetDeployOperators(true, true)
+	model.SetDeployOperators(true)
 	var testCases = []struct {
 		testName     string
 		requireError bool

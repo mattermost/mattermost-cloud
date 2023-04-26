@@ -125,6 +125,13 @@ func NewUtilityGroupHandle(
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
+	mysqlOperator, err := newMysqlOperatorHandle(
+		cluster, cluster.DesiredUtilityVersion(model.PgbouncerCanonicalName),
+		kubeconfigPath, awsClient, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for mysql operator")
+	}
+
 	promtail, err := newPromtailHandle(
 		cluster, cluster.DesiredUtilityVersion(model.PromtailCanonicalName),
 		kubeconfigPath, awsClient, logger)
@@ -170,7 +177,7 @@ func NewUtilityGroupHandle(
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities: []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, nodeProblemDetector, rtcd, metricsServer, velero, cloudprober},
+		utilities: []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, mysqlOperator, promtail, nodeProblemDetector, rtcd, metricsServer, velero, cloudprober},
 		logger:    logger,
 		cluster:   cluster,
 	}, nil

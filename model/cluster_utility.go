@@ -37,6 +37,8 @@ const (
 	VeleroCanonicalName = "velero"
 	// CloudproberCanonicalName is the canonical string representation of Cloudprber
 	CloudproberCanonicalName = "cloudprober"
+	// MysqlOperatorCanonicalName is the canonical string representation of mysql operator
+	MysqlOperatorCanonicalName = "mysql-operator"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -73,6 +75,8 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	TeleportCanonicalName: {Chart: "7.3.26", ValuesPath: ""},
 	// PgbouncerCanonicalName defines the default version and values path for the Helm chart
 	PgbouncerCanonicalName: {Chart: "1.2.0", ValuesPath: ""},
+	// Mysql-Operator
+	MysqlOperatorCanonicalName: {Chart: "0.6.2", ValuesPath: ""},
 	// PromtailCanonicalName defines the default version and values path for the Helm chart
 	PromtailCanonicalName: {Chart: "6.2.2", ValuesPath: ""},
 	// RtcdCanonicalName defines the default version and values path for the Helm chart
@@ -101,6 +105,7 @@ var defaultUtilityValuesFileNames map[string]string = map[string]string{
 	MetricsServerCanonicalName:       "metrics_server_values.yaml",
 	VeleroCanonicalName:              "velero_values.yaml",
 	CloudproberCanonicalName:         "cloudprober_values.yaml",
+	MysqlOperatorCanonicalName:       "mysql_operator_values.yaml",
 }
 
 var (
@@ -146,6 +151,7 @@ type UtilityGroupVersions struct {
 	MetricsServer       *HelmUtilityVersion
 	Velero              *HelmUtilityVersion
 	Cloudprober         *HelmUtilityVersion
+	MysqlOperator       *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -166,6 +172,7 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		MetricsServerCanonicalName:       h.MetricsServer,
 		VeleroCanonicalName:              h.Velero,
 		CloudproberCanonicalName:         h.Cloudprober,
+		MysqlOperatorCanonicalName:       h.MysqlOperator,
 	}
 }
 

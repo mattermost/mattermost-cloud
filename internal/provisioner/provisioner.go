@@ -34,7 +34,6 @@ type ProvisioningParams struct {
 	VpnCIDRList             []string
 	Owner                   string
 	UseExistingAWSResources bool
-	DeployMysqlOperator     bool
 	DeployMinioOperator     bool
 	NdotsValue              string
 	PGBouncerConfig         *model.PGBouncerConfig

@@ -54,15 +54,11 @@ func provisionCluster(
 		return errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
 	}
 
-	mysqlOperatorNamespace := "mysql-operator"
 	minioOperatorNamespace := "minio-operator"
 	mattermostOperatorNamespace := "mattermost-operator"
 
 	namespaces := []string{
 		mattermostOperatorNamespace,
-	}
-	if params.DeployMysqlOperator {
-		namespaces = append(namespaces, mysqlOperatorNamespace)
 	}
 	if params.DeployMinioOperator {
 		namespaces = append(namespaces, minioOperatorNamespace)
@@ -179,13 +175,6 @@ func provisionCluster(
 		})
 	}
 
-	if params.DeployMysqlOperator {
-		files = append(files, k8s.ManifestFile{
-			Path:            "manifests/operator-manifests/mysql/mysql-operator.yaml",
-			DeployNamespace: mysqlOperatorNamespace,
-		})
-	}
-
 	if params.DeployMinioOperator {
 		files = append(files, k8s.ManifestFile{
 			Path:            "manifests/operator-manifests/minio/minio-operator.yaml",
@@ -251,34 +240,6 @@ func provisionCluster(
 				return err
 			}
 			logger.Infof("Successfully deployed service pod %q", pod.GetName())
-		}
-	}
-
-	var operatorsWithStatefulSet []string
-	if params.DeployMysqlOperator {
-		operatorsWithStatefulSet = append(operatorsWithStatefulSet, "mysql-operator")
-	}
-
-	for _, operator := range operatorsWithStatefulSet {
-		var pods *v1.PodList
-		pods, err = k8sClient.GetPodsFromStatefulset(operator, operator)
-		if err != nil {
-			return err
-		}
-		if len(pods.Items) == 0 {
-			return fmt.Errorf("no pods found from %q statefulSet", operator)
-		}
-
-		for _, pod := range pods.Items {
-			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
-			ctxPodRunning, cancelPodRunning := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancelPodRunning()
-			var podRunning *v1.Pod
-			podRunning, err = k8sClient.WaitForPodRunning(ctxPodRunning, operator, pod.GetName())
-			if err != nil {
-				return err
-			}
-			logger.Infof("Successfully deployed service pod %q", podRunning.GetName())
 		}
 	}
 

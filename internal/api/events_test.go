@@ -36,7 +36,7 @@ func TestListStateChangeEvents(t *testing.T) {
 
 	ts := httptest.NewServer(router)
 	client := model.NewClient(ts.URL)
-	model.SetDeployOperators(true, true)
+	model.SetDeployOperators(true)
 
 	// Create Installation and Cluster
 	installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
