@@ -35,6 +35,7 @@ type ProvisioningParams struct {
 	Owner                   string
 	UseExistingAWSResources bool
 	DeployMinioOperator     bool
+	DeployMysqlOperator     bool
 	NdotsValue              string
 	PGBouncerConfig         *model.PGBouncerConfig
 	SLOInstallationGroups   []string

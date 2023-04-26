@@ -30,7 +30,8 @@ var deployMySQLOperator bool
 var deployMinioOperator bool
 
 // SetDeployOperators is called with a value based on a CLI flag.
-func SetDeployOperators(minio bool) {
+func SetDeployOperators(mysql, minio bool) {
+	deployMySQLOperator = mysql
 	deployMinioOperator = minio
 }
 
@@ -172,9 +173,7 @@ func (request *CreateInstallationRequest) Validate() error {
 	if !deployMinioOperator && request.Filestore == InstallationFilestoreMinioOperator {
 		return errors.Errorf("minio filestore cannot be used when minio operator is not deployed")
 	}
-	if !deployMySQLOperator && request.Database == InstallationDatabaseMysqlOperator {
-		return errors.Errorf("mysql operator database cannot be used when mysql operator is not deployed")
-	}
+
 	return checkSpaces(request)
 }
 

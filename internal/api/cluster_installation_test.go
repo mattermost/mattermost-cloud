@@ -598,7 +598,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	model.SetDeployOperators(true)
+	model.SetDeployOperators(true, true)
 
 	t.Run("invalid payload", func(t *testing.T) {
 		resp, errTest := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
@@ -746,7 +746,7 @@ func TestMigrateDNS(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	model.SetDeployOperators(true)
+	model.SetDeployOperators(true, true)
 
 	t.Run("invalid payload", func(t *testing.T) {
 		resp, err := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate/dns", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
@@ -907,7 +907,7 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	model.SetDeployOperators(true)
+	model.SetDeployOperators(true, true)
 
 	t.Run("invalid payload", func(t *testing.T) {
 		resp, err := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate/dns", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
@@ -1057,7 +1057,7 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	model.SetDeployOperators(true)
+	model.SetDeployOperators(true, true)
 
 	t.Run("invalid payload", func(t *testing.T) {
 		resp, err := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate/dns", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))

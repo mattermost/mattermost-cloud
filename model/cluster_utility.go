@@ -336,6 +336,6 @@ func (u *HelmUtilityVersion) Values() string {
 // of the values inside are undefined
 func (u *HelmUtilityVersion) IsEmpty() bool {
 	return u == nil ||
-		u.ValuesPath == "" ||
+		// u.ValuesPath == "" ||
 		u.Chart == ""
 }

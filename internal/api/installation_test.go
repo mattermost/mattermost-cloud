@@ -559,7 +559,7 @@ func TestCreateInstallation(t *testing.T) {
 	})
 
 	t.Run("group selection based on annotations", func(t *testing.T) {
-		model.SetDeployOperators(true)
+		model.SetDeployOperators(true, true)
 
 		group, err := client.CreateGroup(&model.CreateGroupRequest{
 			Name:        "group-selection1",
@@ -1254,7 +1254,7 @@ func TestAssignGroup(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
 	defer store.CloseConnection(t, sqlStore)
-	model.SetDeployOperators(true)
+	model.SetDeployOperators(true, true)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{

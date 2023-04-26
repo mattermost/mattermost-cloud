@@ -34,7 +34,7 @@ func Test_AddInstallationDNS(t *testing.T) {
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
-	model.SetDeployOperators(true)
+	model.SetDeployOperators(true, true)
 
 	client := model.NewClient(ts.URL)
 
@@ -145,7 +145,7 @@ func Test_SetDomainNamePrimary(t *testing.T) {
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
-	model.SetDeployOperators(true)
+	model.SetDeployOperators(true, true)
 
 	client := model.NewClient(ts.URL)
 

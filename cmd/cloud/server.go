@@ -168,7 +168,7 @@ func executeServerCmd(flags serverFlags) error {
 		logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 	}
 
-	model.SetDeployOperators(flags.deployMinioOperator)
+	model.SetDeployOperators(flags.deployMySQLOperator, flags.deployMinioOperator)
 
 	wd, err := os.Getwd()
 	if err != nil {
@@ -217,6 +217,7 @@ func executeServerCmd(flags serverFlags) error {
 		"backup-job-ttl-seconds":                        flags.backupJobTTL,
 		"debug":                                         debugMode,
 		"dev-mode":                                      flags.devMode,
+		"deploy-mysql-operator":                         flags.deployMySQLOperator,
 		"deploy-minio-operator":                         flags.deployMinioOperator,
 		"ndots-value":                                   flags.ndotsDefaultValue,
 		"maxDatabaseConnectionsPerPool":                 flags.maxDatabaseConnectionsPerPool,
@@ -261,6 +262,7 @@ func executeServerCmd(flags serverFlags) error {
 		Owner:                   owner,
 		UseExistingAWSResources: flags.useExistingResources,
 		DeployMinioOperator:     flags.deployMinioOperator,
+		DeployMysqlOperator:     flags.deployMySQLOperator,
 		NdotsValue:              flags.ndotsDefaultValue,
 		PGBouncerConfig:         pgbouncerConfig,
 		SLOInstallationGroups:   flags.sloInstallationGroups,

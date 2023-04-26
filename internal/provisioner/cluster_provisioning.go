@@ -64,6 +64,11 @@ func provisionCluster(
 		namespaces = append(namespaces, minioOperatorNamespace)
 	}
 
+	// if params.DeployMysqlOperator {
+	// TODO: cleanup of the old mysql-operator
+	// What happens with already present databases?
+	// }
+
 	// Remove all previously-installed operator namespaces and resources.
 	ctx := context.TODO()
 	for _, namespace := range namespaces {
