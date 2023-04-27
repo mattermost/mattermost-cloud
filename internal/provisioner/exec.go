@@ -122,7 +122,7 @@ func (provisioner Provisioner) ExecClusterInstallationJob(cluster *model.Cluster
 		return errors.Wrap(err, "failed to create CLI command job")
 	}
 
-	err = wait.PollUntilContextTimeout(ctx, time.Second, 5*time.Second, true, func(_ context.Context) (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Minute, true, func(_ context.Context) (bool, error) {
 		job, err = jobsClient.Get(ctx, jobName, metav1.GetOptions{})
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to get %q job", jobName)
