@@ -131,6 +131,7 @@ type Provisioner interface {
 	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error)
 	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+	GetClusterInstallationStatus(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (*model.ClusterInstallationStatus, error)
 }
 
 // AwsClient describes the interface required to communicate with the AWS

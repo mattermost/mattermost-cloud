@@ -148,18 +148,18 @@ func (a *Client) GetSecurityGroupsWithFilters(filters []ec2Types.Filter) ([]ec2T
 	return output.SecurityGroups, nil
 }
 
-func getLaunchTemplateName(clusterName string) string {
-	return fmt.Sprintf("%s-launch-template", clusterName)
-}
-
-func (a *Client) getLaunchTemplate(clusterName string) (*ec2Types.LaunchTemplate, error) {
-	launchTemplateName := getLaunchTemplateName(clusterName)
-
+func (a *Client) getLaunchTemplate(launchTemplateName string) (*ec2Types.LaunchTemplate, error) {
 	launchTemplates, err := a.Service().ec2.DescribeLaunchTemplates(context.TODO(), &ec2.DescribeLaunchTemplatesInput{
 		LaunchTemplateNames: []string{launchTemplateName},
 	})
 	if err != nil {
-		return nil, err
+		if !IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
+			return nil, err
+		}
+	}
+
+	if launchTemplates == nil || len(launchTemplates.LaunchTemplates) == 0 {
+		return nil, nil
 	}
 
 	for i, lt := range launchTemplates.LaunchTemplates {
@@ -168,116 +168,89 @@ func (a *Client) getLaunchTemplate(clusterName string) (*ec2Types.LaunchTemplate
 		}
 	}
 
+	a.logger.Debugf("Launch template %s does not exist", launchTemplateName)
 	return nil, nil
 }
 
-func (a *Client) EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
+func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
+	if data == nil {
+		return errors.New("launch template data is nil")
+	}
 
-	launchTemplate, err := a.getLaunchTemplate(clusterName)
+	eksCluster, err := a.getEKSCluster(data.ClusterName)
 	if err != nil {
-		if !IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
-			return "", errors.Wrap(err, "failed to get launch template")
-		}
+		return errors.Wrap(err, "failed to get eks cluster")
 	}
 
-	if launchTemplate != nil {
-		latestVersionNumber := launchTemplate.LatestVersionNumber
-		if latestVersionNumber != nil {
-			return fmt.Sprintf("%d", *latestVersionNumber), nil
-		}
-		return "$Latest", nil
-	}
-
-	return a.createLaunchTemplate(clusterName, eksMetadata)
-}
-
-func (a *Client) createLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
-	eksCluster, err := a.getEKSCluster(clusterName)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get eks cluster")
-	}
-
-	userData := getLaunchTemplateUserData(eksCluster, eksMetadata)
+	userData := getLaunchTemplateUserData(eksCluster, data)
 	encodedUserData := base64.StdEncoding.EncodeToString([]byte(userData))
 
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplate(context.TODO(), &ec2.CreateLaunchTemplateInput{
 		LaunchTemplateData: &ec2Types.RequestLaunchTemplateData{
-			ImageId:  aws.String(eksMetadata.ChangeRequest.AMI),
-			UserData: aws.String(encodedUserData),
+			ImageId:          aws.String(data.AMI),
+			UserData:         aws.String(encodedUserData),
+			SecurityGroupIds: data.SecurityGroups,
 		},
-		LaunchTemplateName: aws.String(getLaunchTemplateName(clusterName)),
+		LaunchTemplateName: aws.String(data.Name),
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "failed to create eks launch template")
+		if IsErrorCode(err, "InvalidLaunchTemplateName.AlreadyExistsException") {
+			a.logger.Debugf("Launch template %s already exists", data.Name)
+			return nil
+		}
+		return errors.Wrap(err, "failed to create eks launch template")
 	}
 
 	if launchTemplate == nil || launchTemplate.LaunchTemplate == nil {
-		return "", errors.New("failed to create eks launch template")
+		return errors.New("failed to create eks launch template")
 	}
 
-	latestVersionNumber := launchTemplate.LaunchTemplate.LatestVersionNumber
-
-	if latestVersionNumber != nil {
-		return fmt.Sprintf("%d", *latestVersionNumber), nil
-	}
-
-	return "$Latest", nil
+	return nil
 }
 
-func (a *Client) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (string, error) {
-	eksCluster, err := a.getEKSCluster(clusterName)
+func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
+	if data == nil {
+		return errors.New("launch template data is nil")
+	}
+
+	eksCluster, err := a.getEKSCluster(data.ClusterName)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get eks cluster")
+		return errors.Wrap(err, "failed to get eks cluster")
 	}
 
-	if eksMetadata.ChangeRequest == nil {
-		eksMetadata.ChangeRequest = &model.EKSMetadataRequestedState{}
-	}
-
-	if eksMetadata.ChangeRequest.AMI == "" {
-		eksMetadata.ChangeRequest.AMI = eksMetadata.AMI
-	}
-	if eksMetadata.ChangeRequest.MaxPodsPerNode == 0 {
-		eksMetadata.ChangeRequest.MaxPodsPerNode = eksMetadata.MaxPodsPerNode
-	}
-
-	userData := getLaunchTemplateUserData(eksCluster, eksMetadata)
+	userData := getLaunchTemplateUserData(eksCluster, data)
 	encodedUserData := base64.StdEncoding.EncodeToString([]byte(userData))
 
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplateVersion(context.TODO(), &ec2.CreateLaunchTemplateVersionInput{
 		LaunchTemplateData: &ec2Types.RequestLaunchTemplateData{
-			ImageId:  aws.String(eksMetadata.ChangeRequest.AMI),
-			UserData: aws.String(encodedUserData),
+			ImageId:          aws.String(data.AMI),
+			UserData:         aws.String(encodedUserData),
+			SecurityGroupIds: data.SecurityGroups,
 		},
-		LaunchTemplateName: aws.String(getLaunchTemplateName(clusterName)),
+		LaunchTemplateName: aws.String(data.Name),
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "failed to create eks launch template version")
+		if IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
+			return a.CreateLaunchTemplate(data)
+		}
+		return errors.Wrap(err, "failed to create eks launch template version")
 	}
 
 	if launchTemplate == nil || launchTemplate.LaunchTemplateVersion == nil {
-		return "", errors.New("failed to create eks launch template version")
+		return errors.New("failed to create eks launch template version")
 	}
 
-	latestVersionNumber := launchTemplate.LaunchTemplateVersion.VersionNumber
-
-	if latestVersionNumber != nil {
-		return fmt.Sprintf("%d", *latestVersionNumber), nil
-	}
-
-	return "$Latest", nil
+	return nil
 }
 
-func (a *Client) EnsureLaunchTemplateDeleted(clusterName string) error {
-	launchTemplate, err := a.getLaunchTemplate(clusterName)
+func (a *Client) DeleteLaunchTemplate(launchTemplateName string) error {
+	launchTemplate, err := a.getLaunchTemplate(launchTemplateName)
 	if err != nil {
-		if IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
-			return nil
-		}
 		return err
 	}
 
 	if launchTemplate == nil {
+		a.logger.Debugf("launch template %s not found, assuming deleted", launchTemplateName)
 		return nil
 	}
 
@@ -285,10 +258,23 @@ func (a *Client) EnsureLaunchTemplateDeleted(clusterName string) error {
 		LaunchTemplateId: launchTemplate.LaunchTemplateId,
 	})
 	if err != nil {
+		if IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
+			a.logger.Debugf("launch template %s not found, assuming deleted", launchTemplateName)
+			return nil
+		}
 		return errors.Wrap(err, "failed to delete eks launch template")
 	}
 
 	return nil
+}
+
+func (a *Client) IsLaunchTemplateAvailable(launchTemplateName string) (bool, error) {
+	launchTemplate, err := a.getLaunchTemplate(launchTemplateName)
+	if err != nil {
+		return false, err
+	}
+
+	return launchTemplate != nil, nil
 }
 
 func prettyCreateTagsResponse(output *ec2.CreateTagsOutput) string {
@@ -309,10 +295,10 @@ func prettyDeleteTagsResponse(output *ec2.DeleteTagsOutput) string {
 	return string(prettyResp)
 }
 
-func getLaunchTemplateUserData(eksCluster *eksTypes.Cluster, eksMeta *model.EKSMetadata) string {
+func getLaunchTemplateUserData(eksCluster *eksTypes.Cluster, data *model.LaunchTemplateData) string {
 	dataTemplate := `
 #!/bin/bash
 set -o xtrace
 /etc/eks/bootstrap.sh '%s' --apiserver-endpoint '%s' --b64-cluster-ca '%s' --use-max-pods false  --kubelet-extra-args '--max-pods=%d'`
-	return fmt.Sprintf(dataTemplate, *eksCluster.Name, *eksCluster.Endpoint, *eksCluster.CertificateAuthority.Data, eksMeta.ChangeRequest.MaxPodsPerNode)
+	return fmt.Sprintf(dataTemplate, *eksCluster.Name, *eksCluster.Endpoint, *eksCluster.CertificateAuthority.Data, data.MaxPodsPerNode)
 }

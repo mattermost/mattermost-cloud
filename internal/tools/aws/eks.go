@@ -175,7 +175,7 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 	}
 
 	clusterName := eksMetadata.Name
-	launchTemplate := getLaunchTemplateName(clusterName)
+	launchTemplate := fmt.Sprintf("%s-%s", clusterName, ngPrefix)
 
 	ngChangeRequest := changeRequest.NodeGroups[ngPrefix]
 
@@ -212,11 +212,6 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 		}
 	}
 
-	launchTemplateVersion := "$Latest"
-	if changeRequest.LaunchTemplateVersion != nil && *changeRequest.LaunchTemplateVersion != "" {
-		launchTemplateVersion = *changeRequest.LaunchTemplateVersion
-	}
-
 	nodeGroupReq := eks.CreateNodegroupInput{
 		ClusterName:   aws.String(clusterName),
 		InstanceTypes: []string{ngChangeRequest.InstanceType},
@@ -231,7 +226,7 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 		Subnets: subnetsIDs,
 		LaunchTemplate: &eksTypes.LaunchTemplateSpecification{
 			Name:    aws.String(launchTemplate),
-			Version: aws.String(launchTemplateVersion),
+			Version: aws.String("$Latest"),
 		},
 		Tags: map[string]string{
 			fmt.Sprintf("kubernetes.io/cluster/%s", clusterName): "owned",
@@ -310,14 +305,6 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	changeRequest := eksMetadata.ChangeRequest
 
-	if eksMetadata.ChangeRequest == nil {
-		return errors.New("change request is nil")
-	}
-
-	if changeRequest.NodeGroups == nil {
-		return errors.New("nodegroups are nil")
-	}
-
 	ngChangeRequest, found := changeRequest.NodeGroups[ngPrefix]
 	if !found {
 		return errors.Errorf("nodegroup meta for %s not found in change request", ngPrefix)
@@ -327,69 +314,11 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 
 	oldNodeGroupMeta := eksMetadata.NodeGroups[ngPrefix]
 	oldNodeGroupName := oldNodeGroupMeta.Name
-	oldNodeGroup, err := c.getEKSNodeGroup(clusterName, oldNodeGroupName)
-	if err != nil {
-		return errors.Wrapf(err, "failed to describe EKS NodeGroup %s", oldNodeGroupName)
-	}
-
-	if oldNodeGroup == nil {
-		return errors.Errorf("EKS NodeGroup %s does not exist", oldNodeGroupName)
-	}
-
-	if oldNodeGroup.Status != eksTypes.NodegroupStatusActive {
-		return errors.Errorf("EKS NodeGroup %s is not active", oldNodeGroupName)
-	}
-
-	var isUpdateRequired bool
-	if changeRequest.LaunchTemplateVersion != nil {
-		if oldNodeGroup.LaunchTemplate != nil && oldNodeGroup.LaunchTemplate.Version != nil &&
-			*oldNodeGroup.LaunchTemplate.Version != *changeRequest.LaunchTemplateVersion {
-			isUpdateRequired = true
-		}
-	} else {
-		if oldNodeGroup.LaunchTemplate != nil && oldNodeGroup.LaunchTemplate.Version != nil {
-			changeRequest.LaunchTemplateVersion = oldNodeGroup.LaunchTemplate.Version
-		}
-	}
-
-	if ngChangeRequest.InstanceType != "" {
-		if oldNodeGroup.InstanceTypes != nil && len(oldNodeGroup.InstanceTypes) > 0 &&
-			oldNodeGroup.InstanceTypes[0] != ngChangeRequest.InstanceType {
-			isUpdateRequired = true
-		}
-	} else {
-		ngChangeRequest.InstanceType = oldNodeGroupMeta.InstanceType
-	}
-
-	scalingInfo := oldNodeGroup.ScalingConfig
-	if ngChangeRequest.MinCount != 0 {
-		if *scalingInfo.MinSize != int32(ngChangeRequest.MinCount) {
-			isUpdateRequired = true
-		}
-	} else {
-		ngChangeRequest.MinCount = oldNodeGroupMeta.MinCount
-	}
-
-	if ngChangeRequest.MaxCount != 0 {
-		if *scalingInfo.MaxSize != int32(ngChangeRequest.MaxCount) {
-			isUpdateRequired = true
-		}
-	} else {
-		ngChangeRequest.MaxCount = oldNodeGroupMeta.MaxCount
-	}
-
-	ngChangeRequest.WithPublicSubnet = oldNodeGroupMeta.WithPublicSubnet
-
-	if !isUpdateRequired {
-		return nil
-	}
-
-	changeRequest.NodeGroups[ngPrefix] = ngChangeRequest
 
 	changeRequest.VPC = eksMetadata.VPC
 	changeRequest.NodeRoleARN = eksMetadata.NodeRoleARN
 
-	_, err = c.createEKSNodeGroup(cluster, ngPrefix)
+	_, err := c.createEKSNodeGroup(cluster, ngPrefix)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create a new EKS NodeGroup %s", ngChangeRequest.Name)
 	}

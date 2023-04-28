@@ -10,7 +10,7 @@ GOLANG_VERSION := $(shell cat go.mod | grep "^go " | cut -d " " -f 2)
 ALPINE_VERSION = 3.16
 TERRAFORM_VERSION=1.0.7
 KOPS_VERSION=v1.23.4
-HELM_VERSION=v3.7.2
+HELM_VERSION=v3.11.2
 KUBECTL_VERSION=v1.24.4
 
 ## Docker Build Versions

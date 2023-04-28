@@ -132,8 +132,6 @@ type installationOptions struct {
 	requireAnnotatedInstallations bool
 	gitlabOAuthToken              string
 	forceCRUpgrade                bool
-	mattermostWebHook             string
-	mattermostChannel             string
 	utilitiesGitURL               string
 }
 
@@ -143,8 +141,6 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.requireAnnotatedInstallations, "require-annotated-installations", false, "Require new installations to have at least one annotation.")
 	command.Flags().StringVar(&flags.gitlabOAuthToken, "gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
 	command.Flags().BoolVar(&flags.forceCRUpgrade, "force-cr-upgrade", false, "If specified installation CRVersions will be updated to the latest version when supervised.")
-	command.Flags().StringVar(&flags.mattermostWebHook, "mattermost-webhook", "", "Set to use a Mattermost webhook for spot instances termination notifications")
-	command.Flags().StringVar(&flags.mattermostChannel, "mattermost-channel", "", "Set a mattermost channel for spot instances termination notifications")
 	command.Flags().StringVar(&flags.utilitiesGitURL, "utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
 }
 

@@ -33,6 +33,10 @@ func (s *mockProvisioner) ProvisionerType() string {
 	return "kops"
 }
 
+func (s *mockProvisioner) GetClusterInstallationStatus(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (*model.ClusterInstallationStatus, error) {
+	return &model.ClusterInstallationStatus{}, nil
+}
+
 func (s *mockProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
 	if len(s.Output) == 0 {
 		s.Output = []byte(`{"ServiceSettings":{"SiteURL":"http://test.example.com"}}`)

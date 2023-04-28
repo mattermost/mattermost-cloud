@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	e2eTestGrafanaLogsURLTmpl     = `https://grafana.internal.mattermost.com/explore?orgId=1&left={"datasource":"PFB2D5CACEC34D62E","queries":[{"refId":"A","datasource":{"type":"loki","uid":"PFB2D5CACEC34D62E"},"editorMode":"code","expr":"{cluster=\"cnc\", namespace=\"e2e-mattermost-cloud-test\"} |= %60{{.ID}}%60","queryType":"range"}],"range":{"from":"now-24h","to":"now"}}'`
+	e2eTestGrafanaLogsURLTmpl     = `https://grafana.internal.mattermost.com/explore?orgId=1&left={"datasource":"PFB2D5CACEC34D62E","queries":[{"refId":"A","datasource":{"type":"loki","uid":"PFB2D5CACEC34D62E"},"editorMode":"code","expr":"{cluster=\"cnc\", namespace=\"e2e-mattermost-cloud-test\"} |= %60{{.ID}}%60","queryType":"range"}],"range":{"from":"now-24h","to":"now"}}`
 	provisionerGrafanaLogsURLTmpl = `https://grafana.internal.mattermost.com/explore?orgId=1&left={"datasource":"PFB2D5CACEC34D62E","queries":[{"refId":"A","datasource":{"type":"loki","uid":"PFB2D5CACEC34D62E"},"editorMode":"code","expr":"{namespace=\"mattermost-cloud-test\", component=\"provisioner\"} |= %60{{.ID}}%60","queryType":"range"}],"range":{"from":"now-24h","to":"now"}}`
 )
 
