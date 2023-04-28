@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -136,8 +137,6 @@ func (r *ResourceUtil) GetDatabaseForInstallation(installation *model.Installati
 // GetDatabase returns the Database interface that matches the installationID and DB type.
 func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database {
 	switch dbType {
-	case model.InstallationDatabaseMysqlOperator:
-		return model.NewMysqlOperatorDatabase()
 	case model.InstallationDatabaseExternal:
 		return aws.NewExternalDatabase(installationID, r.awsClient)
 	case model.InstallationDatabaseSingleTenantRDSMySQL:
@@ -183,8 +182,9 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 	}
 
 	// Warning: we should never get here as it would mean that we didn't match
-	// our database type.
-	return model.NewMysqlOperatorDatabase()
+	// our database type. Return a noop database to prevent panics and allow tests that require
+	// processing intallation to run.
+	return testutil.NewNoopDatabase()
 }
 
 // Retry is retrying a function for a maximum number of attempts and time

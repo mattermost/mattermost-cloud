@@ -23,7 +23,7 @@ func SetRequireAnnotatedInstallations(val bool) {
 	requireAnnotatedInstallations = val
 }
 
-// deployMySQLOperator if set, MySQL operator will be deployed
+// deployMySQLOperator if set, MySQL operator will be cleaned up from the cluster.
 var deployMySQLOperator bool
 
 // deployMinioOperator if set, Minio operator will be deployed
@@ -93,7 +93,7 @@ func (request *CreateInstallationRequest) SetDefaults() {
 		request.Affinity = InstallationAffinityIsolated
 	}
 	if request.Database == "" {
-		request.Database = InstallationDatabaseMysqlOperator
+		request.Database = DefaultDatabaseEngine
 	}
 	if request.Filestore == "" {
 		request.Filestore = InstallationFilestoreMinioOperator
@@ -172,9 +172,6 @@ func (request *CreateInstallationRequest) Validate() error {
 
 	if !deployMinioOperator && request.Filestore == InstallationFilestoreMinioOperator {
 		return errors.Errorf("minio filestore cannot be used when minio operator is not deployed")
-	}
-	if !deployMySQLOperator && request.Database == InstallationDatabaseMysqlOperator {
-		return errors.Errorf("mysql operator database cannot be used when mysql operator is not deployed")
 	}
 	return checkSpaces(request)
 }

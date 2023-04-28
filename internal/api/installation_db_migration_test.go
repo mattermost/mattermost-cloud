@@ -110,7 +110,7 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 	t.Run("fail to trigger migration if destination database not supported", func(t *testing.T) {
 		migrationRequest := &model.InstallationDBMigrationRequest{
 			InstallationID:      installation1.ID,
-			DestinationDatabase: model.InstallationDatabaseMysqlOperator,
+			DestinationDatabase: model.DefaultDatabaseEngine,
 		}
 		_, errTest := client.MigrateInstallationDatabase(migrationRequest)
 		require.Error(t, errTest)

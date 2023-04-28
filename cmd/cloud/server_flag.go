@@ -92,7 +92,7 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().StringSliceVar(&flags.sloEnterpriseGroups, "slo-enterprise-groups", []string{}, "The list of enterprise group ids to create dedicated Nginx SLOs for.")
 	command.Flags().StringSliceVar(&flags.vpnListCIDR, "vpn-list-cidr", []string{"0.0.0.0/0"}, "The list of VPN CIDRs to allow communication with the clusters.")
 	command.Flags().BoolVar(&flags.useExistingResources, "use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
-	command.Flags().BoolVar(&flags.deployMySQLOperator, "deploy-mysql-operator", true, "Whether to deploy the mysql operator.")
+	command.Flags().BoolVar(&flags.deployMySQLOperator, "deploy-mysql-operator", true, "Whether to deploy the mysql operator. DEPRECATED: use it only to perform the mysql-operator cleanup")
 	command.Flags().BoolVar(&flags.deployMinioOperator, "deploy-minio-operator", true, "Whether to deploy the minio operator.")
 	command.Flags().StringVar(&flags.ndotsDefaultValue, "ndots-value", "5", "The default ndots value for installations.")
 

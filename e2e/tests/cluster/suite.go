@@ -27,7 +27,7 @@ import (
 type TestConfig struct {
 	Provisioner               string `envconfig:"default=kops"`
 	CloudURL                  string `envconfig:"default=http://localhost:8075"`
-	InstallationDBType        string `envconfig:"default=mysql-operator"`
+	InstallationDBType        string `envconfig:"default=aws-rds"`
 	InstallationFileStoreType string `envconfig:"default=minio-operator"`
 	DNSSubdomain              string `envconfig:"default=dev.cloud.mattermost.com"`
 	WebhookAddress            string `envconfig:"default=http://localhost:11111"`

@@ -206,7 +206,7 @@ cloud installation list
         "Version": "stable",
         "Image": "mattermost/mattermost-enterprise-edition",
         "DNS": "stelios.test.cloud.mattermost.com",
-        "Database": "mysql-operator",
+        "Database": "aws-rds",
         "Filestore": "minio-operator",
         "License": "",
         "MattermostEnv": null,

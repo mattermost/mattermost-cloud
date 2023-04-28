@@ -43,7 +43,6 @@ func runDatabaseTests(command *cobra.Command, c chan *model.WebhookPayload) []st
 		model.InstallationDatabaseMultiTenantRDSMySQL,
 		model.InstallationDatabaseSingleTenantRDSPostgres,
 		model.InstallationDatabaseSingleTenantRDSMySQL,
-		model.InstallationDatabaseMysqlOperator,
 	}
 
 	client := model.NewClient(serverAddress)

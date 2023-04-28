@@ -18,7 +18,6 @@ func TestInternalDatabase(t *testing.T) {
 	}{
 		{"", false},
 		{"unknown", false},
-		{model.InstallationDatabaseMysqlOperator, true},
 		{model.InstallationDatabaseSingleTenantRDSMySQL, false},
 		{model.InstallationDatabaseSingleTenantRDSPostgres, false},
 	}
@@ -41,7 +40,6 @@ func TestIsSupportedDatabase(t *testing.T) {
 	}{
 		{"", false},
 		{"unknown", false},
-		{model.InstallationDatabaseMysqlOperator, true},
 		{model.InstallationDatabaseExternal, true},
 		{model.InstallationDatabaseSingleTenantRDSMySQL, true},
 		{model.InstallationDatabaseSingleTenantRDSPostgres, true},
@@ -65,7 +63,6 @@ func TestIsSingleTenantDatabase(t *testing.T) {
 	}{
 		{"", false},
 		{"unknown", false},
-		{model.InstallationDatabaseMysqlOperator, false},
 		{model.InstallationDatabaseSingleTenantRDSMySQL, true},
 		{model.InstallationDatabaseSingleTenantRDSPostgres, true},
 		{model.InstallationDatabaseMultiTenantRDSPostgres, false},
@@ -88,7 +85,6 @@ func TestIsMultiTenantDatabase(t *testing.T) {
 	}{
 		{"", false},
 		{"unknown", false},
-		{model.InstallationDatabaseMysqlOperator, false},
 		{model.InstallationDatabaseSingleTenantRDSMySQL, false},
 		{model.InstallationDatabaseSingleTenantRDSPostgres, false},
 		{model.InstallationDatabaseMultiTenantRDSPostgres, true},

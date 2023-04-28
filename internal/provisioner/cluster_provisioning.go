@@ -54,7 +54,7 @@ func provisionCluster(
 		return errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
 	}
 
-	mysqlOperatorNamespace := "mysql-operator"
+	ctx := context.TODO()
 	minioOperatorNamespace := "minio-operator"
 	mattermostOperatorNamespace := "mattermost-operator"
 
@@ -62,14 +62,42 @@ func provisionCluster(
 		mattermostOperatorNamespace,
 	}
 	if params.DeployMysqlOperator {
-		namespaces = append(namespaces, mysqlOperatorNamespace)
+		mysqlOperatorNamespace := "mysql-operator"
+
+		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, mysqlOperatorNamespace, metav1.DeleteOptions{})
+		if !k8sErrors.IsNotFound(err) && err != nil {
+			return errors.Wrapf(err, "failed to delete namespace %s", mysqlOperatorNamespace)
+		}
+
+		err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Delete(ctx, "mysql-operator", metav1.DeleteOptions{})
+		if !k8sErrors.IsNotFound(err) && err != nil {
+			return errors.Wrapf(err, "failed to delete mysql-operator cluster role binding")
+		}
+
+		err = k8sClient.Clientset.RbacV1().ClusterRoles().Delete(ctx, "mysql-operator", metav1.DeleteOptions{})
+		if !k8sErrors.IsNotFound(err) && err != nil {
+			return errors.Wrapf(err, "failed to delete mysql-operator cluster role")
+		}
+
+		for _, name := range []string{"mysqlbackups.mysql.presslabs.org", "mysqlclusters.mysql.presslabs.org"} {
+			errDelete := k8sClient.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Delete(ctx, name, metav1.DeleteOptions{})
+			if !k8sErrors.IsNotFound(errDelete) && errDelete != nil {
+				return errors.Wrapf(errDelete, "failed to delete mysql-operator CRD %s", name)
+			}
+		}
+
+		err = k8sClient.KubeagClientSet.ApiregistrationV1().APIServices().Delete(ctx, "v1alpha1.mysql.presslabs.org", metav1.DeleteOptions{})
+		if !k8sErrors.IsNotFound(err) && err != nil {
+			return errors.Wrapf(err, "failed to delete mysql-operator api service")
+		}
+
 	}
+
 	if params.DeployMinioOperator {
 		namespaces = append(namespaces, minioOperatorNamespace)
 	}
 
 	// Remove all previously-installed operator namespaces and resources.
-	ctx := context.TODO()
 	for _, namespace := range namespaces {
 		logger.Infof("Cleaning up namespace %s", namespace)
 		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
@@ -179,13 +207,6 @@ func provisionCluster(
 		})
 	}
 
-	if params.DeployMysqlOperator {
-		files = append(files, k8s.ManifestFile{
-			Path:            "manifests/operator-manifests/mysql/mysql-operator.yaml",
-			DeployNamespace: mysqlOperatorNamespace,
-		})
-	}
-
 	if params.DeployMinioOperator {
 		files = append(files, k8s.ManifestFile{
 			Path:            "manifests/operator-manifests/minio/minio-operator.yaml",
@@ -255,9 +276,6 @@ func provisionCluster(
 	}
 
 	var operatorsWithStatefulSet []string
-	if params.DeployMysqlOperator {
-		operatorsWithStatefulSet = append(operatorsWithStatefulSet, "mysql-operator")
-	}
 
 	for _, operator := range operatorsWithStatefulSet {
 		var pods *v1.PodList
