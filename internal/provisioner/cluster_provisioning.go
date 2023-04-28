@@ -62,6 +62,8 @@ func provisionCluster(
 		mattermostOperatorNamespace,
 	}
 	if params.DeployMysqlOperator {
+		logger.Info("Cleaning up mysql-operator from the cluster")
+
 		mysqlOperatorNamespace := "mysql-operator"
 
 		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, mysqlOperatorNamespace, metav1.DeleteOptions{})
@@ -108,7 +110,7 @@ func provisionCluster(
 		}
 	}
 
-	wait := 60
+	wait := 120
 	logger.Infof("Waiting up to %d seconds for namespaces to be terminated...", wait)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
@@ -272,31 +274,6 @@ func provisionCluster(
 				return err
 			}
 			logger.Infof("Successfully deployed service pod %q", pod.GetName())
-		}
-	}
-
-	var operatorsWithStatefulSet []string
-
-	for _, operator := range operatorsWithStatefulSet {
-		var pods *v1.PodList
-		pods, err = k8sClient.GetPodsFromStatefulset(operator, operator)
-		if err != nil {
-			return err
-		}
-		if len(pods.Items) == 0 {
-			return fmt.Errorf("no pods found from %q statefulSet", operator)
-		}
-
-		for _, pod := range pods.Items {
-			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
-			ctxPodRunning, cancelPodRunning := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancelPodRunning()
-			var podRunning *v1.Pod
-			podRunning, err = k8sClient.WaitForPodRunning(ctxPodRunning, operator, pod.GetName())
-			if err != nil {
-				return err
-			}
-			logger.Infof("Successfully deployed service pod %q", podRunning.GetName())
 		}
 	}
 

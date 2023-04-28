@@ -23,15 +23,11 @@ func SetRequireAnnotatedInstallations(val bool) {
 	requireAnnotatedInstallations = val
 }
 
-// deployMySQLOperator if set, MySQL operator will be cleaned up from the cluster.
-var deployMySQLOperator bool
-
 // deployMinioOperator if set, Minio operator will be deployed
 var deployMinioOperator bool
 
 // SetDeployOperators is called with a value based on a CLI flag.
-func SetDeployOperators(mysql, minio bool) {
-	deployMySQLOperator = mysql
+func SetDeployOperators(minio bool) {
 	deployMinioOperator = minio
 }
 

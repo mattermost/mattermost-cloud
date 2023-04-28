@@ -168,7 +168,7 @@ func executeServerCmd(flags serverFlags) error {
 		logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 	}
 
-	model.SetDeployOperators(flags.deployMySQLOperator, flags.deployMinioOperator)
+	model.SetDeployOperators(flags.deployMinioOperator)
 
 	wd, err := os.Getwd()
 	if err != nil {
