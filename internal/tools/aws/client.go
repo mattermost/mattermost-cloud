@@ -39,6 +39,7 @@ type AWS interface {
 	GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error
+	GetClaimedVPC(clusterID string, logger log.FieldLogger) (string, error)
 	AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error
 	DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error
 	ClaimSecurityGroups(cluster *model.Cluster, ngNames string, vpcID string, logger log.FieldLogger) ([]string, error)
