@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -92,8 +91,6 @@ type AWS interface {
 	GetAccountID() (string, error)
 
 	GetLoadBalancerAPIByType(string) ELB
-
-	GetVpcsWithFilters(filters []ec2Types.Filter) ([]ec2Types.Vpc, error)
 }
 
 // Client is a client for interacting with AWS resources in a single AWS account.
