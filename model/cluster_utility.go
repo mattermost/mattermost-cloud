@@ -178,23 +178,8 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 // when no more clusters exist with the old version format.
 // TODO DELETE THIS
 func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
-	type innerUtilityGroupVersions struct {
-		PrometheusOperator  *HelmUtilityVersion
-		Thanos              *HelmUtilityVersion
-		Nginx               *HelmUtilityVersion
-		NginxInternal       *HelmUtilityVersion
-		Fluentbit           *HelmUtilityVersion
-		Teleport            *HelmUtilityVersion
-		Pgbouncer           *HelmUtilityVersion
-		Promtail            *HelmUtilityVersion
-		Rtcd                *HelmUtilityVersion
-		NodeProblemDetector *HelmUtilityVersion
-		MetricsServer       *HelmUtilityVersion
-		Velero              *HelmUtilityVersion
-		Cloudprober         *HelmUtilityVersion
-	}
-
-	var versions *innerUtilityGroupVersions = &innerUtilityGroupVersions{}
+	type innerUtilityGroupVersions UtilityGroupVersions
+	var versions = &innerUtilityGroupVersions{}
 
 	err := json.Unmarshal(bytes, versions)
 	if err != nil && strings.Contains(err.Error(), "cannot unmarshal string into Go struct field") {
@@ -225,19 +210,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		return errors.Wrap(err, "failed to unmarshal to new HelmUtilityVersion type")
 	}
 
-	h.PrometheusOperator = versions.PrometheusOperator
-	h.Thanos = versions.Thanos
-	h.Nginx = versions.Nginx
-	h.NginxInternal = versions.NginxInternal
-	h.Fluentbit = versions.Fluentbit
-	h.Teleport = versions.Teleport
-	h.Pgbouncer = versions.Pgbouncer
-	h.Promtail = versions.Promtail
-	h.Rtcd = versions.Rtcd
-	h.NodeProblemDetector = versions.NodeProblemDetector
-	h.MetricsServer = versions.MetricsServer
-	h.Velero = versions.Velero
-	h.Cloudprober = versions.Cloudprober
+	*h = *(*UtilityGroupVersions)(versions)
 
 	return nil
 }
