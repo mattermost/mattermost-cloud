@@ -293,4 +293,31 @@ func TestUnmarshallUtilityVersion(t *testing.T) {
 		assert.NoError(t, err)
 		require.Equal(t, version, versions.Nginx.Chart)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":null}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, (*HelmUtilityVersion)(nil), versions.Nginx)
+	})
+
+	t.Run("empty object", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":{}}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, &HelmUtilityVersion{}, versions.Nginx)
+	})
+
+	t.Run("malformed", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":'}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.Error(t, err, "error unmarshalling HelmUtilityVersion")
+		require.Equal(t, (*HelmUtilityVersion)(nil), versions.Nginx)
+	})
 }
