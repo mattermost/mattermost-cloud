@@ -273,6 +273,19 @@ func (a *Client) ClaimSecurityGroups(cluster *model.Cluster, nodeGroup string, v
 	return sgIDs, nil
 }
 
+func (c *Client) GetClaimedVPC(clusterID string, logger log.FieldLogger) (string, error) {
+	vpc, err := getVPCForCluster(clusterID, c)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get VPC for cluster")
+	}
+
+	if vpc == nil {
+		return "", nil
+	}
+
+	return *vpc.VpcId, nil
+}
+
 // GetAndClaimVpcResources creates ClusterResources from an available VPC and
 // tags them appropriately.
 func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {

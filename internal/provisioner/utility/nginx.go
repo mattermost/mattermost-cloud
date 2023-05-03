@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	awsSDK "github.com/aws/aws-sdk-go-v2/aws"
-	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -146,19 +144,17 @@ func (n *nginx) newHelmDeployment() (*helmDeployment, error) {
 		return nil, errors.New("retrieved certificate does not have ARN")
 	}
 
-	vpc, err := n.awsClient.GetVpcsWithFilters([]ec2Types.Filter{
-		{
-			Name:   awsSDK.String(aws.VpcClusterIDTagKey),
-			Values: []string{n.cluster.ID},
-		},
-	})
+	setArguments := []string{
+		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
+	}
+
+	vpc, err := n.awsClient.GetClaimedVPC(n.cluster.ID, n.logger)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to perform VPC lookup for cluster %s", n.cluster.ID)
 	}
 
-	setArguments := []string{
-		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
-		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-additional-resource-tags=VpcID=%s", *vpc[0].VpcId),
+	if vpc != "" {
+		setArguments = append(setArguments, fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-additional-resource-tags=VpcID=%s", vpc))
 	}
 
 	if n.provisioner == model.ProvisionerEKS {
