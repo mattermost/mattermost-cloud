@@ -8,6 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -167,6 +170,76 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		VeleroCanonicalName:              h.Velero,
 		CloudproberCanonicalName:         h.Cloudprober,
 	}
+}
+
+// UnmarshalJSON is a custom JSON unmarshaler that can handle both the
+// old Version string type and the new type. It is entirely
+// self-contained, including types, so that it can be easily removed
+// when no more clusters exist with the old version format.
+// TODO DELETE THIS
+func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
+	type innerUtilityGroupVersions struct {
+		PrometheusOperator  *HelmUtilityVersion
+		Thanos              *HelmUtilityVersion
+		Nginx               *HelmUtilityVersion
+		NginxInternal       *HelmUtilityVersion
+		Fluentbit           *HelmUtilityVersion
+		Teleport            *HelmUtilityVersion
+		Pgbouncer           *HelmUtilityVersion
+		Promtail            *HelmUtilityVersion
+		Rtcd                *HelmUtilityVersion
+		NodeProblemDetector *HelmUtilityVersion
+		MetricsServer       *HelmUtilityVersion
+		Velero              *HelmUtilityVersion
+		Cloudprober         *HelmUtilityVersion
+	}
+
+	var versions *innerUtilityGroupVersions = &innerUtilityGroupVersions{}
+
+	err := json.Unmarshal(bytes, versions)
+	if err != nil && strings.Contains(err.Error(), "cannot unmarshal string into Go struct field") {
+		type oldVersions struct {
+			PrometheusOperator string
+			Thanos             string
+			Nginx              string
+			NginxInternal      string
+			Fluentbit          string
+			Teleport           string
+			Pgbouncer          string
+		}
+		var oldUtilGrpVers *oldVersions = &oldVersions{}
+		secondErr := json.Unmarshal(bytes, oldUtilGrpVers)
+		if secondErr != nil {
+			return fmt.Errorf("%s and %s", errors.Wrap(err, "failed to unmarshal to new HelmUtilityVersion"), errors.Wrap(secondErr, "failed to unmarshal to old HelmUtilityVersion type"))
+		}
+
+		h.PrometheusOperator = &HelmUtilityVersion{Chart: oldUtilGrpVers.PrometheusOperator}
+		h.Thanos = &HelmUtilityVersion{Chart: oldUtilGrpVers.Thanos}
+		h.Nginx = &HelmUtilityVersion{Chart: oldUtilGrpVers.Nginx}
+		h.NginxInternal = &HelmUtilityVersion{Chart: oldUtilGrpVers.NginxInternal}
+		h.Fluentbit = &HelmUtilityVersion{Chart: oldUtilGrpVers.Fluentbit}
+		h.Teleport = &HelmUtilityVersion{Chart: oldUtilGrpVers.Teleport}
+		h.Pgbouncer = &HelmUtilityVersion{Chart: oldUtilGrpVers.Pgbouncer}
+		return nil
+	} else if err != nil {
+		return errors.Wrap(err, "failed to unmarshal to new HelmUtilityVersion type")
+	}
+
+	h.PrometheusOperator = versions.PrometheusOperator
+	h.Thanos = versions.Thanos
+	h.Nginx = versions.Nginx
+	h.NginxInternal = versions.NginxInternal
+	h.Fluentbit = versions.Fluentbit
+	h.Teleport = versions.Teleport
+	h.Pgbouncer = versions.Pgbouncer
+	h.Promtail = versions.Promtail
+	h.Rtcd = versions.Rtcd
+	h.NodeProblemDetector = versions.NodeProblemDetector
+	h.MetricsServer = versions.MetricsServer
+	h.Velero = versions.Velero
+	h.Cloudprober = versions.Cloudprober
+
+	return nil
 }
 
 // UtilityMetadata is a container struct for any metadata related to
