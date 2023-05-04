@@ -68,7 +68,7 @@ func (provisioner *EKSProvisioner) PrepareCluster(cluster *model.Cluster) bool {
 	}
 
 	// Generate the EKS name using the cluster id.
-	cluster.ProvisionerMetadataEKS.Name = fmt.Sprintf("%s-eks-k8s-local", cluster.ID)
+	cluster.ProvisionerMetadataEKS.Name = fmt.Sprintf("%s-eks-k8s", cluster.ID)
 
 	return true
 }
