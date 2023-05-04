@@ -498,6 +498,10 @@ func (a *mockAWS) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, l
 	return aws.ClusterResources{}, nil
 }
 
+func (a *mockAWS) GetClaimedVPC(clusterID string, logger log.FieldLogger) (string, error) {
+	return "", nil
+}
+
 func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources) (*eksTypes.Cluster, error) {
 	return &eksTypes.Cluster{}, nil
 }
