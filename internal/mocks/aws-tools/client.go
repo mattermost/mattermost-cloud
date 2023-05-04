@@ -113,6 +113,21 @@ func (mr *MockAWSMockRecorder) ReleaseVpc(cluster, logger interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseVpc", reflect.TypeOf((*MockAWS)(nil).ReleaseVpc), cluster, logger)
 }
 
+// GetClaimedVPC mocks base method
+func (m *MockAWS) GetClaimedVPC(clusterID string, logger logrus.FieldLogger) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClaimedVPC", clusterID, logger)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetClaimedVPC indicates an expected call of GetClaimedVPC
+func (mr *MockAWSMockRecorder) GetClaimedVPC(clusterID, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClaimedVPC", reflect.TypeOf((*MockAWS)(nil).GetClaimedVPC), clusterID, logger)
+}
+
 // AttachPolicyToRole mocks base method
 func (m *MockAWS) AttachPolicyToRole(roleName, policyName string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()

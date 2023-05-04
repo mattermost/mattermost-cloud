@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"testing"
 
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
@@ -497,6 +498,10 @@ func (a *mockAWS) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, l
 	return aws.ClusterResources{}, nil
 }
 
+func (a *mockAWS) GetClaimedVPC(clusterID string, logger log.FieldLogger) (string, error) {
+	return "", nil
+}
+
 func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources) (*eksTypes.Cluster, error) {
 	return &eksTypes.Cluster{}, nil
 }
@@ -602,6 +607,10 @@ func (a *mockAWS) GetMultitenantBucketNameForInstallation(installationID string,
 
 func (a *mockAWS) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error) {
 	return "password", nil
+}
+
+func (a *mockAWS) GetVpcsWithFilters(filters []ec2Types.Filter) ([]ec2Types.Vpc, error) {
+	return nil, nil
 }
 
 type mockEventProducer struct {
