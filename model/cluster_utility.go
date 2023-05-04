@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 )
 
 const (
@@ -310,6 +311,17 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 type HelmUtilityVersion struct {
 	Chart      string
 	ValuesPath string
+}
+
+// UnmarshalJSON tries to unmarshal the HelmUtilityVersion from JSON
+// If it fails, it assumes that bytes is just the chart version in string
+func (u *HelmUtilityVersion) UnmarshalJSON(bytes []byte) error {
+	type newHelmUtilityVersion HelmUtilityVersion
+	err := json.Unmarshal(bytes, (*newHelmUtilityVersion)(u))
+	if err != nil {
+		u.Chart = strings.Trim(string(bytes), `"`)
+	}
+	return nil
 }
 
 // Version returns the Helm chart version
