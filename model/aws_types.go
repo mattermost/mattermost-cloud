@@ -15,4 +15,5 @@ type LaunchTemplateData struct {
 	AMI            string
 	MaxPodsPerNode int64
 	SecurityGroups []string
+	InstanceType   string
 }

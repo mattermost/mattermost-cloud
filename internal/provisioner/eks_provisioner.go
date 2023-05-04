@@ -194,14 +194,14 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster) (
 	return true, nil
 }
 
-func (provisioner *EKSProvisioner) prepareLaunchTemplate(cluster *model.Cluster, ngPrefix string, withSG bool, logger log.FieldLogger) error {
+func (provisioner *EKSProvisioner) prepareLaunchTemplate(cluster *model.Cluster, ngPrefix string, ngMetadata model.NodeGroupMetadata, logger log.FieldLogger) error {
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	changeRequest := eksMetadata.ChangeRequest
 
 	var err error
 
 	var securityGroups []string
-	if withSG {
+	if ngMetadata.WithSecurityGroup {
 		vpc := changeRequest.VPC
 		if vpc == "" {
 			vpc = eksMetadata.VPC
@@ -218,6 +218,7 @@ func (provisioner *EKSProvisioner) prepareLaunchTemplate(cluster *model.Cluster,
 		SecurityGroups: securityGroups,
 		AMI:            changeRequest.AMI,
 		MaxPodsPerNode: changeRequest.MaxPodsPerNode,
+		InstanceType:   ngMetadata.InstanceType,
 	}
 
 	if launchTemplateData.AMI == "" {
@@ -270,7 +271,7 @@ func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster) error {
 			defer wg.Done()
 			logger.Debugf("Creating EKS NodeGroup %s", ngMetadata.Name)
 
-			err := provisioner.prepareLaunchTemplate(cluster, ngPrefix, ngMetadata.WithSecurityGroup, logger)
+			err := provisioner.prepareLaunchTemplate(cluster, ngPrefix, ngMetadata, logger)
 			if err != nil {
 				logger.WithError(err).Error("failed to ensure launch template")
 				errOccurred = true
@@ -332,7 +333,7 @@ func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bo
 			eksMetadata.NodeGroups[ngPrefix] = model.NodeGroupMetadata{
 				Name:              ngMetadata.Name,
 				Type:              ngMetadata.Type,
-				InstanceType:      nodeGroup.InstanceTypes[0],
+				InstanceType:      ngMetadata.InstanceType,
 				MinCount:          int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
 				MaxCount:          int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
 				WithPublicSubnet:  ngMetadata.WithPublicSubnet,
@@ -423,7 +424,7 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 				ngMetadata.CopyMissingFieldsFrom(oldMetadata)
 				changeRequest.NodeGroups[ngPrefix] = ngMetadata
 
-				err = provisioner.prepareLaunchTemplate(cluster, ngPrefix, ngMetadata.WithSecurityGroup, logger)
+				err = provisioner.prepareLaunchTemplate(cluster, ngPrefix, ngMetadata, logger)
 				if err != nil {
 					logger.WithError(err).Error("failed to ensure launch template")
 					errOccurred = true
@@ -570,6 +571,13 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 				return
 			}
 
+			err = provisioner.prepareLaunchTemplate(cluster, ngPrefix, ngMetadata, logger)
+			if err != nil {
+				logger.WithError(err).Error("failed to ensure launch template")
+				errOccurred = true
+				return
+			}
+
 			err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster, ngPrefix)
 			if err != nil {
 				logger.WithError(err).Errorf("failed to migrate EKS NodeGroup for %s", ngPrefix)
@@ -592,7 +600,7 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 
 			oldNodeGroup := eksMetadata.NodeGroups[ngPrefix]
 			oldNodeGroup.Name = ngMetadata.Name
-			oldNodeGroup.InstanceType = nodeGroup.InstanceTypes[0]
+			oldNodeGroup.InstanceType = ngMetadata.InstanceType
 			oldNodeGroup.MinCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize))
 			oldNodeGroup.MaxCount = int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize))
 			eksMetadata.NodeGroups[ngPrefix] = oldNodeGroup

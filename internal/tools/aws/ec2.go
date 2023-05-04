@@ -190,6 +190,7 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 			ImageId:          aws.String(data.AMI),
 			UserData:         aws.String(encodedUserData),
 			SecurityGroupIds: data.SecurityGroups,
+			InstanceType:     ec2Types.InstanceType(data.InstanceType),
 		},
 		LaunchTemplateName: aws.String(data.Name),
 	})
@@ -226,6 +227,7 @@ func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 			ImageId:          aws.String(data.AMI),
 			UserData:         aws.String(encodedUserData),
 			SecurityGroupIds: data.SecurityGroups,
+			InstanceType:     ec2Types.InstanceType(data.InstanceType),
 		},
 		LaunchTemplateName: aws.String(data.Name),
 	})

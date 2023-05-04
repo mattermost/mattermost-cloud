@@ -214,7 +214,6 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 
 	nodeGroupReq := eks.CreateNodegroupInput{
 		ClusterName:   aws.String(clusterName),
-		InstanceTypes: []string{ngChangeRequest.InstanceType},
 		NodeRole:      &changeRequest.NodeRoleARN,
 		NodegroupName: aws.String(ngChangeRequest.Name),
 		AmiType:       eksTypes.AMITypesCustom,
