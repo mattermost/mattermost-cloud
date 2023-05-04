@@ -186,12 +186,15 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 	encodedUserData := base64.StdEncoding.EncodeToString([]byte(userData))
 
 	var networkInterfaces []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest
-	if data.WithPublicSubnet {
-		networkInterfaces = []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
-			{
-				DeviceIndex:              aws.Int32(0),
-				AssociatePublicIpAddress: aws.Bool(true),
-			},
+	if data.WithPublicSubnet || len(data.SecurityGroups) > 0 {
+		networkInterface := ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
+			DeviceIndex: aws.Int32(0),
+		}
+		if len(data.SecurityGroups) > 0 {
+			networkInterface.Groups = data.SecurityGroups
+		}
+		if data.WithPublicSubnet {
+			networkInterface.AssociatePublicIpAddress = aws.Bool(data.WithPublicSubnet)
 		}
 	}
 
@@ -199,7 +202,6 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 		LaunchTemplateData: &ec2Types.RequestLaunchTemplateData{
 			ImageId:           aws.String(data.AMI),
 			UserData:          aws.String(encodedUserData),
-			SecurityGroupIds:  data.SecurityGroups,
 			InstanceType:      ec2Types.InstanceType(data.InstanceType),
 			NetworkInterfaces: networkInterfaces,
 		},
@@ -234,12 +236,15 @@ func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 	encodedUserData := base64.StdEncoding.EncodeToString([]byte(userData))
 
 	var networkInterfaces []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest
-	if data.WithPublicSubnet {
-		networkInterfaces = []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
-			{
-				DeviceIndex:              aws.Int32(0),
-				AssociatePublicIpAddress: aws.Bool(true),
-			},
+	if data.WithPublicSubnet || len(data.SecurityGroups) > 0 {
+		networkInterface := ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
+			DeviceIndex: aws.Int32(0),
+		}
+		if len(data.SecurityGroups) > 0 {
+			networkInterface.Groups = data.SecurityGroups
+		}
+		if data.WithPublicSubnet {
+			networkInterface.AssociatePublicIpAddress = aws.Bool(data.WithPublicSubnet)
 		}
 	}
 
@@ -247,7 +252,6 @@ func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 		LaunchTemplateData: &ec2Types.RequestLaunchTemplateData{
 			ImageId:           aws.String(data.AMI),
 			UserData:          aws.String(encodedUserData),
-			SecurityGroupIds:  data.SecurityGroups,
 			InstanceType:      ec2Types.InstanceType(data.InstanceType),
 			NetworkInterfaces: networkInterfaces,
 		},
