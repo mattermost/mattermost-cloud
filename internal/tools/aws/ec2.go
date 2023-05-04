@@ -196,6 +196,7 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 		if data.WithPublicSubnet {
 			networkInterface.AssociatePublicIpAddress = aws.Bool(data.WithPublicSubnet)
 		}
+		networkInterfaces = append(networkInterfaces, networkInterface)
 	}
 
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplate(context.TODO(), &ec2.CreateLaunchTemplateInput{
@@ -246,6 +247,7 @@ func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 		if data.WithPublicSubnet {
 			networkInterface.AssociatePublicIpAddress = aws.Bool(data.WithPublicSubnet)
 		}
+		networkInterfaces = append(networkInterfaces, networkInterface)
 	}
 
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplateVersion(context.TODO(), &ec2.CreateLaunchTemplateVersionInput{
