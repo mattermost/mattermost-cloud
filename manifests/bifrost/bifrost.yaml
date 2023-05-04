@@ -17,7 +17,7 @@ spec:
       - name: bifrost
         command:
         - /bifrost
-        image: mattermost/bifrost:v1.0.3
+        image: mattermost/bifrost:v1.0.4
         imagePullPolicy: IfNotPresent
         env:
         - name: BIFROST_SERVICESETTINGS_HOST
@@ -26,6 +26,14 @@ spec:
           value: "0.0.0.0:8099"
         - name: BIFROST_LOGSETTINGS_CONSOLEJSON
           value: "true"
+        - name: BIFROST_SERVICESETTINGS_RESPONSEHEADERTIMEOUTSECS
+          value: "30"
+        - name: BIFROST_SERVICESETTINGS_READTIMEOUTSECS
+          value: "120"
+        - name: BIFROST_SERVICESETTINGS_WRITETIMEOUTSECS
+          value: "300"
+        - name: BIFROST_SERVICESETTINGS_IDLETIMEOUTSECS
+          value: "30"
         - name: BIFROST_S3SETTINGS_BUCKET
           valueFrom:
             secretKeyRef:
