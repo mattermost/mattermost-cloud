@@ -10,10 +10,11 @@ type Certificate struct {
 }
 
 type LaunchTemplateData struct {
-	Name           string
-	ClusterName    string
-	AMI            string
-	MaxPodsPerNode int64
-	SecurityGroups []string
-	InstanceType   string
+	Name             string
+	ClusterName      string
+	AMI              string
+	MaxPodsPerNode   int64
+	SecurityGroups   []string
+	InstanceType     string
+	WithPublicSubnet bool
 }

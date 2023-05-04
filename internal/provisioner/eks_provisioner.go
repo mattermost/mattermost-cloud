@@ -213,12 +213,13 @@ func (provisioner *EKSProvisioner) prepareLaunchTemplate(cluster *model.Cluster,
 	}
 
 	launchTemplateData := &model.LaunchTemplateData{
-		Name:           fmt.Sprintf("%s-%s", eksMetadata.Name, ngPrefix),
-		ClusterName:    eksMetadata.Name,
-		SecurityGroups: securityGroups,
-		AMI:            changeRequest.AMI,
-		MaxPodsPerNode: changeRequest.MaxPodsPerNode,
-		InstanceType:   ngMetadata.InstanceType,
+		Name:             fmt.Sprintf("%s-%s", eksMetadata.Name, ngPrefix),
+		ClusterName:      eksMetadata.Name,
+		SecurityGroups:   securityGroups,
+		AMI:              changeRequest.AMI,
+		MaxPodsPerNode:   changeRequest.MaxPodsPerNode,
+		InstanceType:     ngMetadata.InstanceType,
+		WithPublicSubnet: ngMetadata.WithPublicSubnet,
 	}
 
 	if launchTemplateData.AMI == "" {
@@ -270,6 +271,10 @@ func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster) error {
 		go func(ngPrefix string, ngMetadata model.NodeGroupMetadata) {
 			defer wg.Done()
 			logger.Debugf("Creating EKS NodeGroup %s", ngMetadata.Name)
+
+			oldMetadata := eksMetadata.NodeGroups[ngPrefix]
+			ngMetadata.CopyMissingFieldsFrom(oldMetadata)
+			changeRequest.NodeGroups[ngPrefix] = ngMetadata
 
 			err := provisioner.prepareLaunchTemplate(cluster, ngPrefix, ngMetadata, logger)
 			if err != nil {

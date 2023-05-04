@@ -185,12 +185,23 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 	userData := getLaunchTemplateUserData(eksCluster, data)
 	encodedUserData := base64.StdEncoding.EncodeToString([]byte(userData))
 
+	var networkInterfaces []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest
+	if data.WithPublicSubnet {
+		networkInterfaces = []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
+			{
+				DeviceIndex:              aws.Int32(0),
+				AssociatePublicIpAddress: aws.Bool(true),
+			},
+		}
+	}
+
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplate(context.TODO(), &ec2.CreateLaunchTemplateInput{
 		LaunchTemplateData: &ec2Types.RequestLaunchTemplateData{
-			ImageId:          aws.String(data.AMI),
-			UserData:         aws.String(encodedUserData),
-			SecurityGroupIds: data.SecurityGroups,
-			InstanceType:     ec2Types.InstanceType(data.InstanceType),
+			ImageId:           aws.String(data.AMI),
+			UserData:          aws.String(encodedUserData),
+			SecurityGroupIds:  data.SecurityGroups,
+			InstanceType:      ec2Types.InstanceType(data.InstanceType),
+			NetworkInterfaces: networkInterfaces,
 		},
 		LaunchTemplateName: aws.String(data.Name),
 	})
@@ -222,12 +233,23 @@ func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 	userData := getLaunchTemplateUserData(eksCluster, data)
 	encodedUserData := base64.StdEncoding.EncodeToString([]byte(userData))
 
+	var networkInterfaces []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest
+	if data.WithPublicSubnet {
+		networkInterfaces = []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
+			{
+				DeviceIndex:              aws.Int32(0),
+				AssociatePublicIpAddress: aws.Bool(true),
+			},
+		}
+	}
+
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplateVersion(context.TODO(), &ec2.CreateLaunchTemplateVersionInput{
 		LaunchTemplateData: &ec2Types.RequestLaunchTemplateData{
-			ImageId:          aws.String(data.AMI),
-			UserData:         aws.String(encodedUserData),
-			SecurityGroupIds: data.SecurityGroups,
-			InstanceType:     ec2Types.InstanceType(data.InstanceType),
+			ImageId:           aws.String(data.AMI),
+			UserData:          aws.String(encodedUserData),
+			SecurityGroupIds:  data.SecurityGroups,
+			InstanceType:      ec2Types.InstanceType(data.InstanceType),
+			NetworkInterfaces: networkInterfaces,
 		},
 		LaunchTemplateName: aws.String(data.Name),
 	})
