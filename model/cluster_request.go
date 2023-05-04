@@ -18,7 +18,7 @@ const (
 	// NetworkingAmazon is Amazon networking plugin.
 	NetworkingAmazon = "amazon-vpc-routed-eni"
 	// NetworkingVpcCni is Amazon VPC CNI networking plugin.
-	NetworkingVpcCni = "vpc-cni"
+	NetworkingVpcCni = "amazon-vpc-cni"
 )
 
 // CreateClusterRequest specifies the parameters for a new cluster.
