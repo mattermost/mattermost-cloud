@@ -126,6 +126,21 @@ func (a *Client) InstallEKSAddons(cluster *model.Cluster) error {
 		return errors.Wrap(err, "failed to create ebs-csi addon")
 	}
 
+	input = eks.CreateAddonInput{
+		AddonName:           aws.String("vpc-cni"),
+		ClusterName:         aws.String(cluster.ProvisionerMetadataEKS.Name),
+		ConfigurationValues: aws.String("{\"env\":{\"ENABLE_PREFIX_DELEGATION\":\"true\"}}"),
+		ResolveConflicts:    eksTypes.ResolveConflictsOverwrite,
+	}
+	_, err = a.Service().eks.CreateAddon(context.TODO(), &input)
+	if err != nil {
+		// In case addon already configured we do not want to fail.
+		if IsErrorResourceInUseException(err) {
+			return nil
+		}
+		return errors.Wrap(err, "failed to create vpc-cni addon")
+	}
+
 	return nil
 }
 

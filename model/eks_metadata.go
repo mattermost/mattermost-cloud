@@ -82,7 +82,6 @@ func (em *EKSMetadata) ApplyClusterCreateRequest(createRequest *CreateClusterReq
 		Version:        createRequest.Version,
 		AMI:            createRequest.AMI,
 		MaxPodsPerNode: createRequest.MaxPodsPerNode,
-		Networking:     createRequest.Networking,
 		VPC:            createRequest.VPC,
 		ClusterRoleARN: createRequest.ClusterRoleARN,
 		NodeRoleARN:    createRequest.NodeRoleARN,
