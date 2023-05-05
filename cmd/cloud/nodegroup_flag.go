@@ -6,7 +6,7 @@ package main
 
 import "github.com/spf13/cobra"
 
-type clusterNodegroupsAddFlags struct {
+type clusterNodegroupsCreateFlags struct {
 	clusterFlags
 	clusterID                   string
 	nodegroups                  map[string]string
@@ -14,7 +14,7 @@ type clusterNodegroupsAddFlags struct {
 	nodegroupsWithSecurityGroup []string
 }
 
-func (flags *clusterNodegroupsAddFlags) addFlags(command *cobra.Command) {
+func (flags *clusterNodegroupsCreateFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.clusterID, "cluster", "", "The id of the cluster to be modified.")
 	command.Flags().StringToStringVar(&flags.nodegroups, "nodegroups", nil, "Additional nodegroups to create. The key is the name of the nodegroup and the value is the size constant.")
 	command.Flags().StringSliceVar(&flags.nodegroupsWithPublicSubnet, "nodegroups-with-public-subnet", nil, "Nodegroups to create with public subnet. The value is the name of the nodegroup.")
@@ -22,4 +22,18 @@ func (flags *clusterNodegroupsAddFlags) addFlags(command *cobra.Command) {
 
 	_ = command.MarkFlagRequired("cluster")
 	_ = command.MarkFlagRequired("nodegroups")
+}
+
+type clusterNodegroupDeleteFlags struct {
+	clusterFlags
+	clusterID string
+	nodegroup string
+}
+
+func (flags *clusterNodegroupDeleteFlags) addFlags(command *cobra.Command) {
+	command.Flags().StringVar(&flags.clusterID, "cluster", "", "The id of the cluster to be modified.")
+	command.Flags().StringVar(&flags.nodegroup, "nodegroup", "", "The name of the nodegroup to delete.")
+
+	_ = command.MarkFlagRequired("cluster")
+	_ = command.MarkFlagRequired("nodegroup")
 }
