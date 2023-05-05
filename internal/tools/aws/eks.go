@@ -113,32 +113,44 @@ func (c *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResou
 
 // InstallEKSAddons installs EKS EBS addon to the existing cluster.
 func (a *Client) InstallEKSAddons(cluster *model.Cluster) error {
-	input := eks.CreateAddonInput{
-		AddonName:   aws.String("aws-ebs-csi-driver"),
-		ClusterName: aws.String(cluster.ProvisionerMetadataEKS.Name),
-	}
-	_, err := a.Service().eks.CreateAddon(context.TODO(), &input)
-	if err != nil {
-		// In case addon already configured we do not want to fail.
-		if IsErrorResourceInUseException(err) {
-			return nil
-		}
-		return errors.Wrap(err, "failed to create ebs-csi addon")
+
+	var addons = []eks.CreateAddonInput{
+		{
+			AddonName:        aws.String("coredns"),
+			AddonVersion:     aws.String("v1.8.7-eksbuild.1"),
+			ClusterName:      aws.String(cluster.ProvisionerMetadataEKS.Name),
+			ResolveConflicts: eksTypes.ResolveConflictsOverwrite,
+		},
+		{
+			AddonName:        aws.String("kube-proxy"),
+			AddonVersion:     aws.String("v1.22.6-eksbuild.1"),
+			ClusterName:      aws.String(cluster.ProvisionerMetadataEKS.Name),
+			ResolveConflicts: eksTypes.ResolveConflictsOverwrite,
+		},
+		{
+			AddonName:           aws.String("vpc-cni"),
+			AddonVersion:        aws.String("v1.11.0-eksbuild.1"),
+			ClusterName:         aws.String(cluster.ProvisionerMetadataEKS.Name),
+			ConfigurationValues: aws.String("{\"env\":{\"ENABLE_PREFIX_DELEGATION\":\"true\"}}"),
+			ResolveConflicts:    eksTypes.ResolveConflictsOverwrite,
+		},
+		{
+			AddonName:        aws.String("aws-ebs-csi-driver"),
+			AddonVersion:     aws.String("v1.11.2-eksbuild.1"),
+			ClusterName:      aws.String(cluster.ProvisionerMetadataEKS.Name),
+			ResolveConflicts: eksTypes.ResolveConflictsOverwrite,
+		},
 	}
 
-	input = eks.CreateAddonInput{
-		AddonName:           aws.String("vpc-cni"),
-		ClusterName:         aws.String(cluster.ProvisionerMetadataEKS.Name),
-		ConfigurationValues: aws.String("{\"env\":{\"ENABLE_PREFIX_DELEGATION\":\"true\"}}"),
-		ResolveConflicts:    eksTypes.ResolveConflictsOverwrite,
-	}
-	_, err = a.Service().eks.CreateAddon(context.TODO(), &input)
-	if err != nil {
-		// In case addon already configured we do not want to fail.
-		if IsErrorResourceInUseException(err) {
-			return nil
+	for i, addon := range addons {
+		_, err := a.Service().eks.CreateAddon(context.TODO(), &addons[i])
+		if err != nil {
+			// In case addon already configured we do not want to fail.
+			if IsErrorResourceInUseException(err) {
+				return nil
+			}
+			return errors.Wrapf(err, "failed to create %s addon", *addon.AddonName)
 		}
-		return errors.Wrap(err, "failed to create vpc-cni addon")
 	}
 
 	return nil

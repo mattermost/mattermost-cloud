@@ -187,21 +187,19 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 
 	templateData := &ec2Types.RequestLaunchTemplateData{
 		ImageId:      aws.String(data.AMI),
-		UserData:     aws.String(encodedUserData),
 		InstanceType: ec2Types.InstanceType(data.InstanceType),
+		UserData:     aws.String(encodedUserData),
+		NetworkInterfaces: []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
+			{
+				AssociatePublicIpAddress: aws.Bool(data.WithPublicSubnet),
+				DeleteOnTermination:      aws.Bool(true),
+				DeviceIndex:              aws.Int32(0),
+			},
+		},
 	}
 
-	if data.WithPublicSubnet || len(data.SecurityGroups) > 0 {
-		networkInterface := ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
-			DeviceIndex: aws.Int32(0),
-		}
-		if len(data.SecurityGroups) > 0 {
-			networkInterface.Groups = data.SecurityGroups
-		}
-		if data.WithPublicSubnet {
-			networkInterface.AssociatePublicIpAddress = aws.Bool(data.WithPublicSubnet)
-		}
-		templateData.NetworkInterfaces = []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{networkInterface}
+	for _, sg := range data.SecurityGroups {
+		templateData.NetworkInterfaces[0].Groups = append(templateData.NetworkInterfaces[0].Groups, sg)
 	}
 
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplate(context.TODO(), &ec2.CreateLaunchTemplateInput{
@@ -238,21 +236,19 @@ func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 
 	templateData := &ec2Types.RequestLaunchTemplateData{
 		ImageId:      aws.String(data.AMI),
-		UserData:     aws.String(encodedUserData),
 		InstanceType: ec2Types.InstanceType(data.InstanceType),
+		UserData:     aws.String(encodedUserData),
+		NetworkInterfaces: []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
+			{
+				AssociatePublicIpAddress: aws.Bool(data.WithPublicSubnet),
+				DeleteOnTermination:      aws.Bool(true),
+				DeviceIndex:              aws.Int32(0),
+			},
+		},
 	}
 
-	if data.WithPublicSubnet || len(data.SecurityGroups) > 0 {
-		networkInterface := ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
-			DeviceIndex: aws.Int32(0),
-		}
-		if len(data.SecurityGroups) > 0 {
-			networkInterface.Groups = data.SecurityGroups
-		}
-		if data.WithPublicSubnet {
-			networkInterface.AssociatePublicIpAddress = aws.Bool(data.WithPublicSubnet)
-		}
-		templateData.NetworkInterfaces = []ec2Types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{networkInterface}
+	for _, sg := range data.SecurityGroups {
+		templateData.NetworkInterfaces[0].Groups = append(templateData.NetworkInterfaces[0].Groups, sg)
 	}
 
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplateVersion(context.TODO(), &ec2.CreateLaunchTemplateVersionInput{
@@ -329,6 +325,7 @@ func getLaunchTemplateUserData(eksCluster *eksTypes.Cluster, data *model.LaunchT
 	dataTemplate := `
 #!/bin/bash
 set -o xtrace
-/etc/eks/bootstrap.sh '%s' --apiserver-endpoint '%s' --b64-cluster-ca '%s' --use-max-pods false  --kubelet-extra-args '--max-pods=%d'`
+/etc/eks/bootstrap.sh '%s' --apiserver-endpoint '%s' --b64-cluster-ca '%s' --use-max-pods false  --kubelet-extra-args '--max-pods=%d --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10%%'
+`
 	return fmt.Sprintf(dataTemplate, *eksCluster.Name, *eksCluster.Endpoint, *eksCluster.CertificateAuthority.Data, data.MaxPodsPerNode)
 }
