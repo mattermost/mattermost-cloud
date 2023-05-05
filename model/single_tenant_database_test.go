@@ -54,8 +54,8 @@ func TestNewSingleTenantDatabaseRequestFromReader(t *testing.T) {
 		require.NoError(t, err)
 
 		expected := &model.SingleTenantDatabaseRequest{
-			PrimaryInstanceType: "db.r5.large",
-			ReplicaInstanceType: "db.r5.large",
+			PrimaryInstanceType: "db.t4g.medium",
+			ReplicaInstanceType: "db.t4g.medium",
 			ReplicasCount:       0,
 		}
 		require.Equal(t, expected, request)
