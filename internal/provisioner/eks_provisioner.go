@@ -475,40 +475,6 @@ func (provisioner *EKSProvisioner) RotateClusterNodes(cluster *model.Cluster) er
 	return nil
 }
 
-func (provisioner *EKSProvisioner) isMigrationRequired(oldNodeGroup *eksTypes.Nodegroup, eksMetadata *model.EKSMetadata, ngPrefix string, logger log.FieldLogger) bool {
-	changeRequest := eksMetadata.ChangeRequest
-
-	if oldNodeGroup == nil {
-		logger.Debug("Old EKS NodeGroup is nil")
-		return false
-	}
-
-	ngChangeRequest, found := changeRequest.NodeGroups[ngPrefix]
-	if !found {
-		logger.Debugf("NodeGroup %s not found in ChangeRequest", ngPrefix)
-		return false
-	}
-
-	if changeRequest.MaxPodsPerNode > 0 || changeRequest.AMI != "" {
-		return true
-	}
-
-	if oldNodeGroup.InstanceTypes != nil && len(oldNodeGroup.InstanceTypes) > 0 &&
-		oldNodeGroup.InstanceTypes[0] != ngChangeRequest.InstanceType {
-		return true
-	}
-
-	scalingInfo := oldNodeGroup.ScalingConfig
-	if *scalingInfo.MinSize != int32(ngChangeRequest.MinCount) {
-		return true
-	}
-	if *scalingInfo.MaxSize != int32(ngChangeRequest.MaxCount) {
-		return true
-	}
-
-	return false
-}
-
 // ResizeCluster resizes cluster - not implemented.
 func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
@@ -546,9 +512,10 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 				return
 			}
 
-			if !provisioner.isMigrationRequired(oldEKSNodeGroup, eksMetadata, ngPrefix, logger) {
-				logger.Debugf("EKS NodeGroup migration not required for %s", ngPrefix)
-				return
+			if oldMetadata.InstanceType == ngMetadata.InstanceType &&
+				oldMetadata.MinCount == ngMetadata.MinCount &&
+				oldMetadata.MaxCount == ngMetadata.MaxCount {
+				logger.Debugf("No change in EKS NodeGroup for %s", ngPrefix)
 			}
 
 			err = provisioner.prepareLaunchTemplate(cluster, ngPrefix, ngMetadata, logger)
