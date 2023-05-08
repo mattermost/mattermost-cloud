@@ -17,6 +17,8 @@ const (
 	NetworkingCalico = "calico"
 	// NetworkingAmazon is Amazon networking plugin.
 	NetworkingAmazon = "amazon-vpc-routed-eni"
+	// NetworkingVpcCni is Amazon VPC CNI networking plugin.
+	NetworkingVpcCni = "amazon-vpc-cni"
 )
 
 // CreateClusterRequest specifies the parameters for a new cluster.

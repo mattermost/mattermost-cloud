@@ -590,6 +590,34 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	installations, err := c.Store.GetInstallations(&model.InstallationFilter{
+		Paging: model.AllPagesNotDeleted(),
+		State:  model.InstallationStateDeletionInProgress,
+	}, false, false)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get installations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	for _, installation := range installations {
+		clusterInstallations, err := c.Store.GetClusterInstallations(&model.ClusterInstallationFilter{
+			InstallationID: installation.ID,
+			ClusterID:      clusterID,
+			Paging:         model.AllPagesWithDeleted(),
+		})
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to get cluster installations")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if len(clusterInstallations) != 0 {
+			c.Logger.Errorf("unable to delete cluster while it still has at least one installation")
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+	}
+
 	if clusterDTO.State != newState {
 		oldState := clusterDTO.State
 		clusterDTO.State = newState
