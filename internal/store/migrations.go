@@ -2148,4 +2148,11 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.42.0"), semver.MustParse("0.43.0"), func(e execer) error {
+		if e.DriverName() == driverSqlite {
+			panic("SQLite is no longer supported as a database backend")
+		}
+
+		return nil
+	}},
 }
