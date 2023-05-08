@@ -178,8 +178,8 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		return s.resizeCluster(cluster, logger)
 	case model.ClusterStateNodegroupsCreationRequested:
 		return s.createNodegroups(cluster, logger)
-	case model.ClusterStateNodegroupDeletionRequested:
-		return s.deleteNodegroup(cluster, logger)
+	case model.ClusterStateNodegroupsDeletionRequested:
+		return s.deleteNodegroups(cluster, logger)
 	case model.ClusterStateRefreshMetadata:
 		return s.refreshClusterMetadata(cluster, logger)
 	case model.ClusterStateDeletionRequested:
@@ -267,11 +267,11 @@ func (s *ClusterSupervisor) createNodegroups(cluster *model.Cluster, logger log.
 	return s.refreshClusterMetadata(cluster, logger)
 }
 
-func (s *ClusterSupervisor) deleteNodegroup(cluster *model.Cluster, logger log.FieldLogger) string {
+func (s *ClusterSupervisor) deleteNodegroups(cluster *model.Cluster, logger log.FieldLogger) string {
 	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).DeleteNodegroups(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete nodegroup")
-		return model.ClusterStateNodegroupDeletionFailed
+		return model.ClusterStateNodegroupsDeletionFailed
 	}
 
 	logger.Info("Finished deleting nodegroup")

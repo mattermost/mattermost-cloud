@@ -505,7 +505,7 @@ func handleDeleteNodegroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	nodegroup := vars["nodegroup"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	newState := model.ClusterStateNodegroupDeletionRequested
+	newState := model.ClusterStateNodegroupsDeletionRequested
 
 	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
 	if status != 0 {
