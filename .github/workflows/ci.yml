@@ -60,17 +60,14 @@ jobs:
           cache: true
           go-version-file: go.mod
 
-      - name: ci/test-sqlite
+      - name: ci/test-postgres
         run: make unittest goverall
-
+        env:
+          CLOUD_DATABASE: postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
+      
       - name: ci/test-testwick
         run: make unittest
         working-directory: ./cmd/tools/testwick
-
-      - name: ci/test-postgres
-        run: make unittest
-        env:
-          CLOUD_DATABASE: postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
 
   build:
     runs-on: ubuntu-22.04
