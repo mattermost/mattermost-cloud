@@ -537,7 +537,7 @@ func (c *Client) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, 
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return errors.New("timed out waiting for EKS NodeGroup to become ready")
+			return errors.New("timed out waiting for EKS NodeGroup to be deleted")
 		case <-tick.C:
 			nodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
 			if err != nil {
