@@ -194,12 +194,9 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 				AssociatePublicIpAddress: aws.Bool(data.WithPublicSubnet),
 				DeleteOnTermination:      aws.Bool(true),
 				DeviceIndex:              aws.Int32(0),
+				Groups:                   data.SecurityGroups,
 			},
 		},
-	}
-
-	for _, sg := range data.SecurityGroups {
-		templateData.NetworkInterfaces[0].Groups = append(templateData.NetworkInterfaces[0].Groups, sg)
 	}
 
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplate(context.TODO(), &ec2.CreateLaunchTemplateInput{
@@ -243,12 +240,9 @@ func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 				AssociatePublicIpAddress: aws.Bool(data.WithPublicSubnet),
 				DeleteOnTermination:      aws.Bool(true),
 				DeviceIndex:              aws.Int32(0),
+				Groups:                   data.SecurityGroups,
 			},
 		},
-	}
-
-	for _, sg := range data.SecurityGroups {
-		templateData.NetworkInterfaces[0].Groups = append(templateData.NetworkInterfaces[0].Groups, sg)
 	}
 
 	launchTemplate, err := a.Service().ec2.CreateLaunchTemplateVersion(context.TODO(), &ec2.CreateLaunchTemplateVersionInput{
