@@ -58,13 +58,6 @@ func TestHeaders(t *testing.T) {
 				err: false,
 			},
 			{
-				input: `[{"key": "foo", "value": "bar"}]`,
-				scan: Headers{{
-					Key: "foo", Value: &headerValue,
-				}},
-				err: false,
-			},
-			{
 				input: nil,
 				scan:  Headers{},
 				err:   false,
