@@ -6,5 +6,5 @@ package store
 
 const (
 	driverPostgres = "postgres"
-	driverSqlite   = "sqlite3"
+	driverSqlite   = "sqlite3" // DEPRECATED: This driver is deprecated and will be removed in the future.
 )

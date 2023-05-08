@@ -82,13 +82,11 @@ func (sqlStore *SQLStore) claimSubscription(instanceID string, query sq.SelectBu
 	}
 	defer tx.RollbackUnlessCommitted()
 
-	if sqlStore.db.DriverName() == "postgres" {
+	if sqlStore.db.DriverName() == driverPostgres {
 		// To avoid conflicts on custom lock, we make Postgres lock the row
 		// for the time of transaction with `FOR UPDATE`.
 		// For multiple calls to not block when asking for the same row,
 		// we use `SKIP LOCKED` as we only need one row that matches our expectations.
-		// SQLite does not understand this query as it is not needed there,
-		// due to SQLite using single connection.
 		query = query.Suffix("FOR UPDATE SKIP LOCKED")
 	}
 

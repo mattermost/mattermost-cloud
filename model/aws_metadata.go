@@ -13,8 +13,7 @@ type AWSMetadata struct {
 
 // NewAWSMetadata creates an instance of AWSMetadata given the raw provider metadata.
 func NewAWSMetadata(metadataBytes []byte) (*AWSMetadata, error) {
-	if metadataBytes == nil || string(metadataBytes) == "null" {
-		// TODO: remove "null" check after sqlite is gone.
+	if metadataBytes == nil {
 		return nil, nil
 	}
 

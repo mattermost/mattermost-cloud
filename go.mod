@@ -35,7 +35,6 @@ require (
 	github.com/mattermost/awat v0.2.0
 	github.com/mattermost/mattermost-operator v1.20.1
 	github.com/mattermost/rotator v0.2.0
-	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
 	github.com/pkg/errors v0.9.1

@@ -24,7 +24,6 @@ func makeUnmigratedTestSQLStore(tb testing.TB, logger log.FieldLogger) *SQLStore
 	require.NoError(tb, err)
 
 	switch dsnURL.Scheme {
-	case "sqlite", "sqlite3":
 	case "postgres", "postgresql":
 		q := dsnURL.Query()
 		q.Add("pg_temp", "true")
@@ -37,7 +36,6 @@ func makeUnmigratedTestSQLStore(tb testing.TB, logger log.FieldLogger) *SQLStore
 
 	// For testing with mode=memory and pg_temp above, restrict to a single connection,
 	// otherwise multiple goroutines may not see consistent views / have consistent access.
-	// Technically, this is redundant for sqlite3, given that we force this anyway.
 	sqlStore.db.SetMaxOpenConns(1)
 
 	return sqlStore
