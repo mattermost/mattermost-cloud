@@ -77,7 +77,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster) error {
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
-		return errors.New("metadata not set when creating EKS cluster")
+		return errors.New("EKS Metadata not set when creating EKS cluster")
 	}
 
 	err := eksMetadata.ValidateChangeRequest()
@@ -230,7 +230,7 @@ func (provisioner *EKSProvisioner) CreateNodegroups(cluster *model.Cluster) erro
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
-		return errors.New("metadata not set when creating EKS NodeGroup")
+		return errors.New("EKS Metadata not set when creating EKS NodeGroup")
 	}
 
 	eksMetadata = provisioner.setMissingChangeRequest(eksMetadata)
@@ -349,7 +349,7 @@ func (provisioner *EKSProvisioner) DeleteNodegroups(cluster *model.Cluster) erro
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
-		return errors.New("metadata not set when deleting EKS NodeGroup")
+		return errors.New("EKS Metadata not set when deleting EKS NodeGroup")
 	}
 
 	changeRequest := eksMetadata.ChangeRequest

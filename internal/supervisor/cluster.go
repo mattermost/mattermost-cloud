@@ -270,7 +270,7 @@ func (s *ClusterSupervisor) createNodegroups(cluster *model.Cluster, logger log.
 func (s *ClusterSupervisor) deleteNodegroups(cluster *model.Cluster, logger log.FieldLogger) string {
 	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).DeleteNodegroups(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to delete nodegroup")
+		logger.WithError(err).Error("Failed to delete nodegroups")
 		return model.ClusterStateNodegroupsDeletionFailed
 	}
 
