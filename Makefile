@@ -31,9 +31,9 @@ BUILD_HASH := $(shell git rev-parse HEAD)
 
 ################################################################################
 TEST_FLAGS ?= -v
+
 TEST_PSQL_NAME ?= cloud-test
 TEST_PSQL_PORT ?= 5439
-TEST_PSQL_URL ?= postgres://$(TEST_PSQL_NAME):$(TEST_PSQL_NAME)@localhost:$(TEST_PSQL_PORT)/$(TEST_PSQL_NAME)?sslmode=disable
 
 ################################################################################
 
@@ -207,9 +207,10 @@ check-modules: $(OUTDATED_GEN) ## Check outdated modules
 goverall: $(GOVERALLS_GEN) ## Runs goveralls
 	$(GOVERALLS_GEN) -coverprofile=coverage.out -service=circle-ci -repotoken ${COVERALLS_REPO_TOKEN} || true
 
-.PHONY: unittest
+ifndef CLOUD_DATABASE
+CLOUD_DATABASE ?= postgres://$(TEST_PSQL_NAME):$(TEST_PSQL_NAME)@localhost:$(TEST_PSQL_PORT)/$(TEST_PSQL_NAME)?sslmode=disable
+
 unittest: unittest-create-db
-	CLOUD_DATABASE=$(TEST_PSQL_URL) $(GO) test -failfast ./... ${TEST_FLAGS} -covermode=count -coverprofile=coverage.out
 
 .PHONY: unittest-create-db
 unittest-create-db: unittest-destroy-db ## Start a postgresql database for unit tests, cleaning up any previous instance
@@ -220,6 +221,11 @@ unittest-create-db: unittest-destroy-db ## Start a postgresql database for unit 
 unittest-destroy-db: ## Destroy the postgresql database for unit tests
 	@echo Destroy the docker postgesql database
 	@docker stop $(TEST_PSQL_NAME) || true
+endif
+
+.PHONY: unittest
+unittest:
+	CLOUD_DATABASE=$(CLOUD_DATABASE) $(GO) test -failfast ./... ${TEST_FLAGS} -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
 verify-mocks: mocks
