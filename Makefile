@@ -219,7 +219,7 @@ unittest-create-db: unittest-destroy-db ## Start a postgresql database for unit 
 .PHONY: unittest-destroy-db
 unittest-destroy-db: ## Destroy the postgresql database for unit tests
 	@echo Destroy the docker postgesql database
-	@docker stop $(TEST_PSQL_NAME)
+	@docker stop $(TEST_PSQL_NAME) || true
 
 .PHONY: verify-mocks
 verify-mocks: mocks
