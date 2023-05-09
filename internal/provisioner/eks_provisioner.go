@@ -259,7 +259,7 @@ func (provisioner *EKSProvisioner) CreateNodegroups(cluster *model.Cluster) erro
 				return
 			}
 
-			_, err = provisioner.awsClient.EnsureEKSNodeGroup(cluster, ngPrefix)
+			_, err = provisioner.awsClient.EnsureEKSNodegroup(cluster, ngPrefix)
 			if err != nil {
 				logger.WithError(err).Errorf("Failed to create EKS nodegroup %s", ngMetadata.Name)
 				errOccurred = true
@@ -304,7 +304,7 @@ func (provisioner *EKSProvisioner) CheckNodegroupsCreated(cluster *model.Cluster
 			wait := 300
 			logger.Infof("Waiting up to %d seconds for EKS nodegroup %s to become active...", wait, ngMetadata.Name)
 
-			nodeGroup, err := provisioner.awsClient.WaitForActiveEKSNodeGroup(eksMetadata.Name, ngMetadata.Name, wait)
+			nodeGroup, err := provisioner.awsClient.WaitForActiveEKSNodegroup(eksMetadata.Name, ngMetadata.Name, wait)
 			if err != nil {
 				logger.WithError(err).Errorf("Failed to wait for EKS nodegroup %s to become active", ngMetadata.Name)
 				errOccurred = true
@@ -349,7 +349,7 @@ func (provisioner *EKSProvisioner) CheckNodegroupsCreated(cluster *model.Cluster
 	return true, nil
 }
 
-// DeleteNodegroups deletes the EKS nodegroup.
+// DeleteNodegroups deletes the EKS nodegroups.
 func (provisioner *EKSProvisioner) DeleteNodegroups(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
@@ -373,7 +373,7 @@ func (provisioner *EKSProvisioner) DeleteNodegroups(cluster *model.Cluster) erro
 		go func(ngPrefix string, ngMetadata model.NodeGroupMetadata) {
 			defer wg.Done()
 
-			err := provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, ngMetadata.Name)
+			err := provisioner.awsClient.EnsureEKSNodegroupDeleted(eksMetadata.Name, ngMetadata.Name)
 			if err != nil {
 				logger.WithError(err).Errorf("Failed to delete EKS nodedroup %s", ngMetadata.Name)
 				errOccurred = true
@@ -382,7 +382,7 @@ func (provisioner *EKSProvisioner) DeleteNodegroups(cluster *model.Cluster) erro
 
 			wait := 600
 			logger.Infof("Waiting up to %d seconds for EKS nodegroup %s to be deleted...", wait, ngMetadata.Name)
-			err = provisioner.awsClient.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, ngMetadata.Name, wait)
+			err = provisioner.awsClient.WaitForEKSNodegroupToBeDeleted(eksMetadata.Name, ngMetadata.Name, wait)
 			if err != nil {
 				logger.WithError(err).Errorf("Failed to delete EKS nodegroup %s", ngMetadata.Name)
 				errOccurred = true
@@ -476,7 +476,7 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 					return
 				}
 
-				err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster, ngPrefix)
+				err = provisioner.awsClient.EnsureEKSNodegroupMigrated(cluster, ngPrefix)
 				if err != nil {
 					logger.WithError(err).Errorf("Failed to migrate EKS nodegroup for %s", ngPrefix)
 					errOccurred = true
@@ -565,7 +565,7 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 			ngMetadata.CopyMissingFieldsFrom(oldMetadata)
 			changeRequest.NodeGroups[ngPrefix] = ngMetadata
 
-			oldEKSNodeGroup, err2 := provisioner.awsClient.GetActiveEKSNodeGroup(eksMetadata.Name, oldMetadata.Name)
+			oldEKSNodeGroup, err2 := provisioner.awsClient.GetActiveEKSNodegroup(eksMetadata.Name, oldMetadata.Name)
 			if err2 != nil {
 				logger.WithError(err2).Errorf("Failed to get the existing EKS nodegroup for %s", ngPrefix)
 				errOccurred = true
@@ -581,6 +581,7 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 				oldMetadata.MinCount == ngMetadata.MinCount &&
 				oldMetadata.MaxCount == ngMetadata.MaxCount {
 				logger.Debugf("No change in EKS nodegroup for %s", ngPrefix)
+				return
 			}
 
 			err = provisioner.prepareLaunchTemplate(cluster, ngPrefix, ngMetadata, logger)
@@ -590,14 +591,14 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 				return
 			}
 
-			err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster, ngPrefix)
+			err = provisioner.awsClient.EnsureEKSNodegroupMigrated(cluster, ngPrefix)
 			if err != nil {
 				logger.WithError(err).Errorf("Failed to migrate EKS nodegroup for %s", ngPrefix)
 				errOccurred = true
 				return
 			}
 
-			nodeGroup, err2 := provisioner.awsClient.GetActiveEKSNodeGroup(eksMetadata.Name, ngMetadata.Name)
+			nodeGroup, err2 := provisioner.awsClient.GetActiveEKSNodegroup(eksMetadata.Name, ngMetadata.Name)
 			if err2 != nil {
 				logger.WithError(err2).Errorf("Failed to get EKS nodegroup %s", ngMetadata.Name)
 				errOccurred = true
@@ -671,7 +672,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 		go func(ngPrefix string, ngMetadata model.NodeGroupMetadata) {
 			defer wg.Done()
 
-			err = provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, ngMetadata.Name)
+			err = provisioner.awsClient.EnsureEKSNodegroupDeleted(eksMetadata.Name, ngMetadata.Name)
 			if err != nil {
 				logger.WithError(err).Errorf("Failed to delete EKS nodegroup %s", ngMetadata.Name)
 				errOccurred = true
@@ -680,7 +681,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 
 			wait := 600
 			logger.Infof("Waiting up to %d seconds for nodegroup %s to be deleted...", wait, ngMetadata.Name)
-			err = provisioner.awsClient.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, ngMetadata.Name, wait)
+			err = provisioner.awsClient.WaitForEKSNodegroupToBeDeleted(eksMetadata.Name, ngMetadata.Name, wait)
 			if err != nil {
 				logger.WithError(err).Errorf("Failed to delete EKS nodegroup %s", ngMetadata.Name)
 				errOccurred = true
@@ -695,7 +696,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 				return
 			}
 
-			logger.Debugf("Successfully deleted EKS NodeGroup %s", ngMetadata.Name)
+			logger.Debugf("Successfully deleted EKS nodegroup %s", ngMetadata.Name)
 		}(ng, meta)
 	}
 
@@ -794,7 +795,7 @@ func (provisioner *EKSProvisioner) getKubeConfigPath(cluster *model.Cluster) (st
 		return "", errors.Wrap(err, "failed to get EKS cluster")
 	}
 	if eksCluster == nil {
-		return "", errors.Errorf("the EKS cluster %s does not exist", clusterName)
+		return "", errors.Errorf("No active EKS cluster found with name %s", clusterName)
 	}
 
 	kubeconfig, err := newEKSKubeConfig(eksCluster, provisioner.awsClient)

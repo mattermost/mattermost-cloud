@@ -179,7 +179,7 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 
 	eksCluster, err := a.getEKSCluster(data.ClusterName)
 	if err != nil {
-		return errors.Wrap(err, "failed to get EKS Cluster")
+		return errors.Wrap(err, "failed to get EKS cluster")
 	}
 
 	userData := getLaunchTemplateUserData(eksCluster, data)
@@ -205,14 +205,14 @@ func (a *Client) CreateLaunchTemplate(data *model.LaunchTemplateData) error {
 	})
 	if err != nil {
 		if IsErrorCode(err, "InvalidLaunchTemplateName.AlreadyExistsException") {
-			a.logger.Debugf("LaunchTemplate %s already exists", data.Name)
+			a.logger.Debugf("Launch template %s already exists", data.Name)
 			return nil
 		}
-		return errors.Wrap(err, "failed to create EKS LaunchTemplate")
+		return errors.Wrap(err, "failed to create EKS launch template")
 	}
 
 	if launchTemplate == nil || launchTemplate.LaunchTemplate == nil {
-		return errors.New("failed to create EKS LaunchTemplate")
+		return errors.New("failed to create EKS launch template")
 	}
 
 	return nil
@@ -225,7 +225,7 @@ func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 
 	eksCluster, err := a.getEKSCluster(data.ClusterName)
 	if err != nil {
-		return errors.Wrap(err, "failed to get ESK Cluster")
+		return errors.Wrap(err, "failed to get ESK cluster")
 	}
 
 	userData := getLaunchTemplateUserData(eksCluster, data)
@@ -253,11 +253,11 @@ func (a *Client) UpdateLaunchTemplate(data *model.LaunchTemplateData) error {
 		if IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
 			return a.CreateLaunchTemplate(data)
 		}
-		return errors.Wrap(err, "failed to create EKS LaunchTemplate version")
+		return errors.Wrap(err, "failed to create EKS launch template version")
 	}
 
 	if launchTemplate == nil || launchTemplate.LaunchTemplateVersion == nil {
-		return errors.New("failed to create ESK LaunchTemplate version")
+		return errors.New("failed to create ESK launch template version")
 	}
 
 	return nil
@@ -270,7 +270,7 @@ func (a *Client) DeleteLaunchTemplate(launchTemplateName string) error {
 	}
 
 	if launchTemplate == nil {
-		a.logger.Debugf("LaunchTemplate %s not found, assuming deleted", launchTemplateName)
+		a.logger.Debugf("Launch template %s not found, assuming deleted", launchTemplateName)
 		return nil
 	}
 
@@ -282,7 +282,7 @@ func (a *Client) DeleteLaunchTemplate(launchTemplateName string) error {
 			a.logger.Debugf("launch template %s not found, assuming deleted", launchTemplateName)
 			return nil
 		}
-		return errors.Wrap(err, "failed to delete EKS LaunchTemplate")
+		return errors.Wrap(err, "failed to delete EKS launch template")
 	}
 
 	return nil

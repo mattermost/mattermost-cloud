@@ -184,7 +184,7 @@ func AddToCreateClusterRequest(sizes map[string]string, request *model.CreateClu
 	for ng, ngSize := range sizes {
 		ngType, minCount, maxCount, err := processCustomSize(ngSize)
 		if err != nil {
-			return errors.Wrapf(err, "invalid nodegroup size for %s", ng)
+			return err
 		}
 
 		request.AdditionalNodeGroups[ng] = model.NodeGroupMetadata{
@@ -211,7 +211,7 @@ func AddToCreateNodegroupsRequest(sizes map[string]string, request *model.Create
 	for ng, ngSize := range sizes {
 		ngType, minCount, maxCount, err := processCustomSize(ngSize)
 		if err != nil {
-			return errors.Wrapf(err, "invalid nodegroup size for %s", ng)
+			return err
 		}
 
 		request.Nodegroups[ng] = model.NodeGroupMetadata{

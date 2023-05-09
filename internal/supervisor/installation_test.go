@@ -425,7 +425,7 @@ func (a *mockAWS) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID str
 	return nil
 }
 
-func (a *mockAWS) WaitForActiveEKSNodeGroup(clusterName, workerName string, timeout int) (*eksTypes.Nodegroup, error) {
+func (a *mockAWS) WaitForActiveEKSNodegroup(clusterName, workerName string, timeout int) (*eksTypes.Nodegroup, error) {
 	return nil, nil
 }
 
@@ -433,7 +433,7 @@ func (a *mockAWS) WaitForEKSClusterToBeDeleted(clusterName string, timeout int) 
 	return nil
 }
 
-func (a *mockAWS) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error {
+func (a *mockAWS) WaitForEKSNodegroupToBeDeleted(clusterName, workerName string, timeout int) error {
 	return nil
 }
 
@@ -441,15 +441,15 @@ func (a *mockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Upd
 	return nil, nil
 }
 
-func (a *mockAWS) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix string) error {
+func (a *mockAWS) EnsureEKSNodegroupMigrated(cluster *model.Cluster, ngPrefix string) error {
 	return nil
 }
 
-func (a *mockAWS) GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
+func (a *mockAWS) GetActiveEKSNodegroup(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
 	return nil, nil
 }
 
-func (a *mockAWS) EnsureEKSNodeGroupDeleted(clusterName, workerName string) error {
+func (a *mockAWS) EnsureEKSNodegroupDeleted(clusterName, workerName string) error {
 	return nil
 }
 
@@ -506,7 +506,7 @@ func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.Cluster
 	return &eksTypes.Cluster{}, nil
 }
 
-func (a *mockAWS) EnsureEKSNodeGroup(cluster *model.Cluster, nodeGroupPrefix string) (*eksTypes.Nodegroup, error) {
+func (a *mockAWS) EnsureEKSNodegroup(cluster *model.Cluster, nodeGroupPrefix string) (*eksTypes.Nodegroup, error) {
 	return &eksTypes.Nodegroup{}, nil
 }
 

@@ -259,7 +259,7 @@ func (s *ClusterSupervisor) createNodegroups(cluster *model.Cluster, logger log.
 
 	_, err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodegroupsCreated(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to create nodegroups")
+		logger.WithError(err).Error("Failed to check if nodegroups are created")
 		return model.ClusterStateNodegroupsCreationFailed
 	}
 
@@ -288,7 +288,7 @@ func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logge
 
 	err = s.store.UpdateCluster(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to update cluster metadata in store")
+		logger.WithError(err).Error("Failed to update cluster metadata")
 		return model.ClusterStateRefreshMetadata
 	}
 
@@ -323,7 +323,7 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 		return model.ClusterStateCreationFailed
 	}
 	if !ready {
-		logger.Debug("Cluster is not yet ready")
+		logger.Debug("Cluster not yet ready")
 		return model.ClusterStateCreationInProgress
 	}
 
@@ -340,11 +340,11 @@ func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log
 
 	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodegroupsCreated(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to check if nodegroups creation finished")
+		logger.WithError(err).Error("Failed to check if nodegroups are created")
 		return model.ClusterStateCreationFailed
 	}
 	if !ready {
-		logger.Debug("Cluster nodegroups are not ready yet")
+		logger.Debug("Cluster nodegroups not yet ready")
 		return model.ClusterStateWaitingForNodes
 	}
 

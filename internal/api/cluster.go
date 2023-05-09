@@ -448,7 +448,7 @@ func handleCreateNodegroups(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
 	if status != 0 {
-		c.Logger.Debug("Cluster is not in a valid state for nodegroup creation")
+		c.Logger.Debug("Cluster is not in a valid state for nodegroups creation")
 		w.WriteHeader(status)
 		return
 	}

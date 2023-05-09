@@ -70,7 +70,7 @@ func (c *Client) createEKSCluster(cluster *model.Cluster, resources ClusterResou
 
 	out, err := c.Service().eks.CreateCluster(ctx, &input)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create EKS Cluster")
+		return nil, errors.Wrap(err, "failed to create EKS cluster")
 	}
 
 	return out.Cluster, nil
@@ -83,7 +83,7 @@ func (a *Client) getEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
 	})
 	if err != nil {
 		if !IsErrorResourceNotFound(err) {
-			return nil, errors.Wrap(err, "failed to describe EKS Cluster")
+			return nil, errors.Wrap(err, "failed to describe EKS cluster")
 		}
 	}
 
@@ -162,11 +162,11 @@ func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Upda
 	}
 
 	if eksCluster == nil {
-		return nil, errors.Errorf("requested EKS Cluster %s is not found", clusterName)
+		return nil, errors.Errorf("requested EKS cluster %s does not exist", clusterName)
 	}
 
 	if eksCluster.Status != eksTypes.ClusterStatusActive {
-		return nil, errors.Errorf("requested EKS Cluster %s is not active", clusterName)
+		return nil, errors.Errorf("requested EKS cluster %s is not active", clusterName)
 	}
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -180,7 +180,7 @@ func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Upda
 	})
 
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update EKS Cluster version")
+		return nil, errors.Wrap(err, "failed to update EKS cluster version")
 	}
 
 	return output.Update, nil
@@ -191,7 +191,7 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	changeRequest := eksMetadata.ChangeRequest
 	if changeRequest == nil {
-		return nil, errors.New("metadata ChangeRequest is not set")
+		return nil, errors.New("metadata ChangeRequest is nil")
 	}
 
 	clusterResource, err := a.GetVpcResourcesByVpcID(changeRequest.VPC, a.logger)
@@ -272,7 +272,7 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 
 	out, err := a.Service().eks.CreateNodegroup(context.TODO(), &nodeGroupReq)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create EKS Nodegroup")
+		return nil, errors.Wrap(err, "failed to create EKS nodegroup")
 	}
 
 	return out.Nodegroup, nil
@@ -286,7 +286,7 @@ func (c *Client) getEKSNodeGroup(clusterName, nodegroupName string) (*eksTypes.N
 	})
 	if err != nil {
 		if !IsErrorResourceNotFound(err) {
-			return nil, errors.Wrap(err, "failed to describe EKS Nodegroup")
+			return nil, errors.Wrap(err, "failed to describe EKS nodegroup")
 		}
 	}
 
@@ -297,8 +297,8 @@ func (c *Client) getEKSNodeGroup(clusterName, nodegroupName string) (*eksTypes.N
 	return nil, nil
 }
 
-// EnsureEKSNodeGroup ensures EKS cluster node groups are created.
-func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*eksTypes.Nodegroup, error) {
+// EnsureEKSNodegroup ensures EKS nodegroup is created.
+func (c *Client) EnsureEKSNodegroup(cluster *model.Cluster, ngPrefix string) (*eksTypes.Nodegroup, error) {
 
 	clusterName := cluster.ProvisionerMetadataEKS.Name
 
@@ -312,7 +312,7 @@ func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 
 	nodeGroup, err := c.getEKSNodeGroup(clusterName, ngChangeRequest.Name)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get an EKS Nodegroup %s", ngChangeRequest.Name)
+		return nil, errors.Wrapf(err, "failed to get an EKS nodegroup %s", ngChangeRequest.Name)
 	}
 
 	if nodeGroup != nil {
@@ -322,8 +322,8 @@ func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 	return c.createEKSNodeGroup(cluster, ngPrefix)
 }
 
-// EnsureEKSNodeGroupMigrated updates EKS cluster node group.
-func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix string) error {
+// EnsureEKSNodegroupMigrated updates EKS nodegroup.
+func (c *Client) EnsureEKSNodegroupMigrated(cluster *model.Cluster, ngPrefix string) error {
 	logger := c.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -344,26 +344,26 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 
 	_, err := c.createEKSNodeGroup(cluster, ngPrefix)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create a new EKS Nodegroup %s", ngChangeRequest.Name)
+		return errors.Wrapf(err, "failed to create a new EKS nodegroup %s", ngChangeRequest.Name)
 	}
 
 	wait := 600 // seconds
-	logger.Infof("Waiting up to %d seconds for EKS Nodegroup %s to become active...", wait, ngChangeRequest.Name)
+	logger.Infof("Waiting up to %d seconds for EKS nodegroup %s to become active...", wait, ngChangeRequest.Name)
 
-	_, err = c.WaitForActiveEKSNodeGroup(eksMetadata.Name, ngChangeRequest.Name, wait)
+	_, err = c.WaitForActiveEKSNodegroup(eksMetadata.Name, ngChangeRequest.Name, wait)
 	if err != nil {
 		return err
 	}
 
-	logger.Debugf("Deleting the old EKS Nodegroup %s", oldNodeGroupName)
+	logger.Debugf("Deleting the old EKS nodegroup %s", oldNodeGroupName)
 
-	err = c.EnsureEKSNodeGroupDeleted(clusterName, oldNodeGroupName)
+	err = c.EnsureEKSNodegroupDeleted(clusterName, oldNodeGroupName)
 	if err != nil {
-		return errors.Wrapf(err, "failed to delete the old EKS Nodegroup %s", oldNodeGroupName)
+		return errors.Wrapf(err, "failed to delete the old EKS nodegroup %s", oldNodeGroupName)
 	}
 
-	logger.Infof("Waiting up to %d seconds for EKS Nodegroup %s to be deleted...", wait, oldNodeGroupName)
-	err = c.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, oldNodeGroupName, wait)
+	logger.Infof("Waiting up to %d seconds for EKS nodegroup %s to be deleted...", wait, oldNodeGroupName)
+	err = c.WaitForEKSNodegroupToBeDeleted(eksMetadata.Name, oldNodeGroupName, wait)
 	if err != nil {
 		return err
 	}
@@ -377,7 +377,7 @@ func (a *Client) EnsureEKSClusterDeleted(clusterName string) error {
 
 	eksCluster, err := a.getEKSCluster(clusterName)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe EKS Cluster")
+		return errors.Wrap(err, "failed to describe EKS cluster")
 	}
 
 	if eksCluster == nil {
@@ -390,48 +390,48 @@ func (a *Client) EnsureEKSClusterDeleted(clusterName string) error {
 	}
 
 	if eksCluster.Status == eksTypes.ClusterStatusFailed {
-		return errors.New("requested EKS Cluster is in failed state")
+		return errors.New("requested EKS cluster is in failed state")
 	}
 
 	delInput := &eks.DeleteClusterInput{Name: aws.String(clusterName)}
 	_, err = a.Service().eks.DeleteCluster(ctx, delInput)
 	if err != nil {
-		return errors.Wrap(err, "failed to trigger EKS Cluster deletion")
+		return errors.Wrap(err, "failed to trigger EKS cluster deletion")
 	}
 
 	// Cluster just started deletion
 	return nil
 }
 
-// EnsureEKSNodeGroupDeleted ensures EKS node groups are deleted.
-func (a *Client) EnsureEKSNodeGroupDeleted(clusterName, nodegroupName string) error {
+// EnsureEKSNodegroupDeleted ensures EKS nodegroup is deleted.
+func (a *Client) EnsureEKSNodegroupDeleted(clusterName, nodegroupName string) error {
 	if nodegroupName == "" {
 		return nil
 	}
 
-	nodeGroups, err := a.getEKSNodeGroup(clusterName, nodegroupName)
+	nodeGroup, err := a.getEKSNodeGroup(clusterName, nodegroupName)
 	if err != nil {
-		return errors.Wrap(err, "failed to get EKS Nodegroup")
+		return errors.Wrap(err, "failed to get EKS nodegroup")
 	}
-	// Node groups deleted, we can return
-	if nodeGroups == nil {
+
+	if nodeGroup == nil {
 		return nil
 	}
 
-	if nodeGroups.Status == eksTypes.NodegroupStatusDeleting {
+	if nodeGroup.Status == eksTypes.NodegroupStatusDeleting {
 		return nil
 	}
 
-	if nodeGroups.Status == eksTypes.NodegroupStatusDeleteFailed {
-		return errors.Wrapf(err, "failed to delete EKS Nodegroup %s", nodegroupName)
+	if nodeGroup.Status == eksTypes.NodegroupStatusDeleteFailed {
+		return errors.Wrapf(err, "failed to delete EKS nodegroup %s", nodegroupName)
 	}
 
 	_, err = a.Service().eks.DeleteNodegroup(context.TODO(), &eks.DeleteNodegroupInput{
 		ClusterName:   aws.String(clusterName),
-		NodegroupName: nodeGroups.NodegroupName,
+		NodegroupName: nodeGroup.NodegroupName,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to delete EKS Nodegroup")
+		return errors.Wrap(err, "failed to delete EKS nodegroup")
 	}
 
 	return nil
@@ -441,7 +441,7 @@ func (a *Client) EnsureEKSNodeGroupDeleted(clusterName, nodegroupName string) er
 func (c *Client) GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
 	cluster, err := c.getEKSCluster(clusterName)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get EKS Cluster")
+		return nil, errors.Wrap(err, "failed to get EKS cluster")
 	}
 
 	if cluster == nil {
@@ -449,7 +449,7 @@ func (c *Client) GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, err
 	}
 
 	if cluster.Status == eksTypes.ClusterStatusFailed {
-		return nil, errors.New("requested EKS Cluster is in failed state")
+		return nil, errors.New("requested EKS cluster is in failed state")
 	}
 
 	if cluster.Status == eksTypes.ClusterStatusActive {
@@ -459,11 +459,11 @@ func (c *Client) GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, err
 	return nil, nil
 }
 
-// GetActiveEKSNodeGroup returns the EKS node group if active.
-func (c *Client) GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
+// GetActiveEKSNodegroup returns the EKS nodegroup if active.
+func (c *Client) GetActiveEKSNodegroup(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
 	nodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get EKS Nodegroup")
+		return nil, errors.Wrap(err, "failed to get EKS nodegroup")
 	}
 
 	if nodeGroup == nil {
@@ -471,7 +471,7 @@ func (c *Client) GetActiveEKSNodeGroup(clusterName, workerName string) (*eksType
 	}
 
 	if nodeGroup.Status == eksTypes.NodegroupStatusCreateFailed {
-		return nil, errors.New("failed to create EKS Nodegroup")
+		return nil, errors.New("failed to create EKS nodegroup")
 	}
 
 	if nodeGroup.Status == eksTypes.NodegroupStatusActive {
@@ -491,11 +491,11 @@ func (c *Client) WaitForActiveEKSCluster(clusterName string, timeout int) (*eksT
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return nil, errors.New("timed out waiting for EKS Cluster to become active")
+			return nil, errors.New("timed out waiting for EKS cluster to become active")
 		case <-tick.C:
 			eksCluster, err := c.GetActiveEKSCluster(clusterName)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to check if EKS Cluster is active")
+				return nil, errors.Wrap(err, "failed to check if EKS cluster is active")
 			}
 			if eksCluster != nil {
 				return eksCluster, nil
@@ -504,7 +504,7 @@ func (c *Client) WaitForActiveEKSCluster(clusterName string, timeout int) (*eksT
 	}
 }
 
-func (c *Client) WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, timeout int) (*eksTypes.Nodegroup, error) {
+func (c *Client) WaitForActiveEKSNodegroup(clusterName, nodeGroupName string, timeout int) (*eksTypes.Nodegroup, error) {
 	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
 	defer timeoutTimer.Stop()
 	tick := time.NewTicker(5 * time.Second)
@@ -513,11 +513,11 @@ func (c *Client) WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, ti
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return nil, errors.New("timed out waiting for EKS Nodegroup to become active")
+			return nil, errors.New("timed out waiting for EKS nodegroup to become active")
 		case <-tick.C:
-			nodeGroup, err := c.GetActiveEKSNodeGroup(clusterName, nodeGroupName)
+			nodeGroup, err := c.GetActiveEKSNodegroup(clusterName, nodeGroupName)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to check if EKS Nodegroup is active")
+				return nil, errors.Wrap(err, "failed to check if EKS nodegroup is active")
 			}
 			if nodeGroup != nil {
 				return nodeGroup, nil
@@ -526,7 +526,7 @@ func (c *Client) WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, ti
 	}
 }
 
-func (c *Client) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error {
+func (c *Client) WaitForEKSNodegroupToBeDeleted(clusterName, workerName string, timeout int) error {
 	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
 	defer timeoutTimer.Stop()
 	tick := time.NewTicker(5 * time.Second)
@@ -535,11 +535,11 @@ func (c *Client) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, 
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return errors.New("timed out waiting for EKS Nodegroup to be deleted")
+			return errors.New("timed out waiting for EKS nodegroup to be deleted")
 		case <-tick.C:
 			nodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
 			if err != nil {
-				return errors.Wrap(err, "failed to describe EKS Nodegroup")
+				return errors.Wrap(err, "failed to describe EKS nodegroup")
 			}
 			if nodeGroup == nil {
 				return nil
@@ -557,11 +557,11 @@ func (c *Client) WaitForEKSClusterToBeDeleted(clusterName string, timeout int) e
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return errors.New("timed out waiting for EKS Cluster to become ready")
+			return errors.New("timed out waiting for EKS cluster to become ready")
 		case <-tick.C:
 			eksCluster, err := c.getEKSCluster(clusterName)
 			if err != nil {
-				return errors.Wrap(err, "failed to describe EKS Cluster")
+				return errors.Wrap(err, "failed to describe EKS cluster")
 			}
 			if eksCluster == nil {
 				return nil
@@ -579,15 +579,15 @@ func (c *Client) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID stri
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return errors.New("timed out waiting for EKS Cluster update to be completed")
+			return errors.New("timed out waiting for EKS cluster update to be completed")
 		case <-tick.C:
 			updateStatus, err := c.getEKSClusterUpdateStatus(clusterName, updateID)
 			if err != nil {
-				return errors.Wrap(err, "failed to describe EKS Cluster")
+				return errors.Wrap(err, "failed to describe EKS cluster")
 			}
 
 			if updateStatus == eksTypes.UpdateStatusFailed {
-				return errors.New("failed to update EKS Cluster")
+				return errors.New("failed to update EKS cluster")
 			}
 
 			if updateStatus == eksTypes.UpdateStatusSuccessful {
@@ -603,7 +603,7 @@ func (c *Client) getEKSClusterUpdateStatus(clusterName, updateID string) (eksTyp
 		UpdateId: ptr.String(updateID),
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "failed to describe update for EKS Cluster")
+		return "", errors.Wrap(err, "failed to describe update for EKS cluster")
 	}
 
 	return output.Update.Status, nil
