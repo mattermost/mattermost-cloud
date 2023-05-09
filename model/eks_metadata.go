@@ -304,6 +304,15 @@ func (em *EKSMetadata) ValidateNodegroupsCreateRequest(nodegroups map[string]Nod
 	return nil
 }
 
+// ValidateNodegroupDeleteRequest ensures that the nodegroup to delete exists.
+func (em *EKSMetadata) ValidateNodegroupDeleteRequest(nodegroup string) error {
+	if _, f := em.NodeGroups[nodegroup]; !f {
+		return errors.Errorf("nodegroup %s not found to delete", nodegroup)
+	}
+
+	return nil
+}
+
 // ApplyNodegroupsCreateRequest applies the nodegroups to create to the
 // KopsMetadata.
 func (em *EKSMetadata) ApplyNodegroupsCreateRequest(request *CreateNodegroupsRequest) {
@@ -337,6 +346,23 @@ func (em *EKSMetadata) ApplyNodegroupsCreateRequest(request *CreateNodegroupsReq
 		}
 	}
 
+}
+
+// ApplyNodegroupDeleteRequest applies the nodegroup to delete to the
+// KopsMetadata.
+func (em *EKSMetadata) ApplyNodegroupDeleteRequest(nodegroup string) {
+
+	if em.NodeGroups == nil {
+		return
+	}
+
+	em.ChangeRequest = &EKSMetadataRequestedState{
+		NodeGroups: map[string]NodeGroupMetadata{
+			nodegroup: {
+				Name: em.NodeGroups[nodegroup].Name,
+			},
+		},
+	}
 }
 
 func (em *EKSMetadata) GetCommonMetadata() ProvisionerMetadata {
