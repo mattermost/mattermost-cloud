@@ -130,7 +130,7 @@ func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
 
 	cluster, err = s.store.GetCluster(cluster.ID)
 	if err != nil {
-		logger.WithError(err).Warnf("failed to get cluster and thus persist state %s", newState)
+		logger.WithError(err).Warnf("Failed to get cluster and thus persist state %s", newState)
 		return
 	}
 
@@ -142,7 +142,7 @@ func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
 	cluster.State = newState
 	err = s.store.UpdateCluster(cluster)
 	if err != nil {
-		logger.WithError(err).Warnf("failed to set cluster state to %s", newState)
+		logger.WithError(err).Warnf("Failed to set cluster state to %s", newState)
 		return
 	}
 
@@ -226,10 +226,10 @@ func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.Fi
 	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).UpgradeCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to upgrade cluster")
-		logger.Info("Updating cluster store with latest cluster data")
+		logger.Info("Updating cluster metadata to reflect upgrade failure")
 		err = s.store.UpdateCluster(cluster)
 		if err != nil {
-			logger.WithError(err).Error("Failed to save updated cluster metadata")
+			logger.WithError(err).Error("Failed to update cluster metadata to reflect upgrade failure")
 			return model.ClusterStateRefreshMetadata
 		}
 		return model.ClusterStateUpgradeFailed
@@ -259,7 +259,7 @@ func (s *ClusterSupervisor) createNodegroups(cluster *model.Cluster, logger log.
 
 	_, err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodegroupsCreated(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to create nodegroups")
+		logger.WithError(err).Error("Failed to check if nodegroups are created")
 		return model.ClusterStateNodegroupsCreationFailed
 	}
 
@@ -274,7 +274,7 @@ func (s *ClusterSupervisor) deleteNodegroups(cluster *model.Cluster, logger log.
 		return model.ClusterStateNodegroupsDeletionFailed
 	}
 
-	logger.Info("Finished deleting nodegroup")
+	logger.Info("Finished deleting nodegroups")
 	return s.refreshClusterMetadata(cluster, logger)
 }
 
@@ -282,13 +282,13 @@ func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logge
 
 	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).RefreshClusterMetadata(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to refresh cluster")
+		logger.WithError(err).Error("Failed to refresh cluster metadata")
 		return model.ClusterStateRefreshMetadata
 	}
 
 	err = s.store.UpdateCluster(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to save updated cluster metadata")
+		logger.WithError(err).Error("Failed to update cluster metadata")
 		return model.ClusterStateRefreshMetadata
 	}
 
@@ -308,7 +308,7 @@ func (s *ClusterSupervisor) deleteCluster(cluster *model.Cluster, logger log.Fie
 
 	err = s.store.DeleteCluster(cluster.ID)
 	if err != nil {
-		logger.WithError(err).Error("Failed to record updated cluster after deletion")
+		logger.WithError(err).Error("Failed to delete cluster from store")
 		return model.ClusterStateDeletionFailed
 	}
 
@@ -329,7 +329,7 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 
 	err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateNodegroups(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to create cluster nodes")
+		logger.WithError(err).Error("Failed to create cluster nodegroups")
 		return model.ClusterStateCreationFailed
 	}
 
@@ -340,11 +340,11 @@ func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log
 
 	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodegroupsCreated(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to check if node creation finished")
+		logger.WithError(err).Error("Failed to check if nodegroups are created")
 		return model.ClusterStateCreationFailed
 	}
 	if !ready {
-		logger.Debug("Cluster nodes are not ready yet")
+		logger.Debug("Cluster nodegroups not yet ready")
 		return model.ClusterStateWaitingForNodes
 	}
 
@@ -390,6 +390,12 @@ func (s *ClusterSupervisor) processClusterMetrics(cluster *model.Cluster, logger
 	case model.ClusterStateDeletionRequested:
 		s.metrics.ClusterDeletionDurationHist.WithLabelValues().Observe(elapsedSeconds)
 		logger.Debugf("Cluster was deleted in %d seconds", int(elapsedSeconds))
+	case model.ClusterStateNodegroupsCreationRequested:
+		s.metrics.ClusterNodegroupsCreationDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		logger.Debugf("Cluster nodegroups were created in %d seconds", int(elapsedSeconds))
+	case model.ClusterStateNodegroupsDeletionRequested:
+		s.metrics.ClusterNodegroupsDeletionDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		logger.Debugf("Cluster nodegroups were deleted in %d seconds", int(elapsedSeconds))
 	default:
 		return errors.Errorf("failed to handle event %s with new state %s", event.Event.ID, event.StateChange.NewState)
 	}

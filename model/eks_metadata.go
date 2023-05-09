@@ -163,7 +163,7 @@ func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRe
 	nodeGroups := patchRequest.NodeGroups
 
 	if len(em.NodeGroups) == 0 {
-		return errors.New("no nodegroups available to resize")
+		return errors.New("no nodegroups are available to resize")
 	}
 
 	if len(nodeGroups) == 0 {
@@ -183,7 +183,7 @@ func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRe
 
 	if patchRequest.NodeMinCount != nil && patchRequest.NodeMaxCount != nil {
 		if *patchRequest.NodeMinCount > *patchRequest.NodeMaxCount {
-			return errors.New("min node count cannot be greater than max node count")
+			return errors.New("minimum node count cannot be greater than maximum node count")
 		}
 		return nil
 	}
@@ -193,7 +193,7 @@ func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRe
 			ng := em.NodeGroups[ngToResize]
 			nodeMaxCount := ng.MaxCount
 			if *patchRequest.NodeMinCount > nodeMaxCount {
-				return errors.New("resize patch would set min node count higher than max node count")
+				return errors.New("resize patch would set minimum node count higher than maximum node count")
 			}
 		}
 	}
@@ -203,7 +203,7 @@ func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRe
 			ng := em.NodeGroups[ngToResize]
 			nodeMinCount := ng.MinCount
 			if *patchRequest.NodeMaxCount < nodeMinCount {
-				return errors.New("resize patch would set max node count lower than min node count")
+				return errors.New("resize patch would set maximum node count lower than minimum node count")
 			}
 		}
 	}
@@ -257,7 +257,7 @@ func (em *EKSMetadata) ApplyClusterSizePatch(patchRequest *PatchClusterSizeReque
 func (em *EKSMetadata) ValidateChangeRequest() error {
 	changeRequest := em.ChangeRequest
 	if changeRequest == nil {
-		return errors.New("the EKS Metadata ChangeRequest is nil")
+		return errors.New("metadata ChangeRequest is nil")
 	}
 
 	changeAllowed := false
@@ -277,7 +277,7 @@ func (em *EKSMetadata) ValidateChangeRequest() error {
 	}
 
 	if !changeAllowed {
-		return errors.New("the EKS Metadata ChangeRequest has no change values set")
+		return errors.New("metadata ChangeRequest has no changes to apply")
 	}
 
 	return nil

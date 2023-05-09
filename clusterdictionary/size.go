@@ -5,6 +5,11 @@
 package clusterdictionary
 
 import (
+	"strconv"
+	"strings"
+
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/gookit/goutil/arrutil"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
@@ -130,6 +135,41 @@ func ApplyToPatchClusterSizeRequest(size string, request *model.PatchClusterSize
 	return nil
 }
 
+func processCustomSize(size string) (string, int64, int64, error) {
+	if len(size) == 0 {
+		return "", 0, 0, nil
+	}
+
+	parts := strings.Split(size, ";")
+	ngType := ec2Types.InstanceType(parts[0])
+
+	if !arrutil.In[ec2Types.InstanceType](ngType, ngType.Values()) {
+		return "", 0, 0, errors.Errorf("%s is not a valid InstanceType", ngType)
+	}
+
+	minCount := 2
+	maxCount := 2
+
+	for _, part := range parts[1:] {
+		switch {
+		case strings.HasPrefix(part, "min="):
+			minCount, _ = strconv.Atoi(strings.TrimPrefix(part, "min="))
+		case strings.HasPrefix(part, "max="):
+			maxCount, _ = strconv.Atoi(strings.TrimPrefix(part, "max="))
+		}
+	}
+
+	if minCount < 1 {
+		minCount = 1
+	}
+
+	if minCount > maxCount {
+		maxCount = minCount
+	}
+
+	return string(ngType), int64(minCount), int64(maxCount), nil
+}
+
 // AddToCreateClusterRequest takes a map of size keywords and adds the corresponding
 // values to a CreateClusterRequest.
 func AddToCreateClusterRequest(sizes map[string]string, request *model.CreateClusterRequest) error {
@@ -142,17 +182,15 @@ func AddToCreateClusterRequest(sizes map[string]string, request *model.CreateClu
 	}
 
 	for ng, ngSize := range sizes {
-		if !IsValidClusterSize(ngSize) {
-			return errors.Errorf("%s is not a valid size", ngSize)
+		ngType, minCount, maxCount, err := processCustomSize(ngSize)
+		if err != nil {
+			return err
 		}
 
-		values := ValidSizes[ngSize]
-
 		request.AdditionalNodeGroups[ng] = model.NodeGroupMetadata{
-			// These values are used in EKS configuration, but not in kops.
-			InstanceType: values.NodeInstanceType,
-			MinCount:     values.NodeMinCount,
-			MaxCount:     values.NodeMaxCount,
+			InstanceType: ngType,
+			MinCount:     minCount,
+			MaxCount:     maxCount,
 		}
 	}
 
@@ -171,16 +209,15 @@ func AddToCreateNodegroupsRequest(sizes map[string]string, request *model.Create
 	}
 
 	for ng, ngSize := range sizes {
-		if !IsValidClusterSize(ngSize) {
-			return errors.Errorf("%s is not a valid size", ngSize)
+		ngType, minCount, maxCount, err := processCustomSize(ngSize)
+		if err != nil {
+			return err
 		}
 
-		values := ValidSizes[ngSize]
-
 		request.Nodegroups[ng] = model.NodeGroupMetadata{
-			InstanceType: values.NodeInstanceType,
-			MinCount:     values.NodeMinCount,
-			MaxCount:     values.NodeMaxCount,
+			InstanceType: ngType,
+			MinCount:     minCount,
+			MaxCount:     maxCount,
 		}
 	}
 

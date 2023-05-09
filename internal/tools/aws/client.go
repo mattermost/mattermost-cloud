@@ -69,16 +69,16 @@ type AWS interface {
 
 	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error)
 	EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Update, error)
-	EnsureEKSNodeGroup(cluster *model.Cluster, nodeGroupPrefix string) (*eksTypes.Nodegroup, error)
-	EnsureEKSNodeGroupMigrated(cluster *model.Cluster, nodeGroupPrefix string) error
+	EnsureEKSNodegroup(cluster *model.Cluster, nodeGroupPrefix string) (*eksTypes.Nodegroup, error)
+	EnsureEKSNodegroupMigrated(cluster *model.Cluster, nodeGroupPrefix string) error
 	GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, error)
-	GetActiveEKSNodeGroup(clusterName, nodeGroupName string) (*eksTypes.Nodegroup, error)
-	EnsureEKSNodeGroupDeleted(clusterName, nodeGroupName string) error
+	GetActiveEKSNodegroup(clusterName, nodeGroupName string) (*eksTypes.Nodegroup, error)
+	EnsureEKSNodegroupDeleted(clusterName, nodeGroupName string) error
 	EnsureEKSClusterDeleted(clusterName string) error
 	InstallEKSAddons(cluster *model.Cluster) error
 	WaitForActiveEKSCluster(clusterName string, timeout int) (*eksTypes.Cluster, error)
-	WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, timeout int) (*eksTypes.Nodegroup, error)
-	WaitForEKSNodeGroupToBeDeleted(clusterName, nodeGroupName string, timeout int) error
+	WaitForActiveEKSNodegroup(clusterName, nodeGroupName string, timeout int) (*eksTypes.Nodegroup, error)
+	WaitForEKSNodegroupToBeDeleted(clusterName, nodeGroupName string, timeout int) error
 	WaitForEKSClusterToBeDeleted(clusterName string, timeout int) error
 	WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID string, timeout int) error
 

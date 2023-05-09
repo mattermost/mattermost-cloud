@@ -136,7 +136,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 			continue
 		}
 		if _, f := flags.additionalNodegroups[ng]; !f {
-			return fmt.Errorf("nodegroup %s not provided as additional nodegroups", ng)
+			return fmt.Errorf("nodegroup %s not provided as an additional nodegroup", ng)
 		}
 	}
 
@@ -145,7 +145,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 			continue
 		}
 		if _, f := flags.additionalNodegroups[ng]; !f {
-			return fmt.Errorf("nodegroup %s not provided as additional nodegroups", ng)
+			return fmt.Errorf("nodegroup %s not provided as an additional nodegroup", ng)
 		}
 	}
 

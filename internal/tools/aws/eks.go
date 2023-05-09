@@ -26,7 +26,6 @@ func (c *Client) createEKSCluster(cluster *model.Cluster, resources ClusterResou
 	// TODO: we do not expect to query that many subnets but for safety
 	// we can check the NextToken.
 	subnetsOut, err := c.Service().ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
-		// TODO: is it public/private
 		SubnetIds: resources.PrivateSubnetIDs,
 	})
 	if err != nil {
@@ -60,7 +59,6 @@ func (c *Client) createEKSCluster(cluster *model.Cluster, resources ClusterResou
 	}
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
-	// TODO: we can allow further parametrization in the future
 	input := eks.CreateClusterInput{
 		Name:               aws.String(eksMetadata.Name),
 		ResourcesVpcConfig: &vpcConfig,
@@ -85,7 +83,7 @@ func (a *Client) getEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
 	})
 	if err != nil {
 		if !IsErrorResourceNotFound(err) {
-			return nil, errors.Wrap(err, "failed to describe cluster")
+			return nil, errors.Wrap(err, "failed to describe EKS cluster")
 		}
 	}
 
@@ -113,32 +111,44 @@ func (c *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResou
 
 // InstallEKSAddons installs EKS EBS addon to the existing cluster.
 func (a *Client) InstallEKSAddons(cluster *model.Cluster) error {
-	input := eks.CreateAddonInput{
-		AddonName:   aws.String("aws-ebs-csi-driver"),
-		ClusterName: aws.String(cluster.ProvisionerMetadataEKS.Name),
-	}
-	_, err := a.Service().eks.CreateAddon(context.TODO(), &input)
-	if err != nil {
-		// In case addon already configured we do not want to fail.
-		if IsErrorResourceInUseException(err) {
-			return nil
-		}
-		return errors.Wrap(err, "failed to create ebs-csi addon")
+
+	var addons = []eks.CreateAddonInput{
+		{
+			AddonName:        aws.String("coredns"),
+			AddonVersion:     aws.String("v1.8.7-eksbuild.1"),
+			ClusterName:      aws.String(cluster.ProvisionerMetadataEKS.Name),
+			ResolveConflicts: eksTypes.ResolveConflictsOverwrite,
+		},
+		{
+			AddonName:        aws.String("kube-proxy"),
+			AddonVersion:     aws.String("v1.22.6-eksbuild.1"),
+			ClusterName:      aws.String(cluster.ProvisionerMetadataEKS.Name),
+			ResolveConflicts: eksTypes.ResolveConflictsOverwrite,
+		},
+		{
+			AddonName:           aws.String("vpc-cni"),
+			AddonVersion:        aws.String("v1.11.0-eksbuild.1"),
+			ClusterName:         aws.String(cluster.ProvisionerMetadataEKS.Name),
+			ConfigurationValues: aws.String("{\"env\":{\"ENABLE_PREFIX_DELEGATION\":\"true\"}}"),
+			ResolveConflicts:    eksTypes.ResolveConflictsOverwrite,
+		},
+		{
+			AddonName:        aws.String("aws-ebs-csi-driver"),
+			AddonVersion:     aws.String("v1.11.2-eksbuild.1"),
+			ClusterName:      aws.String(cluster.ProvisionerMetadataEKS.Name),
+			ResolveConflicts: eksTypes.ResolveConflictsOverwrite,
+		},
 	}
 
-	input = eks.CreateAddonInput{
-		AddonName:           aws.String("vpc-cni"),
-		ClusterName:         aws.String(cluster.ProvisionerMetadataEKS.Name),
-		ConfigurationValues: aws.String("{\"env\":{\"ENABLE_PREFIX_DELEGATION\":\"true\"}}"),
-		ResolveConflicts:    eksTypes.ResolveConflictsOverwrite,
-	}
-	_, err = a.Service().eks.CreateAddon(context.TODO(), &input)
-	if err != nil {
-		// In case addon already configured we do not want to fail.
-		if IsErrorResourceInUseException(err) {
-			return nil
+	for i, addon := range addons {
+		_, err := a.Service().eks.CreateAddon(context.TODO(), &addons[i])
+		if err != nil {
+			// In case addon already configured we do not want to fail.
+			if IsErrorResourceInUseException(err) {
+				return nil
+			}
+			return errors.Wrapf(err, "failed to create %s addon", *addon.AddonName)
 		}
-		return errors.Wrap(err, "failed to create vpc-cni addon")
 	}
 
 	return nil
@@ -152,11 +162,11 @@ func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Upda
 	}
 
 	if eksCluster == nil {
-		return nil, errors.Errorf("cluster %s does not exist", clusterName)
+		return nil, errors.Errorf("requested EKS cluster %s does not exist", clusterName)
 	}
 
 	if eksCluster.Status != eksTypes.ClusterStatusActive {
-		return nil, errors.Errorf("cluster %s is not active", clusterName)
+		return nil, errors.Errorf("requested EKS cluster %s is not active", clusterName)
 	}
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -181,7 +191,7 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	changeRequest := eksMetadata.ChangeRequest
 	if changeRequest == nil {
-		return nil, errors.New("change request is nil")
+		return nil, errors.New("metadata ChangeRequest is nil")
 	}
 
 	clusterResource, err := a.GetVpcResourcesByVpcID(changeRequest.VPC, a.logger)
@@ -229,7 +239,6 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 
 	nodeGroupReq := eks.CreateNodegroupInput{
 		ClusterName:   aws.String(clusterName),
-		InstanceTypes: []string{ngChangeRequest.InstanceType},
 		NodeRole:      &changeRequest.NodeRoleARN,
 		NodegroupName: aws.String(ngChangeRequest.Name),
 		AmiType:       eksTypes.AMITypesCustom,
@@ -263,21 +272,21 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 
 	out, err := a.Service().eks.CreateNodegroup(context.TODO(), &nodeGroupReq)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create EKS NodeGroup")
+		return nil, errors.Wrap(err, "failed to create EKS nodegroup")
 	}
 
 	return out.Nodegroup, nil
 }
 
-func (c *Client) getEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
+func (c *Client) getEKSNodeGroup(clusterName, nodegroupName string) (*eksTypes.Nodegroup, error) {
 
 	output, err := c.Service().eks.DescribeNodegroup(context.TODO(), &eks.DescribeNodegroupInput{
 		ClusterName:   aws.String(clusterName),
-		NodegroupName: aws.String(workerName),
+		NodegroupName: aws.String(nodegroupName),
 	})
 	if err != nil {
 		if !IsErrorResourceNotFound(err) {
-			return nil, errors.Wrap(err, "failed to describe EKS NodeGroup")
+			return nil, errors.Wrap(err, "failed to describe EKS nodegroup")
 		}
 	}
 
@@ -288,8 +297,8 @@ func (c *Client) getEKSNodeGroup(clusterName, workerName string) (*eksTypes.Node
 	return nil, nil
 }
 
-// EnsureEKSNodeGroup ensures EKS cluster node groups are created.
-func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*eksTypes.Nodegroup, error) {
+// EnsureEKSNodegroup ensures EKS nodegroup is created.
+func (c *Client) EnsureEKSNodegroup(cluster *model.Cluster, ngPrefix string) (*eksTypes.Nodegroup, error) {
 
 	clusterName := cluster.ProvisionerMetadataEKS.Name
 
@@ -298,12 +307,12 @@ func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 
 	ngChangeRequest, found := changeRequest.NodeGroups[ngPrefix]
 	if !found {
-		return nil, errors.Errorf("nodegroup %s not found in change request", ngPrefix)
+		return nil, errors.Errorf("nodegroup metadata for %s not found in ChangeRequest", ngPrefix)
 	}
 
 	nodeGroup, err := c.getEKSNodeGroup(clusterName, ngChangeRequest.Name)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get an EKS NodeGroup %s", ngChangeRequest.Name)
+		return nil, errors.Wrapf(err, "failed to get an EKS nodegroup %s", ngChangeRequest.Name)
 	}
 
 	if nodeGroup != nil {
@@ -313,8 +322,8 @@ func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*e
 	return c.createEKSNodeGroup(cluster, ngPrefix)
 }
 
-// EnsureEKSNodeGroupMigrated updates EKS cluster node group.
-func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix string) error {
+// EnsureEKSNodegroupMigrated updates EKS nodegroup.
+func (c *Client) EnsureEKSNodegroupMigrated(cluster *model.Cluster, ngPrefix string) error {
 	logger := c.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -322,7 +331,7 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 
 	ngChangeRequest, found := changeRequest.NodeGroups[ngPrefix]
 	if !found {
-		return errors.Errorf("nodegroup meta for %s not found in change request", ngPrefix)
+		return errors.Errorf("nodegroup metadata for %s not found in ChangeRequest", ngPrefix)
 	}
 
 	clusterName := eksMetadata.Name
@@ -335,26 +344,26 @@ func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix str
 
 	_, err := c.createEKSNodeGroup(cluster, ngPrefix)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create a new EKS NodeGroup %s", ngChangeRequest.Name)
+		return errors.Wrapf(err, "failed to create a new EKS nodegroup %s", ngChangeRequest.Name)
 	}
 
 	wait := 600 // seconds
-	logger.Infof("Waiting up to %d seconds for EKS NodeGroup %s to become active...", wait, ngChangeRequest.Name)
+	logger.Infof("Waiting up to %d seconds for EKS nodegroup %s to become active...", wait, ngChangeRequest.Name)
 
-	_, err = c.WaitForActiveEKSNodeGroup(eksMetadata.Name, ngChangeRequest.Name, wait)
+	_, err = c.WaitForActiveEKSNodegroup(eksMetadata.Name, ngChangeRequest.Name, wait)
 	if err != nil {
 		return err
 	}
 
-	logger.Debugf("Deleting the old EKS NodeGroup %s", oldNodeGroupName)
+	logger.Debugf("Deleting the old EKS nodegroup %s", oldNodeGroupName)
 
-	err = c.EnsureEKSNodeGroupDeleted(clusterName, oldNodeGroupName)
+	err = c.EnsureEKSNodegroupDeleted(clusterName, oldNodeGroupName)
 	if err != nil {
-		return errors.Wrapf(err, "failed to delete the old EKS NodeGroup %s", oldNodeGroupName)
+		return errors.Wrapf(err, "failed to delete the old EKS nodegroup %s", oldNodeGroupName)
 	}
 
-	logger.Infof("Waiting up to %d seconds for EKS NodeGroup %s to be deleted...", wait, oldNodeGroupName)
-	err = c.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, oldNodeGroupName, wait)
+	logger.Infof("Waiting up to %d seconds for EKS nodegroup %s to be deleted...", wait, oldNodeGroupName)
+	err = c.WaitForEKSNodegroupToBeDeleted(eksMetadata.Name, oldNodeGroupName, wait)
 	if err != nil {
 		return err
 	}
@@ -381,7 +390,7 @@ func (a *Client) EnsureEKSClusterDeleted(clusterName string) error {
 	}
 
 	if eksCluster.Status == eksTypes.ClusterStatusFailed {
-		return errors.New("cluster is in failed state")
+		return errors.New("requested EKS cluster is in failed state")
 	}
 
 	delInput := &eks.DeleteClusterInput{Name: aws.String(clusterName)}
@@ -394,35 +403,35 @@ func (a *Client) EnsureEKSClusterDeleted(clusterName string) error {
 	return nil
 }
 
-// EnsureEKSNodeGroupDeleted ensures EKS node groups are deleted.
-func (a *Client) EnsureEKSNodeGroupDeleted(clusterName, workerName string) error {
-	if workerName == "" {
+// EnsureEKSNodegroupDeleted ensures EKS nodegroup is deleted.
+func (a *Client) EnsureEKSNodegroupDeleted(clusterName, nodegroupName string) error {
+	if nodegroupName == "" {
 		return nil
 	}
 
-	nodeGroups, err := a.getEKSNodeGroup(clusterName, workerName)
+	nodeGroup, err := a.getEKSNodeGroup(clusterName, nodegroupName)
 	if err != nil {
-		return errors.Wrap(err, "failed to get NodeGroup")
+		return errors.Wrap(err, "failed to get EKS nodegroup")
 	}
-	// Node groups deleted, we can return
-	if nodeGroups == nil {
+
+	if nodeGroup == nil {
 		return nil
 	}
 
-	if nodeGroups.Status == eksTypes.NodegroupStatusDeleting {
+	if nodeGroup.Status == eksTypes.NodegroupStatusDeleting {
 		return nil
 	}
 
-	if nodeGroups.Status == eksTypes.NodegroupStatusDeleteFailed {
-		return errors.Wrapf(err, "node group deletion failed %q", *nodeGroups.NodegroupName)
+	if nodeGroup.Status == eksTypes.NodegroupStatusDeleteFailed {
+		return errors.Wrapf(err, "failed to delete EKS nodegroup %s", nodegroupName)
 	}
 
 	_, err = a.Service().eks.DeleteNodegroup(context.TODO(), &eks.DeleteNodegroupInput{
 		ClusterName:   aws.String(clusterName),
-		NodegroupName: nodeGroups.NodegroupName,
+		NodegroupName: nodeGroup.NodegroupName,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to delete NodeGroup")
+		return errors.Wrap(err, "failed to delete EKS nodegroup")
 	}
 
 	return nil
@@ -440,7 +449,7 @@ func (c *Client) GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, err
 	}
 
 	if cluster.Status == eksTypes.ClusterStatusFailed {
-		return nil, errors.New("cluster creation failed")
+		return nil, errors.New("requested EKS cluster is in failed state")
 	}
 
 	if cluster.Status == eksTypes.ClusterStatusActive {
@@ -450,11 +459,11 @@ func (c *Client) GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, err
 	return nil, nil
 }
 
-// GetActiveEKSNodeGroup returns the EKS node group if active.
-func (c *Client) GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
+// GetActiveEKSNodegroup returns the EKS nodegroup if active.
+func (c *Client) GetActiveEKSNodegroup(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
 	nodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get NodeGroup")
+		return nil, errors.Wrap(err, "failed to get EKS nodegroup")
 	}
 
 	if nodeGroup == nil {
@@ -462,7 +471,7 @@ func (c *Client) GetActiveEKSNodeGroup(clusterName, workerName string) (*eksType
 	}
 
 	if nodeGroup.Status == eksTypes.NodegroupStatusCreateFailed {
-		return nil, errors.New("EKS NodeGroup creation failed")
+		return nil, errors.New("failed to create EKS nodegroup")
 	}
 
 	if nodeGroup.Status == eksTypes.NodegroupStatusActive {
@@ -495,7 +504,7 @@ func (c *Client) WaitForActiveEKSCluster(clusterName string, timeout int) (*eksT
 	}
 }
 
-func (c *Client) WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, timeout int) (*eksTypes.Nodegroup, error) {
+func (c *Client) WaitForActiveEKSNodegroup(clusterName, nodeGroupName string, timeout int) (*eksTypes.Nodegroup, error) {
 	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
 	defer timeoutTimer.Stop()
 	tick := time.NewTicker(5 * time.Second)
@@ -504,11 +513,11 @@ func (c *Client) WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, ti
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return nil, errors.New("timed out waiting for EKS NodeGroup to become active")
+			return nil, errors.New("timed out waiting for EKS nodegroup to become active")
 		case <-tick.C:
-			nodeGroup, err := c.GetActiveEKSNodeGroup(clusterName, nodeGroupName)
+			nodeGroup, err := c.GetActiveEKSNodegroup(clusterName, nodeGroupName)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to check if EKS NodeGroup is active")
+				return nil, errors.Wrap(err, "failed to check if EKS nodegroup is active")
 			}
 			if nodeGroup != nil {
 				return nodeGroup, nil
@@ -517,7 +526,7 @@ func (c *Client) WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, ti
 	}
 }
 
-func (c *Client) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error {
+func (c *Client) WaitForEKSNodegroupToBeDeleted(clusterName, workerName string, timeout int) error {
 	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
 	defer timeoutTimer.Stop()
 	tick := time.NewTicker(5 * time.Second)
@@ -526,11 +535,11 @@ func (c *Client) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, 
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return errors.New("timed out waiting for EKS NodeGroup to become ready")
+			return errors.New("timed out waiting for EKS nodegroup to be deleted")
 		case <-tick.C:
 			nodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
 			if err != nil {
-				return errors.Wrap(err, "failed to describe NodeGroup")
+				return errors.Wrap(err, "failed to describe EKS nodegroup")
 			}
 			if nodeGroup == nil {
 				return nil
@@ -578,7 +587,7 @@ func (c *Client) WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID stri
 			}
 
 			if updateStatus == eksTypes.UpdateStatusFailed {
-				return errors.New("EKS cluster update failed")
+				return errors.New("failed to update EKS cluster")
 			}
 
 			if updateStatus == eksTypes.UpdateStatusSuccessful {
@@ -594,7 +603,7 @@ func (c *Client) getEKSClusterUpdateStatus(clusterName, updateID string) (eksTyp
 		UpdateId: ptr.String(updateID),
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "failed to describe EKS cluster update")
+		return "", errors.Wrap(err, "failed to describe update for EKS cluster")
 	}
 
 	return output.Update.Status, nil

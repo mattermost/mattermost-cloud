@@ -49,7 +49,7 @@ func (flags *createRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.clusterRoleARN, "cluster-role-arn", "", "AWS role ARN for cluster.")
 	command.Flags().StringVar(&flags.nodeRoleARN, "node-role-arn", "", "AWS role ARN for node.")
 	command.Flags().BoolVar(&flags.useEKS, "eks", false, "Create EKS cluster.")
-	command.Flags().StringToStringVar(&flags.additionalNodegroups, "additional-nodegroups", nil, "Additional nodegroups to create. The key is the name of the nodegroup and the value is the size constant.")
+	command.Flags().StringToStringVar(&flags.additionalNodegroups, "additional-nodegroups", nil, "Additional nodegroups to create. Example: --additional-nodegroups ng1=t3.medium;min=1;max=3")
 	command.Flags().StringSliceVar(&flags.nodegroupsWithPublicSubnet, "nodegroups-with-public-subnet", nil, "Nodegroups to create with public subnet. The value is the name of the nodegroup.")
 	command.Flags().StringSliceVar(&flags.nodegroupsWithSecurityGroup, "nodegroups-with-sg", nil, "Nodegroups to create with dedicated security group. The value is the name of the nodegroup.")
 }
