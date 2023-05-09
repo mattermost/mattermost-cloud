@@ -144,8 +144,9 @@ func processCustomSize(size string) (string, int64, int64, error) {
 	ngType := ec2Types.InstanceType(parts[0])
 
 	if !arrutil.In[ec2Types.InstanceType](ngType, ngType.Values()) {
-		return "", 0, 0, errors.Errorf("%s is not a valid node group type", ngType)
+		return "", 0, 0, errors.Errorf("%s is not a valid InstanceType", ngType)
 	}
+
 	minCount := 2
 	maxCount := 2
 

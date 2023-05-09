@@ -184,7 +184,7 @@ func (request *CreateClusterRequest) Validate() error {
 					return errors.Errorf("node min count (%d) must be 1 or greater for node group %s", ng.MinCount, name)
 				}
 				if ng.MinCount > ng.MaxCount {
-					return errors.Errorf("node min count (%d) cannot be greater than max count (%d) for node group %s", ng.MinCount, ng.MaxCount, name)
+					return errors.Errorf("node min count (%d) cannot be greater than max count (%d) for nodegroup %s", ng.MinCount, ng.MaxCount, name)
 				}
 			}
 		}
