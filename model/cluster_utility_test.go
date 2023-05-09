@@ -5,6 +5,7 @@
 package model
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -147,7 +148,7 @@ func TestGetActualVersion(t *testing.T) {
 				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
-				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-6.2.8"},
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.1.0"},
@@ -172,7 +173,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "fluent-bit-0.9"}, version)
 
 	version = c.ActualUtilityVersion(TeleportCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-kube-agent-6.2.8"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"}, version)
 
 	version = c.ActualUtilityVersion(PgbouncerCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"}, version)
@@ -221,7 +222,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
-				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-6.2.8"},
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.1.0"},
@@ -271,4 +272,52 @@ func TestGetDesiredVersion(t *testing.T) {
 
 	version = c.DesiredUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, nilHuv, version)
+}
+
+func TestUnmarshallUtilityVersion(t *testing.T) {
+	version := "0.9.0"
+	t.Run("new format", func(t *testing.T) {
+		// new format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":{"chart":"` + version + `"}}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, version, versions.Nginx.Chart)
+	})
+
+	t.Run("old format", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":"` + version + `"}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, version, versions.Nginx.Chart)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":null}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, (*HelmUtilityVersion)(nil), versions.Nginx)
+	})
+
+	t.Run("empty object", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":{}}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, &HelmUtilityVersion{}, versions.Nginx)
+	})
+
+	t.Run("malformed", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":'}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.Error(t, err, "error unmarshalling HelmUtilityVersion")
+		require.Equal(t, (*HelmUtilityVersion)(nil), versions.Nginx)
+	})
 }

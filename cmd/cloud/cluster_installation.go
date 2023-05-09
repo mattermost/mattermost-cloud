@@ -22,6 +22,7 @@ func newCmdClusterInstallation() *cobra.Command {
 	cmd.AddCommand(newCmdClusterInstallationGet())
 	cmd.AddCommand(newCmdClusterInstallationList())
 	cmd.AddCommand(newCmdClusterInstallationConfig())
+	cmd.AddCommand(newCmdClusterInstallationStatus())
 	cmd.AddCommand(newCmdClusterInstallationMMCTL())
 	cmd.AddCommand(newCmdClusterInstallationMattermostCLI())
 	cmd.AddCommand(newCmdClusterInstallationMigration())
@@ -197,6 +198,36 @@ func newCmdClusterInstallationConfigSet() *cobra.Command {
 				return errors.Wrap(err, "failed to modify cluster installation config")
 			}
 			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+		},
+	}
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdClusterInstallationStatus() *cobra.Command {
+	var flags clusterInstallationStatusFlags
+
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Get the status of a particular cluster installation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			client := model.NewClient(flags.serverAddress)
+
+			clusterInstallation, err := client.GetClusterInstallationStatus(flags.clusterInstallationID)
+			if err != nil {
+				return errors.Wrap(err, "failed to query cluster installation")
+			}
+			if clusterInstallation == nil {
+				return nil
+			}
+
+			return printJSON(clusterInstallation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)

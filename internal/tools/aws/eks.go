@@ -7,8 +7,6 @@ package aws
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -29,7 +27,7 @@ func (c *Client) createEKSCluster(cluster *model.Cluster, resources ClusterResou
 	// we can check the NextToken.
 	subnetsOut, err := c.Service().ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
 		// TODO: is it public/private
-		SubnetIds: resources.PublicSubnetsIDs,
+		SubnetIds: resources.PrivateSubnetIDs,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe subnets")
@@ -128,6 +126,21 @@ func (a *Client) InstallEKSAddons(cluster *model.Cluster) error {
 		return errors.Wrap(err, "failed to create ebs-csi addon")
 	}
 
+	input = eks.CreateAddonInput{
+		AddonName:           aws.String("vpc-cni"),
+		ClusterName:         aws.String(cluster.ProvisionerMetadataEKS.Name),
+		ConfigurationValues: aws.String("{\"env\":{\"ENABLE_PREFIX_DELEGATION\":\"true\"}}"),
+		ResolveConflicts:    eksTypes.ResolveConflictsOverwrite,
+	}
+	_, err = a.Service().eks.CreateAddon(context.TODO(), &input)
+	if err != nil {
+		// In case addon already configured we do not want to fail.
+		if IsErrorResourceInUseException(err) {
+			return nil
+		}
+		return errors.Wrap(err, "failed to create vpc-cni addon")
+	}
+
 	return nil
 }
 
@@ -163,26 +176,33 @@ func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Upda
 	return output.Update, nil
 }
 
-func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
+func (a *Client) createEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*eksTypes.Nodegroup, error) {
 
-	clusterName := cluster.ProvisionerMetadataEKS.Name
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	changeRequest := eksMetadata.ChangeRequest
 	if changeRequest == nil {
 		return nil, errors.New("change request is nil")
 	}
 
-	workerName := cluster.ProvisionerMetadataEKS.ChangeRequest.WorkerName
-
 	clusterResource, err := a.GetVpcResourcesByVpcID(changeRequest.VPC, a.logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get VPC resources")
 	}
 
-	launchTemplate := getLaunchTemplateName(clusterName)
+	clusterName := eksMetadata.Name
+	launchTemplate := fmt.Sprintf("%s-%s", clusterName, ngPrefix)
+
+	ngChangeRequest := changeRequest.NodeGroups[ngPrefix]
+
+	var subnets []string
+	if ngChangeRequest.WithPublicSubnet {
+		subnets = clusterResource.PublicSubnetsIDs
+	} else {
+		subnets = clusterResource.PrivateSubnetIDs
+	}
 
 	subnetsOut, err := a.Service().ec2.DescribeSubnets(context.TODO(), &ec2.DescribeSubnetsInput{
-		SubnetIds: clusterResource.PrivateSubnetIDs,
+		SubnetIds: subnets,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe subnets")
@@ -207,30 +227,38 @@ func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup
 		}
 	}
 
-	launchTemplateVersion := "$Latest"
-	if changeRequest.LaunchTemplateVersion != nil && *changeRequest.LaunchTemplateVersion > 0 {
-		launchTemplateVersion = fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion)
-	}
-
 	nodeGroupReq := eks.CreateNodegroupInput{
 		ClusterName:   aws.String(clusterName),
-		InstanceTypes: []string{changeRequest.NodeInstanceType},
+		InstanceTypes: []string{ngChangeRequest.InstanceType},
 		NodeRole:      &changeRequest.NodeRoleARN,
-		NodegroupName: aws.String(workerName),
+		NodegroupName: aws.String(ngChangeRequest.Name),
 		AmiType:       eksTypes.AMITypesCustom,
 		ScalingConfig: &eksTypes.NodegroupScalingConfig{
-			DesiredSize: ptr.Int32(int32(changeRequest.NodeMinCount)),
-			MaxSize:     ptr.Int32(int32(changeRequest.NodeMaxCount)),
-			MinSize:     ptr.Int32(int32(changeRequest.NodeMinCount)),
+			DesiredSize: ptr.Int32(int32(ngChangeRequest.MinCount)),
+			MaxSize:     ptr.Int32(int32(ngChangeRequest.MaxCount)),
+			MinSize:     ptr.Int32(int32(ngChangeRequest.MinCount)),
 		},
 		Subnets: subnetsIDs,
 		LaunchTemplate: &eksTypes.LaunchTemplateSpecification{
 			Name:    aws.String(launchTemplate),
-			Version: aws.String(launchTemplateVersion),
+			Version: aws.String("$Latest"),
 		},
 		Tags: map[string]string{
 			fmt.Sprintf("kubernetes.io/cluster/%s", clusterName): "owned",
 		},
+		Labels: map[string]string{
+			"type": ngPrefix,
+		},
+	}
+
+	if ngPrefix != model.NodeGroupWorker {
+		nodeGroupReq.Taints = []eksTypes.Taint{
+			{
+				Effect: eksTypes.TaintEffectNoSchedule,
+				Key:    aws.String(ngPrefix),
+				Value:  aws.String("true"),
+			},
+		}
 	}
 
 	out, err := a.Service().eks.CreateNodegroup(context.TODO(), &nodeGroupReq)
@@ -261,133 +289,72 @@ func (c *Client) getEKSNodeGroup(clusterName, workerName string) (*eksTypes.Node
 }
 
 // EnsureEKSNodeGroup ensures EKS cluster node groups are created.
-func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
+func (c *Client) EnsureEKSNodeGroup(cluster *model.Cluster, ngPrefix string) (*eksTypes.Nodegroup, error) {
 
 	clusterName := cluster.ProvisionerMetadataEKS.Name
-	workerName := cluster.ProvisionerMetadataEKS.ChangeRequest.WorkerName
-	existingNodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
+
+	eksMetadata := cluster.ProvisionerMetadataEKS
+	changeRequest := eksMetadata.ChangeRequest
+
+	ngChangeRequest, found := changeRequest.NodeGroups[ngPrefix]
+	if !found {
+		return nil, errors.Errorf("nodegroup %s not found in change request", ngPrefix)
+	}
+
+	nodeGroup, err := c.getEKSNodeGroup(clusterName, ngChangeRequest.Name)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get existing EKS NodeGroup")
+		return nil, errors.Wrapf(err, "failed to get an EKS NodeGroup %s", ngChangeRequest.Name)
 	}
 
-	if existingNodeGroup != nil {
-		return existingNodeGroup, nil
+	if nodeGroup != nil {
+		return nodeGroup, nil
 	}
 
-	return c.createEKSNodeGroup(cluster)
+	return c.createEKSNodeGroup(cluster, ngPrefix)
 }
 
 // EnsureEKSNodeGroupMigrated updates EKS cluster node group.
-func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
+func (c *Client) EnsureEKSNodeGroupMigrated(cluster *model.Cluster, ngPrefix string) error {
 	logger := c.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	changeRequest := eksMetadata.ChangeRequest
+
+	ngChangeRequest, found := changeRequest.NodeGroups[ngPrefix]
+	if !found {
+		return errors.Errorf("nodegroup meta for %s not found in change request", ngPrefix)
+	}
+
 	clusterName := eksMetadata.Name
 
-	if eksMetadata.ChangeRequest == nil {
-		return errors.New("change request is nil")
-	}
-
-	workerName := eksMetadata.WorkerName
-
-	if workerName == "" {
-		return errors.New("nodegroup name is missing")
-	}
-
-	nodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
-	if err != nil {
-		return errors.Wrap(err, "failed to describe EKS NodeGroup")
-	}
-
-	if nodeGroup == nil {
-		return errors.New("EKS NodeGroup does not exist")
-	}
-
-	if nodeGroup.Status != eksTypes.NodegroupStatusActive {
-		return errors.Errorf("EKS NodeGroup %s is not active", workerName)
-	}
-
-	var isUpdateRequired bool
-	if changeRequest.LaunchTemplateVersion != nil {
-		if nodeGroup.LaunchTemplate != nil && nodeGroup.LaunchTemplate.Version != nil &&
-			*nodeGroup.LaunchTemplate.Version != fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion) {
-			isUpdateRequired = true
-		}
-	} else {
-		if nodeGroup.LaunchTemplate != nil && nodeGroup.LaunchTemplate.Version != nil {
-			version, err2 := strconv.Atoi(*nodeGroup.LaunchTemplate.Version)
-			if err2 != nil {
-				logger.Errorln("failed to convert launch template version to int", err2)
-			}
-			changeRequest.LaunchTemplateVersion = ptr.Int64(int64(version))
-		}
-	}
-
-	if changeRequest.NodeInstanceType != "" {
-		if nodeGroup.InstanceTypes != nil && len(nodeGroup.InstanceTypes) > 0 &&
-			nodeGroup.InstanceTypes[0] != changeRequest.NodeInstanceType {
-			isUpdateRequired = true
-		}
-	} else {
-		changeRequest.NodeInstanceType = eksMetadata.NodeInstanceType
-	}
-
-	scalingInfo := nodeGroup.ScalingConfig
-	if changeRequest.NodeMinCount != 0 {
-		if *scalingInfo.MinSize != int32(changeRequest.NodeMinCount) {
-			isUpdateRequired = true
-		}
-	} else {
-		changeRequest.NodeMinCount = eksMetadata.NodeMinCount
-	}
-
-	if changeRequest.NodeMaxCount != 0 {
-		if *scalingInfo.MaxSize != int32(changeRequest.NodeMaxCount) {
-			isUpdateRequired = true
-		}
-	} else {
-		changeRequest.NodeMaxCount = eksMetadata.NodeMaxCount
-	}
-
-	if !isUpdateRequired {
-		return nil
-	}
-
-	logger.Info("creating an EKS NodeGroup")
-
-	workerSeq := strings.TrimPrefix(workerName, "worker-")
-	workerSeqInt, err := strconv.Atoi(workerSeq)
-	if err != nil {
-		return errors.Wrap(err, "failed to convert worker sequence to int")
-	}
-
-	changeRequest.WorkerName = fmt.Sprintf("worker-%d", workerSeqInt+1)
+	oldNodeGroupMeta := eksMetadata.NodeGroups[ngPrefix]
+	oldNodeGroupName := oldNodeGroupMeta.Name
 
 	changeRequest.VPC = eksMetadata.VPC
 	changeRequest.NodeRoleARN = eksMetadata.NodeRoleARN
 
-	_, err = c.createEKSNodeGroup(cluster)
+	_, err := c.createEKSNodeGroup(cluster, ngPrefix)
 	if err != nil {
-		return errors.Wrap(err, "failed to create a new NodeGroup")
+		return errors.Wrapf(err, "failed to create a new EKS NodeGroup %s", ngChangeRequest.Name)
 	}
 
 	wait := 600 // seconds
-	logger.Infof("Waiting up to %d seconds for EKS NodeGroup to become active...", wait)
-	_, err = c.WaitForActiveEKSNodeGroup(eksMetadata.Name, eksMetadata.ChangeRequest.WorkerName, wait)
+	logger.Infof("Waiting up to %d seconds for EKS NodeGroup %s to become active...", wait, ngChangeRequest.Name)
+
+	_, err = c.WaitForActiveEKSNodeGroup(eksMetadata.Name, ngChangeRequest.Name, wait)
 	if err != nil {
 		return err
 	}
 
-	logger.Info("deleting the old NodeGroup")
+	logger.Debugf("Deleting the old EKS NodeGroup %s", oldNodeGroupName)
 
-	err = c.EnsureEKSNodeGroupDeleted(clusterName, workerName)
+	err = c.EnsureEKSNodeGroupDeleted(clusterName, oldNodeGroupName)
 	if err != nil {
-		return errors.Wrap(err, "failed to delete the old NodeGroup")
+		return errors.Wrapf(err, "failed to delete the old EKS NodeGroup %s", oldNodeGroupName)
 	}
 
-	logger.Infof("Waiting up to %d seconds for NodeGroup to be deleted...", wait)
-	err = c.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, eksMetadata.WorkerName, wait)
+	logger.Infof("Waiting up to %d seconds for EKS NodeGroup %s to be deleted...", wait, oldNodeGroupName)
+	err = c.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, oldNodeGroupName, wait)
 	if err != nil {
 		return err
 	}
@@ -528,7 +495,7 @@ func (c *Client) WaitForActiveEKSCluster(clusterName string, timeout int) (*eksT
 	}
 }
 
-func (c *Client) WaitForActiveEKSNodeGroup(clusterName, workerName string, timeout int) (*eksTypes.Nodegroup, error) {
+func (c *Client) WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, timeout int) (*eksTypes.Nodegroup, error) {
 	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
 	defer timeoutTimer.Stop()
 	tick := time.NewTicker(5 * time.Second)
@@ -539,7 +506,7 @@ func (c *Client) WaitForActiveEKSNodeGroup(clusterName, workerName string, timeo
 		case <-timeoutTimer.C:
 			return nil, errors.New("timed out waiting for EKS NodeGroup to become active")
 		case <-tick.C:
-			nodeGroup, err := c.GetActiveEKSNodeGroup(clusterName, workerName)
+			nodeGroup, err := c.GetActiveEKSNodeGroup(clusterName, nodeGroupName)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to check if EKS NodeGroup is active")
 			}

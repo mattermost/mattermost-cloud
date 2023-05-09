@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 )
 
 const (
@@ -70,7 +71,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// FluentbitCanonicalName defines the default version and values path for the Helm chart
 	FluentbitCanonicalName: {Chart: "0.20.1", ValuesPath: ""},
 	// TeleportCanonicalName defines the default version and values path for the Helm chart
-	TeleportCanonicalName: {Chart: "6.2.8", ValuesPath: ""},
+	TeleportCanonicalName: {Chart: "7.3.26", ValuesPath: ""},
 	// PgbouncerCanonicalName defines the default version and values path for the Helm chart
 	PgbouncerCanonicalName: {Chart: "1.2.0", ValuesPath: ""},
 	// PromtailCanonicalName defines the default version and values path for the Helm chart
@@ -310,6 +311,17 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 type HelmUtilityVersion struct {
 	Chart      string
 	ValuesPath string
+}
+
+// UnmarshalJSON tries to unmarshal the HelmUtilityVersion from JSON
+// If it fails, it assumes that bytes is just the chart version in string
+func (u *HelmUtilityVersion) UnmarshalJSON(bytes []byte) error {
+	type newHelmUtilityVersion HelmUtilityVersion
+	err := json.Unmarshal(bytes, (*newHelmUtilityVersion)(u))
+	if err != nil {
+		u.Chart = strings.Trim(string(bytes), `"`)
+	}
+	return nil
 }
 
 // Version returns the Helm chart version

@@ -17,29 +17,34 @@ const (
 	NetworkingCalico = "calico"
 	// NetworkingAmazon is Amazon networking plugin.
 	NetworkingAmazon = "amazon-vpc-routed-eni"
+	// NetworkingVpcCni is Amazon VPC CNI networking plugin.
+	NetworkingVpcCni = "amazon-vpc-cni"
 )
 
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
-	Provider               string                         `json:"provider,omitempty"`
-	Zones                  []string                       `json:"zones,omitempty"`
-	Version                string                         `json:"version,omitempty"`
-	AMI                    string                         `json:"ami,omitempty"`
-	MasterInstanceType     string                         `json:"master-instance-type,omitempty"`
-	MasterCount            int64                          `json:"master-count,omitempty"`
-	NodeInstanceType       string                         `json:"node-instance-type,omitempty"`
-	NodeMinCount           int64                          `json:"node-min-count,omitempty"`
-	NodeMaxCount           int64                          `json:"node-max-count,omitempty"`
-	AllowInstallations     bool                           `json:"allow-installations,omitempty"`
-	APISecurityLock        bool                           `json:"api-security-lock,omitempty"`
-	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
-	Annotations            []string                       `json:"annotations,omitempty"`
-	Networking             string                         `json:"networking,omitempty"`
-	VPC                    string                         `json:"vpc,omitempty"`
-	MaxPodsPerNode         int64                          `json:"max-pods-per-node,omitempty"`
-	ClusterRoleARN         string                         `json:"cluster-role-arn,omitempty"`
-	NodeRoleARN            string                         `json:"node-role-arn,omitempty"`
-	Provisioner            string                         `json:"provisioner,omitempty"`
+	Provider                   string                         `json:"provider,omitempty"`
+	Zones                      []string                       `json:"zones,omitempty"`
+	Version                    string                         `json:"version,omitempty"`
+	AMI                        string                         `json:"ami,omitempty"`
+	MasterInstanceType         string                         `json:"master-instance-type,omitempty"`
+	MasterCount                int64                          `json:"master-count,omitempty"`
+	NodeInstanceType           string                         `json:"node-instance-type,omitempty"`
+	NodeMinCount               int64                          `json:"node-min-count,omitempty"`
+	NodeMaxCount               int64                          `json:"node-max-count,omitempty"`
+	AllowInstallations         bool                           `json:"allow-installations,omitempty"`
+	APISecurityLock            bool                           `json:"api-security-lock,omitempty"`
+	DesiredUtilityVersions     map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
+	Annotations                []string                       `json:"annotations,omitempty"`
+	Networking                 string                         `json:"networking,omitempty"`
+	VPC                        string                         `json:"vpc,omitempty"`
+	MaxPodsPerNode             int64                          `json:"max-pods-per-node,omitempty"`
+	ClusterRoleARN             string                         `json:"cluster-role-arn,omitempty"`
+	NodeRoleARN                string                         `json:"node-role-arn,omitempty"`
+	Provisioner                string                         `json:"provisioner,omitempty"`
+	AdditionalNodeGroups       map[string]NodeGroupMetadata   `json:"additional-node-groups,omitempty"`
+	NodeGroupWithPublicSubnet  []string                       `json:"nodegroup-with-public-subnet,omitempty"`
+	NodeGroupWithSecurityGroup []string                       `json:"nodegroup-with-sg,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -107,6 +112,22 @@ func (request *CreateClusterRequest) SetDefaults() {
 		request.Networking = NetworkingCalico
 	}
 
+	if request.Provisioner == ProvisionerEKS {
+		for ng, meta := range request.AdditionalNodeGroups {
+			if len(meta.InstanceType) == 0 {
+				meta.InstanceType = "m5.large"
+			}
+			if meta.MinCount == 0 {
+				meta.MinCount = 2
+			}
+			if meta.MaxCount == 0 {
+				meta.MaxCount = meta.MinCount
+			}
+
+			request.AdditionalNodeGroups[ng] = meta
+		}
+	}
+
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
 	}
@@ -152,6 +173,40 @@ func (request *CreateClusterRequest) Validate() error {
 		if len(request.Zones) < 2 {
 			return errors.New("EKS cluster needs at least two zones")
 		}
+
+		if request.AdditionalNodeGroups != nil {
+			if _, f := request.AdditionalNodeGroups[NodeGroupWorker]; f {
+				return errors.New("additional node group name cannot be named worker")
+			}
+
+			for name, ng := range request.AdditionalNodeGroups {
+				if ng.MinCount < 1 {
+					return errors.Errorf("node min count (%d) must be 1 or greater for node group %s", ng.MinCount, name)
+				}
+				if ng.MaxCount != ng.MinCount {
+					return errors.Errorf("node min (%d) and max (%d) counts must match for node group %s", ng.MinCount, ng.MaxCount, name)
+				}
+			}
+		}
+
+		for _, ng := range request.NodeGroupWithPublicSubnet {
+			if ng == NodeGroupWorker {
+				continue
+			}
+			if _, f := request.AdditionalNodeGroups[ng]; !f {
+				return errors.Errorf("invalid nodegroup %s to use public subnets", ng)
+			}
+		}
+
+		for _, ng := range request.NodeGroupWithSecurityGroup {
+			if ng == NodeGroupWorker {
+				continue
+			}
+			if _, f := request.AdditionalNodeGroups[ng]; !f {
+				return errors.Errorf("invalid nodegroup %s to use security group", ng)
+			}
+		}
+
 	}
 
 	if !contains(GetSupportedCniList(), request.Networking) {
@@ -269,6 +324,7 @@ type PatchClusterSizeRequest struct {
 	NodeMinCount     *int64         `json:"node-min-count,omitempty"`
 	NodeMaxCount     *int64         `json:"node-max-count,omitempty"`
 	RotatorConfig    *RotatorConfig `json:"rotatorConfig,omitempty"`
+	NodeGroups       []string       `json:"nodeGroups,omitempty"`
 }
 
 // Validate validates the values of a PatchClusterSizeRequest.
@@ -324,4 +380,76 @@ func NewProvisionClusterRequestFromReader(reader io.Reader) (*ProvisionClusterRe
 	}
 
 	return &provisionClusterRequest, nil
+}
+
+type CreateNodegroupsRequest struct {
+	Nodegroups                 map[string]NodeGroupMetadata `json:"nodegroups"`
+	NodeGroupWithPublicSubnet  []string                     `json:"nodegroup-with-public-subnet,omitempty"`
+	NodeGroupWithSecurityGroup []string                     `json:"nodegroup-with-sg,omitempty"`
+}
+
+// SetDefaults sets default values for nodegroups.
+func (request *CreateNodegroupsRequest) SetDefaults() {
+	for ng, meta := range request.Nodegroups {
+		if len(meta.InstanceType) == 0 {
+			meta.InstanceType = "m5.large"
+		}
+		if meta.MinCount == 0 {
+			meta.MinCount = 2
+		}
+		if meta.MaxCount == 0 {
+			meta.MaxCount = meta.MinCount
+		}
+
+		request.Nodegroups[ng] = meta
+	}
+}
+
+// Validate validates the values of a nodegroup creation request.
+func (request *CreateNodegroupsRequest) Validate() error {
+	for ng, meta := range request.Nodegroups {
+		if meta.MinCount < 1 {
+			return errors.Errorf("nodegroup %s min count has to be 1 or greater", ng)
+		}
+		if meta.MaxCount < meta.MinCount {
+			return errors.Errorf("nodegroup %s max count (%d) can't be less than min count (%d)", ng, meta.MaxCount, meta.MinCount)
+		}
+	}
+
+	for _, ng := range request.NodeGroupWithPublicSubnet {
+		if ng == NodeGroupWorker {
+			continue
+		}
+		if _, f := request.Nodegroups[ng]; !f {
+			return errors.Errorf("invalid nodegroup %s to use public subnets", ng)
+		}
+	}
+
+	for _, ng := range request.NodeGroupWithSecurityGroup {
+		if ng == NodeGroupWorker {
+			continue
+		}
+		if _, f := request.Nodegroups[ng]; !f {
+			return errors.Errorf("invalid nodegroup %s to use security group", ng)
+		}
+	}
+
+	return nil
+}
+
+// NewCreateNodegroupsRequestFromReader will create an CreateNodegroupsRequest from an io.Reader with JSON data.
+func NewCreateNodegroupsRequestFromReader(reader io.Reader) (*CreateNodegroupsRequest, error) {
+	var createNodegroupsRequest CreateNodegroupsRequest
+	err := json.NewDecoder(reader).Decode(&createNodegroupsRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode create nodegroups request")
+	}
+
+	createNodegroupsRequest.SetDefaults()
+	err = createNodegroupsRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "create nodegroups request failed validation")
+	}
+
+	return &createNodegroupsRequest, nil
 }

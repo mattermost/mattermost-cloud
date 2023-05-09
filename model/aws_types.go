@@ -8,3 +8,11 @@ package model
 type Certificate struct {
 	ARN *string
 }
+
+type LaunchTemplateData struct {
+	Name           string
+	ClusterName    string
+	AMI            string
+	MaxPodsPerNode int64
+	SecurityGroups []string
+}

@@ -9,6 +9,7 @@ package pkg
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -18,6 +19,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+// installationWaitTimeout is the maximum time to wait for an installation to be ready.
+const installationWaitTimeout = 15 * time.Minute
 
 // WaitForInstallationAvailability pings installation until it responds successfully.
 func WaitForInstallationAvailability(dns string, log logrus.FieldLogger) error {
@@ -52,7 +56,7 @@ func WaitForHibernation(client *model.Client, installationID string, log logrus.
 
 // WaitForStable waits until Installation reaches Stable state.
 func WaitForStable(client *model.Client, installationID string, log logrus.FieldLogger) error {
-	err := WaitForFunc(NewWaitConfig(5*time.Minute, 10*time.Second, 2, log), func() (bool, error) {
+	err := WaitForFunc(NewWaitConfig(installationWaitTimeout, 10*time.Second, 2, log), func() (bool, error) {
 		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{})
 		if err != nil {
 			return false, errors.Wrap(err, "while waiting for stable")
@@ -69,7 +73,7 @@ func WaitForStable(client *model.Client, installationID string, log logrus.Field
 
 // WaitForInstallationToBeStable waits until installation reaches Stable state.
 func WaitForInstallationToBeStable(ctx context.Context, installationID string, whChan <-chan *model.WebhookPayload, log logrus.FieldLogger) error {
-	waitCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	waitCtx, cancel := context.WithTimeout(ctx, installationWaitTimeout)
 	defer cancel()
 
 	whWaiter := webhookWaiter{
@@ -123,6 +127,30 @@ func WaitForInstallationToBeDeleted(ctx context.Context, installationID string, 
 	}
 
 	return whWaiter.waitForState(waitCtx, installationID)
+}
+
+// WaitForClusterInstallationReadyStatus pings installation until it responds successfully.
+func WaitForClusterInstallationReadyStatus(client *model.Client, clusterInstallationID string, log logrus.FieldLogger) error {
+	err := WaitForFunc(NewWaitConfig(5*time.Minute, 20*time.Second, 0, log), func() (bool, error) {
+		status, err := client.GetClusterInstallationStatus(clusterInstallationID)
+		if err != nil {
+			return false, errors.Wrap(err, "while waiting for cluster installation to be ready")
+		}
+
+		if status.Replicas != nil && status.ReadyLocalServer != nil {
+			if *status.Replicas == *status.ReadyLocalServer {
+				return true, nil
+			}
+
+			log.Infof("Cluster installation %s not ready: %d/%d", clusterInstallationID, *status.ReadyLocalServer, *status.Replicas)
+			statusByte, _ := json.Marshal(status)
+			log.Debug(string(statusByte))
+		}
+
+		return false, nil
+	})
+
+	return err
 }
 
 // PingInstallation hits Mattermost ping endpoint.

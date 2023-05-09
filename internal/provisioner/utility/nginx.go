@@ -148,6 +148,15 @@ func (n *nginx) newHelmDeployment() (*helmDeployment, error) {
 		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
 	}
 
+	vpc, err := n.awsClient.GetClaimedVPC(n.cluster.ID, n.logger)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to perform VPC lookup for cluster %s", n.cluster.ID)
+	}
+
+	if vpc != "" {
+		setArguments = append(setArguments, fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-additional-resource-tags=VpcID=%s", vpc))
+	}
+
 	if n.provisioner == model.ProvisionerEKS {
 		// Calico networking cannot currently be installed on the EKS control plane nodes.
 		// As a result the control plane nodes will not be able to initiate network connections to Calico pods.

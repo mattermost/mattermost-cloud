@@ -38,8 +38,10 @@ type AWS interface {
 	GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error
+	GetClaimedVPC(clusterID string, logger log.FieldLogger) (string, error)
 	AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error
 	DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error
+	ClaimSecurityGroups(cluster *model.Cluster, ngNames string, vpcID string, logger log.FieldLogger) ([]string, error)
 
 	GetPrivateZoneDomainName(logger log.FieldLogger) (string, error)
 
@@ -67,22 +69,23 @@ type AWS interface {
 
 	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error)
 	EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Update, error)
-	EnsureEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error)
-	EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error
+	EnsureEKSNodeGroup(cluster *model.Cluster, nodeGroupPrefix string) (*eksTypes.Nodegroup, error)
+	EnsureEKSNodeGroupMigrated(cluster *model.Cluster, nodeGroupPrefix string) error
 	GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, error)
-	GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error)
-	EnsureEKSNodeGroupDeleted(clusterName, workerName string) error
+	GetActiveEKSNodeGroup(clusterName, nodeGroupName string) (*eksTypes.Nodegroup, error)
+	EnsureEKSNodeGroupDeleted(clusterName, nodeGroupName string) error
 	EnsureEKSClusterDeleted(clusterName string) error
 	InstallEKSAddons(cluster *model.Cluster) error
 	WaitForActiveEKSCluster(clusterName string, timeout int) (*eksTypes.Cluster, error)
-	WaitForActiveEKSNodeGroup(clusterName, workerName string, timeout int) (*eksTypes.Nodegroup, error)
-	WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error
+	WaitForActiveEKSNodeGroup(clusterName, nodeGroupName string, timeout int) (*eksTypes.Nodegroup, error)
+	WaitForEKSNodeGroupToBeDeleted(clusterName, nodeGroupName string, timeout int) error
 	WaitForEKSClusterToBeDeleted(clusterName string, timeout int) error
 	WaitForEKSClusterUpdateToBeCompleted(clusterName, updateID string, timeout int) error
 
-	EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
-	UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
-	EnsureLaunchTemplateDeleted(clusterName string) error
+	CreateLaunchTemplate(data *model.LaunchTemplateData) error
+	IsLaunchTemplateAvailable(launchTemplateName string) (bool, error)
+	UpdateLaunchTemplate(data *model.LaunchTemplateData) error
+	DeleteLaunchTemplate(launchTemplateName string) error
 
 	GetRegion() string
 	GetAccountID() (string, error)

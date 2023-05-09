@@ -32,6 +32,14 @@ const (
 	ClusterStateResizeRequested = "resize-requested"
 	// ClusterStateResizeFailed is a cluster that failed to resize.
 	ClusterStateResizeFailed = "resize-failed"
+	// ClusterStateNodegroupsCreationRequested is a cluster in the process of creating nodegroups.
+	ClusterStateNodegroupsCreationRequested = "nodegroups-creation-requested"
+	// ClusterStateNodegroupsCreationFailed is a cluster that failed to create nodegroups.
+	ClusterStateNodegroupsCreationFailed = "nodegroups-creation-failed"
+	// ClusterStateNodegroupsDeletionRequested is a cluster in the process of deleting nodegroups.
+	ClusterStateNodegroupsDeletionRequested = "nodegroups-deletion-requested"
+	// ClusterStateNodegroupsDeletionFailed is a cluster that failed to delete nodegroups.
+	ClusterStateNodegroupsDeletionFailed = "nodegroups-deletion-failed"
 	// ClusterStateDeletionRequested is a cluster in the process of being deleted.
 	ClusterStateDeletionRequested = "deletion-requested"
 	// ClusterStateDeletionFailed is a cluster that failed deletion.
@@ -53,6 +61,8 @@ var AllClusterStates = []string{
 	ClusterStateCreationFailed,
 	ClusterStateProvisioningRequested,
 	ClusterStateProvisioningFailed,
+	ClusterStateNodegroupsCreationRequested,
+	ClusterStateNodegroupsCreationFailed,
 	ClusterStateUpgradeRequested,
 	ClusterStateUpgradeFailed,
 	ClusterStateResizeRequested,
@@ -76,6 +86,8 @@ var AllClusterStatesPendingWork = []string{
 	ClusterStateRefreshMetadata,
 	ClusterStateUpgradeRequested,
 	ClusterStateResizeRequested,
+	ClusterStateNodegroupsCreationRequested,
+	ClusterStateNodegroupsDeletionRequested,
 	ClusterStateDeletionRequested,
 }
 
@@ -98,6 +110,7 @@ var AllClusterRequestStates = []string{
 	ClusterStateProvisioningRequested,
 	ClusterStateUpgradeRequested,
 	ClusterStateResizeRequested,
+	ClusterStateNodegroupsCreationRequested,
 	ClusterStateDeletionRequested,
 }
 
@@ -132,6 +145,16 @@ var (
 			ClusterStateStable,
 			ClusterStateResizeRequested,
 			ClusterStateResizeFailed,
+		},
+		ClusterStateNodegroupsCreationRequested: {
+			ClusterStateStable,
+			ClusterStateNodegroupsCreationRequested,
+			ClusterStateNodegroupsCreationFailed,
+		},
+		ClusterStateNodegroupsDeletionRequested: {
+			ClusterStateStable,
+			ClusterStateNodegroupsDeletionRequested,
+			ClusterStateNodegroupsDeletionFailed,
 		},
 		ClusterStateDeletionRequested: {
 			ClusterStateStable,
