@@ -193,7 +193,7 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 
 	// Notify even if we didn't make changes, to expedite even the no-op operations above.
 	unlockOnce()
-	c.Supervisor.Do()
+	_ = c.Supervisor.Do()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -249,7 +249,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	// Notify even if we didn't make changes, to expedite even the no-op operations above.
 	unlockOnce()
-	c.Supervisor.Do()
+	_ = c.Supervisor.Do()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -350,7 +350,7 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	_ = c.Supervisor.Do()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -423,7 +423,7 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	_ = c.Supervisor.Do()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -463,7 +463,7 @@ func handleCreateNodegroups(c *Context, w http.ResponseWriter, r *http.Request) 
 	if clusterDTO.Provisioner == model.ProvisionerEKS {
 		err = clusterDTO.ProvisionerMetadataEKS.ValidateNodegroupsCreateRequest(createNodegroupsRequest.Nodegroups)
 		if err != nil {
-			c.Logger.WithError(err).Error("failed to validate nodegroups create request")
+			c.Logger.WithError(err).Error("Failed to validate nodegroups creation request")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -524,7 +524,7 @@ func handleDeleteNodegroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	if clusterDTO.Provisioner == model.ProvisionerEKS {
 		err := clusterDTO.ProvisionerMetadataEKS.ValidateNodegroupDeleteRequest(nodegroup)
 		if err != nil {
-			c.Logger.WithError(err).Error("failed to validate nodegroup delete request")
+			c.Logger.WithError(err).Error("Failed to validate nodegroup deletion request")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -636,7 +636,7 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	_ = c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusAccepted)
 }

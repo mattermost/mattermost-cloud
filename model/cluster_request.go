@@ -409,10 +409,10 @@ func (request *CreateNodegroupsRequest) SetDefaults() {
 func (request *CreateNodegroupsRequest) Validate() error {
 	for ng, meta := range request.Nodegroups {
 		if meta.MinCount < 1 {
-			return errors.Errorf("nodegroup %s min count has to be 1 or greater", ng)
+			return errors.Errorf("minimum node count has to be 1 or greater for nodegroup %s", ng)
 		}
 		if meta.MaxCount < meta.MinCount {
-			return errors.Errorf("nodegroup %s max count (%d) can't be less than min count (%d)", ng, meta.MaxCount, meta.MinCount)
+			return errors.Errorf("maximum node count (%d) can't be less than minimum node count (%d) for nodegroup %s", meta.MaxCount, meta.MinCount, ng)
 		}
 	}
 
@@ -421,7 +421,7 @@ func (request *CreateNodegroupsRequest) Validate() error {
 			continue
 		}
 		if _, f := request.Nodegroups[ng]; !f {
-			return errors.Errorf("invalid nodegroup %s to use public subnets", ng)
+			return errors.Errorf("nodegroup %s not found to use public subnet", ng)
 		}
 	}
 
@@ -430,7 +430,7 @@ func (request *CreateNodegroupsRequest) Validate() error {
 			continue
 		}
 		if _, f := request.Nodegroups[ng]; !f {
-			return errors.Errorf("invalid nodegroup %s to use security group", ng)
+			return errors.Errorf("nodegroup %s not found to use security group", ng)
 		}
 	}
 

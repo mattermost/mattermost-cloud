@@ -188,7 +188,6 @@ func AddToCreateClusterRequest(sizes map[string]string, request *model.CreateClu
 		}
 
 		request.AdditionalNodeGroups[ng] = model.NodeGroupMetadata{
-			// These values are used in EKS configuration, but not in kops.
 			InstanceType: ngType,
 			MinCount:     minCount,
 			MaxCount:     maxCount,
