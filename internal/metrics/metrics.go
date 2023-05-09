@@ -36,11 +36,13 @@ type CloudMetrics struct {
 	ClusterInstallationDeletionDurationHist    *prometheus.HistogramVec
 
 	// Cluster
-	ClusterCreationDurationHist     *prometheus.HistogramVec
-	ClusterUpgradeDurationHist      *prometheus.HistogramVec
-	ClusterProvisioningDurationHist *prometheus.HistogramVec
-	ClusterResizeDurationHist       *prometheus.HistogramVec
-	ClusterDeletionDurationHist     *prometheus.HistogramVec
+	ClusterCreationDurationHist           *prometheus.HistogramVec
+	ClusterUpgradeDurationHist            *prometheus.HistogramVec
+	ClusterProvisioningDurationHist       *prometheus.HistogramVec
+	ClusterResizeDurationHist             *prometheus.HistogramVec
+	ClusterDeletionDurationHist           *prometheus.HistogramVec
+	ClusterNodegroupsCreationDurationHist *prometheus.HistogramVec
+	ClusterNodegroupsDeletionDurationHist *prometheus.HistogramVec
 }
 
 // New creates a new Prometheus-based Metrics object to be used
@@ -187,6 +189,26 @@ func New() *CloudMetrics {
 				Subsystem: provisionerSubsystemApp,
 				Name:      "cluster_deletion_duration_seconds",
 				Help:      "The duration of cluster deletion tasks",
+				Buckets:   standardDurationBuckets(),
+			},
+			[]string{},
+		),
+		ClusterNodegroupsCreationDurationHist: promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: provisionerNamespace,
+				Subsystem: provisionerSubsystemApp,
+				Name:      "cluster_nodegroups_creation_duration_seconds",
+				Help:      "The duration of cluster nodegroups creation tasks",
+				Buckets:   standardDurationBuckets(),
+			},
+			[]string{},
+		),
+		ClusterNodegroupsDeletionDurationHist: promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: provisionerNamespace,
+				Subsystem: provisionerSubsystemApp,
+				Name:      "cluster_nodegroups_deletion_duration_seconds",
+				Help:      "The duration of cluster nodegroups deletion tasks",
 				Buckets:   standardDurationBuckets(),
 			},
 			[]string{},

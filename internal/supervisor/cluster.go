@@ -390,6 +390,12 @@ func (s *ClusterSupervisor) processClusterMetrics(cluster *model.Cluster, logger
 	case model.ClusterStateDeletionRequested:
 		s.metrics.ClusterDeletionDurationHist.WithLabelValues().Observe(elapsedSeconds)
 		logger.Debugf("Cluster was deleted in %d seconds", int(elapsedSeconds))
+	case model.ClusterStateNodegroupsCreationRequested:
+		s.metrics.ClusterNodegroupsCreationDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		logger.Debugf("Cluster nodegroups were created in %d seconds", int(elapsedSeconds))
+	case model.ClusterStateNodegroupsDeletionRequested:
+		s.metrics.ClusterNodegroupsDeletionDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		logger.Debugf("Cluster nodegroups were deleted in %d seconds", int(elapsedSeconds))
 	default:
 		return errors.Errorf("failed to handle event %s with new state %s", event.Event.ID, event.StateChange.NewState)
 	}
