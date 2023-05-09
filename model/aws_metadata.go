@@ -13,7 +13,7 @@ type AWSMetadata struct {
 
 // NewAWSMetadata creates an instance of AWSMetadata given the raw provider metadata.
 func NewAWSMetadata(metadataBytes []byte) (*AWSMetadata, error) {
-	if metadataBytes == nil {
+	if metadataBytes == nil || string(metadataBytes) == "null" {
 		return nil, nil
 	}
 

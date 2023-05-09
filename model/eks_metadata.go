@@ -369,7 +369,7 @@ func NewEKSMetadata(metadataBytes []byte) (*EKSMetadata, error) {
 	// Check if length of metadata is 0 as opposed to if the value is nil. This
 	// is done to avoid an issue encountered where the metadata value provided
 	// had a length of 0, but had non-zero capacity.
-	if len(metadataBytes) == 0 {
+	if len(metadataBytes) == 0 || string(metadataBytes) == "null" {
 		return nil, nil
 	}
 
