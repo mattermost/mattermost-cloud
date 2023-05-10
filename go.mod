@@ -49,7 +49,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
 	github.com/vrischmann/envconfig v1.3.0
-	golang.org/x/tools v0.8.0
+	golang.org/x/tools v0.9.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.27.1
 	k8s.io/apiextensions-apiserver v0.27.1
