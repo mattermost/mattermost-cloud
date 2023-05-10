@@ -36,6 +36,10 @@ const (
 	ClusterStateNodegroupsCreationRequested = "nodegroups-creation-requested"
 	// ClusterStateNodegroupsCreationFailed is a cluster that failed to create nodegroups.
 	ClusterStateNodegroupsCreationFailed = "nodegroups-creation-failed"
+	// ClusterStateNodegroupsDeletionRequested is a cluster in the process of deleting nodegroups.
+	ClusterStateNodegroupsDeletionRequested = "nodegroups-deletion-requested"
+	// ClusterStateNodegroupsDeletionFailed is a cluster that failed to delete nodegroups.
+	ClusterStateNodegroupsDeletionFailed = "nodegroups-deletion-failed"
 	// ClusterStateDeletionRequested is a cluster in the process of being deleted.
 	ClusterStateDeletionRequested = "deletion-requested"
 	// ClusterStateDeletionFailed is a cluster that failed deletion.
@@ -83,6 +87,7 @@ var AllClusterStatesPendingWork = []string{
 	ClusterStateUpgradeRequested,
 	ClusterStateResizeRequested,
 	ClusterStateNodegroupsCreationRequested,
+	ClusterStateNodegroupsDeletionRequested,
 	ClusterStateDeletionRequested,
 }
 
@@ -145,6 +150,11 @@ var (
 			ClusterStateStable,
 			ClusterStateNodegroupsCreationRequested,
 			ClusterStateNodegroupsCreationFailed,
+		},
+		ClusterStateNodegroupsDeletionRequested: {
+			ClusterStateStable,
+			ClusterStateNodegroupsDeletionRequested,
+			ClusterStateNodegroupsDeletionFailed,
 		},
 		ClusterStateDeletionRequested: {
 			ClusterStateStable,

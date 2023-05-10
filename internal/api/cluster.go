@@ -34,6 +34,7 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("/annotations", addContext(handleAddClusterAnnotations)).Methods("POST")
 	clusterRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteClusterAnnotation)).Methods("DELETE")
 	clusterRouter.Handle("/nodegroups", addContext(handleCreateNodegroups)).Methods("POST")
+	clusterRouter.Handle("/nodegroup/{nodegroup}", addContext(handleDeleteNodegroup)).Methods("DELETE")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
 
@@ -496,6 +497,67 @@ func handleCreateNodegroups(c *Context, w http.ResponseWriter, r *http.Request) 
 	outputJSON(c, w, clusterDTO)
 }
 
+// handleDeleteNodegroup responds to DELETE /api/cluster/{cluster}/nodegroup/{nodegroup}, deleting
+// the requested nodegroup.
+func handleDeleteNodegroup(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	nodegroup := vars["nodegroup"]
+	c.Logger = c.Logger.WithField("cluster", clusterID)
+
+	newState := model.ClusterStateNodegroupsDeletionRequested
+
+	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
+	if status != 0 {
+		c.Logger.Debug("Cluster is not in a valid state for nodegroup deletion")
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if clusterDTO.Provisioner == model.ProvisionerKops {
+		c.Logger.Debug("Deleting nodegroup for Kops cluster is not supported")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if clusterDTO.Provisioner == model.ProvisionerEKS {
+		err := clusterDTO.ProvisionerMetadataEKS.ValidateNodegroupDeleteRequest(nodegroup)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to validate nodegroup delete request")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Set Nodegroup in change request
+		clusterDTO.ProvisionerMetadataEKS.ApplyNodegroupDeleteRequest(nodegroup)
+	}
+
+	oldState := clusterDTO.State
+
+	clusterDTO.State = newState
+	err := c.Store.UpdateCluster(clusterDTO.Cluster)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to update cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if oldState != newState {
+		err = c.EventProducer.ProduceClusterStateChangeEvent(clusterDTO.Cluster, oldState)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to create cluster state change event")
+		}
+	}
+
+	unlockOnce()
+	_ = c.Supervisor.Do()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, clusterDTO)
+}
+
 // handleDeleteCluster responds to DELETE /api/cluster/{cluster}, beginning the process of
 // deleting the cluster.
 func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -526,6 +588,34 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.Logger.Errorf("unable to delete cluster while it still has %d cluster installations", len(clusterInstallations))
 		w.WriteHeader(http.StatusForbidden)
 		return
+	}
+
+	installations, err := c.Store.GetInstallations(&model.InstallationFilter{
+		Paging: model.AllPagesNotDeleted(),
+		State:  model.InstallationStateDeletionInProgress,
+	}, false, false)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get installations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	for _, installation := range installations {
+		clusterInstallations, err := c.Store.GetClusterInstallations(&model.ClusterInstallationFilter{
+			InstallationID: installation.ID,
+			ClusterID:      clusterID,
+			Paging:         model.AllPagesWithDeleted(),
+		})
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to get cluster installations")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if len(clusterInstallations) != 0 {
+			c.Logger.Errorf("unable to delete cluster while it still has at least one installation")
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 	}
 
 	if clusterDTO.State != newState {

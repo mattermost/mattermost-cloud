@@ -20,6 +20,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// installationWaitTimeout is the maximum time to wait for an installation to be ready.
+const installationWaitTimeout = 15 * time.Minute
+
 // WaitForInstallationAvailability pings installation until it responds successfully.
 func WaitForInstallationAvailability(dns string, log logrus.FieldLogger) error {
 	err := WaitForFunc(NewWaitConfig(20*time.Minute, 20*time.Second, 2, log), func() (bool, error) {
@@ -53,7 +56,7 @@ func WaitForHibernation(client *model.Client, installationID string, log logrus.
 
 // WaitForStable waits until Installation reaches Stable state.
 func WaitForStable(client *model.Client, installationID string, log logrus.FieldLogger) error {
-	err := WaitForFunc(NewWaitConfig(5*time.Minute, 10*time.Second, 2, log), func() (bool, error) {
+	err := WaitForFunc(NewWaitConfig(installationWaitTimeout, 10*time.Second, 2, log), func() (bool, error) {
 		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{})
 		if err != nil {
 			return false, errors.Wrap(err, "while waiting for stable")
@@ -70,7 +73,7 @@ func WaitForStable(client *model.Client, installationID string, log logrus.Field
 
 // WaitForInstallationToBeStable waits until installation reaches Stable state.
 func WaitForInstallationToBeStable(ctx context.Context, installationID string, whChan <-chan *model.WebhookPayload, log logrus.FieldLogger) error {
-	waitCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	waitCtx, cancel := context.WithTimeout(ctx, installationWaitTimeout)
 	defer cancel()
 
 	whWaiter := webhookWaiter{
