@@ -31,7 +31,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gosuri/uilive v0.0.4
 	github.com/jmoiron/sqlx v1.3.5
-	github.com/lib/pq v1.10.8
+	github.com/lib/pq v1.10.9
 	github.com/mattermost/awat v0.2.0
 	github.com/mattermost/mattermost-operator v1.21.0-rc.0.0.20230510072817-fa12babf1e99
 	github.com/mattermost/rotator v0.2.0
