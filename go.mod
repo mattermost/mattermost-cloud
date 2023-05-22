@@ -20,7 +20,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.14.11
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.28.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.33.1
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.19.7
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.19.8
 	github.com/aws/aws-sdk-go-v2/service/sts v1.19.0
 	github.com/aws/smithy-go v1.13.5
 	github.com/blang/semver v3.5.1+incompatible
