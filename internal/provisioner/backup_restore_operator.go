@@ -162,7 +162,7 @@ func (o BackupOperator) startJob(jobsClient v1.JobInterface, job *batchv1.Job, l
 	}
 
 	// Wait for 5 seconds for job to start, if it won't it will be caught on next round.
-	err = wait.PollUntilContextTimeout(ctx, time.Second, 5*time.Second, true, func(_ context.Context) (bool, error) {
+	err = wait.Poll(time.Second, 5*time.Second, func() (bool, error) {
 		job, err = jobsClient.Get(ctx, jobName, metav1.GetOptions{})
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to get %q job", jobName)

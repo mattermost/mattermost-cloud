@@ -33,14 +33,14 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.9
 	github.com/mattermost/awat v0.2.0
-	github.com/mattermost/mattermost-operator v1.21.0-rc.0.0.20230510072817-fa12babf1e99
+	github.com/mattermost/mattermost-operator v1.21.0-rc.0.0.20230522113233-cf088d99b22d
 	github.com/mattermost/rotator v0.2.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.65.1
-	github.com/prometheus-operator/prometheus-operator/pkg/client v0.65.1
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.64.1
+	github.com/prometheus-operator/prometheus-operator/pkg/client v0.64.1
 	github.com/prometheus/client_golang v1.15.1
 	github.com/sirupsen/logrus v1.9.2
 	github.com/slok/sloth v0.11.0
@@ -51,11 +51,11 @@ require (
 	github.com/vrischmann/envconfig v1.3.0
 	golang.org/x/tools v0.9.1
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.27.2
-	k8s.io/apiextensions-apiserver v0.27.2
-	k8s.io/apimachinery v0.27.2
-	k8s.io/client-go v0.27.2
-	k8s.io/kube-aggregator v0.27.2
+	k8s.io/api v0.26.3
+	k8s.io/apiextensions-apiserver v0.26.3
+	k8s.io/apimachinery v0.26.3
+	k8s.io/client-go v0.26.3
+	k8s.io/kube-aggregator v0.26.3
 )
 
 require (
