@@ -461,7 +461,7 @@ func TestOperator_TriggerRestore(t *testing.T) {
 
 func setJobActiveWhenExists(t *testing.T, client v1.JobInterface, name string) {
 	ctx := context.Background()
-	err := wait.Poll(1*time.Second, 30*time.Second, func() (bool, error) {
+	err := wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
 		job, err := client.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
