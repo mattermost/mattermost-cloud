@@ -5,7 +5,6 @@
 package provisioner
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -21,7 +20,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -79,7 +77,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster) error {
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
-		return errors.New("error: EKS metadata not set when creating EKS cluster")
+		return errors.New("EKS Metadata not set when creating EKS cluster")
 	}
 
 	err := eksMetadata.ValidateChangeRequest()
@@ -161,34 +159,12 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster) (
 	}
 
 	eksMetadata.ClusterRoleARN = *eksCluster.RoleArn
-	eksMetadata.Networking = model.NetworkingCalico
 	eksMetadata.VPC = changeRequest.VPC
 	eksMetadata.Version = changeRequest.Version
 
 	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to store cluster")
-	}
-
-	// To install Calico Networking, We need to delete VPC CNI plugin (aws-node)
-	// and install Calico CNI plugin before creating any pods
-	k8sClient, err := provisioner.getKubeClient(cluster)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to initialize K8s client from kube config")
-	}
-
-	// Delete aws-node daemonset to disable VPC CNI plugin
-	_ = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(context.Background(), "aws-node", metav1.DeleteOptions{})
-
-	var files []k8s.ManifestFile
-	files = append(files, k8s.ManifestFile{
-		Path:            "manifests/eks/calico-eks.yaml",
-		DeployNamespace: "kube-system",
-	})
-
-	err = k8sClient.CreateFromFiles(files)
-	if err != nil {
-		return false, err
 	}
 
 	return true, nil
@@ -248,13 +224,13 @@ func (provisioner *EKSProvisioner) prepareLaunchTemplate(cluster *model.Cluster,
 	return nil
 }
 
-// CreateNodes creates the EKS nodes.
-func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster) error {
+// CreateNodegroups creates the EKS nodegroups.
+func (provisioner *EKSProvisioner) CreateNodegroups(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
-		return errors.New("error: EKS metadata not set when creating EKS NodeGroup")
+		return errors.New("EKS Metadata not set when creating EKS NodeGroup")
 	}
 
 	eksMetadata = provisioner.setMissingChangeRequest(eksMetadata)
@@ -300,8 +276,8 @@ func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster) error {
 	return nil
 }
 
-// CheckNodesCreated provisions EKS cluster.
-func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bool, error) {
+// CheckNodegroupsCreated checks if the EKS nodegroups are created.
+func (provisioner *EKSProvisioner) CheckNodegroupsCreated(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -349,16 +325,87 @@ func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bo
 		return false, errors.New("one of the EKS NodeGroups failed to become active")
 	}
 
+	err := provisioner.awsClient.InstallEKSAddons(cluster)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to install EKS EBS Addon")
+	}
+
 	eksMetadata.NodeRoleARN = changeRequest.NodeRoleARN
 	eksMetadata.AMI = changeRequest.AMI
 	eksMetadata.MaxPodsPerNode = changeRequest.MaxPodsPerNode
+	eksMetadata.Networking = model.NetworkingVpcCni
 
-	err := provisioner.clusterUpdateStore.UpdateCluster(cluster)
+	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to store cluster")
 	}
 
 	return true, nil
+}
+
+// DeleteNodegroups deletes the EKS nodegroup.
+func (provisioner *EKSProvisioner) DeleteNodegroups(cluster *model.Cluster) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	eksMetadata := cluster.ProvisionerMetadataEKS
+	if eksMetadata == nil {
+		return errors.New("EKS Metadata not set when deleting EKS NodeGroup")
+	}
+
+	changeRequest := eksMetadata.ChangeRequest
+	if changeRequest == nil || changeRequest.NodeGroups == nil {
+		return errors.New("nodegroup change request not set when deleting EKS NodeGroup")
+	}
+
+	nodeGroups := changeRequest.NodeGroups
+
+	var wg sync.WaitGroup
+	var errOccurred bool
+
+	for ng, meta := range nodeGroups {
+		wg.Add(1)
+		go func(ngPrefix string, ngMetadata model.NodeGroupMetadata) {
+			defer wg.Done()
+
+			err := provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, ngMetadata.Name)
+			if err != nil {
+				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ngMetadata.Name)
+				errOccurred = true
+				return
+			}
+
+			wait := 600
+			logger.Infof("Waiting up to %d seconds for NodeGroup %s to be deleted...", wait, ngMetadata.Name)
+			err = provisioner.awsClient.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, ngMetadata.Name, wait)
+			if err != nil {
+				logger.WithError(err).Errorf("failed to delete EKS NodeGroup %s", ngMetadata.Name)
+				errOccurred = true
+				return
+			}
+
+			launchTemplateName := fmt.Sprintf("%s-%s", eksMetadata.Name, ngPrefix)
+			err = provisioner.awsClient.DeleteLaunchTemplate(launchTemplateName)
+			if err != nil {
+				logger.WithError(err).Errorf("failed to delete EKS LaunchTemplate %s", launchTemplateName)
+				errOccurred = true
+				return
+			}
+
+			logger.Debugf("Successfully deleted EKS NodeGroup %s", ngMetadata.Name)
+		}(ng, meta)
+	}
+
+	wg.Wait()
+
+	if errOccurred {
+		return errors.New("failed to delete one of the nodegroups")
+	}
+
+	for ng := range nodeGroups {
+		delete(eksMetadata.NodeGroups, ng)
+	}
+
+	return nil
 }
 
 // ProvisionCluster provisions EKS cluster.
@@ -368,13 +415,6 @@ func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster) erro
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
 		return errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
-	}
-
-	// TODO: ideally we would do it as part of cluster creation as this
-	// also is async operation.
-	err := provisioner.awsClient.InstallEKSAddons(cluster)
-	if err != nil {
-		return errors.Wrap(err, "failed to install EKS EBS Addon")
 	}
 
 	kubeConfigPath, err := provisioner.getKubeConfigPath(cluster)

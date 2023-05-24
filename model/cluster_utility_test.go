@@ -5,6 +5,7 @@
 package model
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -271,4 +272,52 @@ func TestGetDesiredVersion(t *testing.T) {
 
 	version = c.DesiredUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, nilHuv, version)
+}
+
+func TestUnmarshallUtilityVersion(t *testing.T) {
+	version := "0.9.0"
+	t.Run("new format", func(t *testing.T) {
+		// new format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":{"chart":"` + version + `"}}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, version, versions.Nginx.Chart)
+	})
+
+	t.Run("old format", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":"` + version + `"}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, version, versions.Nginx.Chart)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":null}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, (*HelmUtilityVersion)(nil), versions.Nginx)
+	})
+
+	t.Run("empty object", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":{}}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.NoError(t, err)
+		require.Equal(t, &HelmUtilityVersion{}, versions.Nginx)
+	})
+
+	t.Run("malformed", func(t *testing.T) {
+		// old format
+		versions := &UtilityGroupVersions{}
+		str := `{"nginx":'}`
+		err := json.Unmarshal([]byte(str), versions)
+		assert.Error(t, err, "error unmarshalling HelmUtilityVersion")
+		require.Equal(t, (*HelmUtilityVersion)(nil), versions.Nginx)
+	})
 }

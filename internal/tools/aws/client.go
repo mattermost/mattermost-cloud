@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -39,6 +38,7 @@ type AWS interface {
 	GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error
+	GetClaimedVPC(clusterID string, logger log.FieldLogger) (string, error)
 	AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error
 	DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error
 	ClaimSecurityGroups(cluster *model.Cluster, ngNames string, vpcID string, logger log.FieldLogger) ([]string, error)
@@ -91,8 +91,6 @@ type AWS interface {
 	GetAccountID() (string, error)
 
 	GetLoadBalancerAPIByType(string) ELB
-
-	GetVpcsWithFilters(filters []ec2Types.Filter) ([]ec2Types.Vpc, error)
 }
 
 // Client is a client for interacting with AWS resources in a single AWS account.
