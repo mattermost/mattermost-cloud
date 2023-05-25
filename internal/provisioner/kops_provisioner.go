@@ -447,16 +447,22 @@ func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster) 
 	return true, nil
 }
 
-func (provisioner *KopsProvisioner) CreateNodes(cluster *model.Cluster) error {
+// CreateNodegroups is a noop for KopsProvisioner.
+func (provisioner *KopsProvisioner) CreateNodegroups(cluster *model.Cluster) error {
 	return nil
 }
 
-// CheckNodesCreated is a noop for KopsProvisioner.
-func (provisioner *KopsProvisioner) CheckNodesCreated(cluster *model.Cluster) (bool, error) {
+// CheckNodegroupsCreated is a noop for KopsProvisioner.
+func (provisioner *KopsProvisioner) CheckNodegroupsCreated(cluster *model.Cluster) (bool, error) {
 	// TODO: this is currently not implemented for kops.
 	// Entire waiting logic happens as part of cluster creation therefore we
 	// just skip this step and report cluster as created.
 	return true, nil
+}
+
+// DeleteNodegroups is a noop for KopsProvisioner.
+func (provisioner *KopsProvisioner) DeleteNodegroups(cluster *model.Cluster) error {
+	return nil
 }
 
 // ProvisionCluster installs all the baseline kubernetes resources needed for

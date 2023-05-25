@@ -41,7 +41,7 @@ func (c *Client) getZoneName(zoneNameList []string, customerDNSName string) (zon
 func (c *Client) getRecordIDs(zoneID, customerDNSName string, logger logrus.FieldLogger) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
-	dnsRecords, err := c.cfClient.DNSRecords(ctx, zoneID, cf.DNSRecord{Name: customerDNSName})
+	dnsRecords, _, err := c.cfClient.ListDNSRecords(ctx, cf.ZoneIdentifier(zoneID), cf.ListDNSRecordsParams{Name: customerDNSName})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get DNS Record ID from Cloudflare")
 	}
@@ -120,7 +120,7 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
-	existingRecords, err := c.cfClient.DNSRecords(ctx, zoneID, cf.DNSRecord{
+	existingRecords, _, err := c.cfClient.ListDNSRecords(ctx, cf.ZoneIdentifier(zoneID), cf.ListDNSRecordsParams{
 		Name: dnsName,
 		Type: "CNAME",
 	})
@@ -131,8 +131,8 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 	if len(existingRecords) == 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 		defer cancel()
-		var recordResp *cf.DNSRecordResponse
-		recordResp, err = c.cfClient.CreateDNSRecord(ctx, zoneID, record)
+		var recordResp cf.DNSRecord
+		recordResp, err = c.cfClient.CreateDNSRecord(ctx, cf.ZoneIdentifier(zoneID), cf.CreateDNSRecordParams(record))
 		if err != nil {
 			return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
 		}
@@ -168,7 +168,16 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 func (c *Client) updateDNSRecord(zoneID string, id string, record cf.DNSRecord, logger logrus.FieldLogger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
-	err := c.cfClient.UpdateDNSRecord(ctx, zoneID, id, record)
+	_, err := c.cfClient.UpdateDNSRecord(ctx, cf.ZoneIdentifier(zoneID), cf.UpdateDNSRecordParams{
+		ID:      id,
+		Type:    record.Type,
+		Name:    record.Name,
+		Content: record.Content,
+		TTL:     record.TTL,
+		Proxied: record.Proxied,
+		Comment: record.Comment,
+		Tags:    record.Tags,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to update record")
 	}
@@ -206,7 +215,7 @@ func (c *Client) DeleteDNSRecords(dnsNames []string, logger logrus.FieldLogger) 
 			ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 			defer cancel()
 
-			err = c.cfClient.DeleteDNSRecord(ctx, zoneID, recID)
+			err = c.cfClient.DeleteDNSRecord(ctx, cf.ZoneIdentifier(zoneID), recID)
 			if err != nil {
 				return errors.Wrap(err, "Failed to delete DNS Record at Cloudflare")
 			}

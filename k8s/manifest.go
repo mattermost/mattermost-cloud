@@ -31,8 +31,8 @@ import (
 	apixv1beta1scheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/kube-aggregator/pkg/apis/apiregistration/install"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
-	aggregatorscheme "k8s.io/kube-aggregator/pkg/apiserver/scheme"
 )
 
 // ManifestFile is a file containing kubernetes resources.
@@ -70,9 +70,9 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile, installationName string)
 		return err
 	}
 
+	install.Install(scheme.Scheme)
 	apixv1beta1scheme.AddToScheme(scheme.Scheme)
 	mattermostscheme.AddToScheme(scheme.Scheme)
-	aggregatorscheme.AddToScheme(scheme.Scheme)
 	monitoringscheme.AddToScheme(scheme.Scheme)
 
 	logger := kc.logger.WithFields(log.Fields{
