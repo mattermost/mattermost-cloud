@@ -19,12 +19,12 @@ func TestNewHelmDeploymentWithDefaultConfigurationNodeProblemDetector(t *testing
 	defer ctrl.Finish()
 
 	logger := log.New()
-	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.3.2"}, &model.Cluster{
+	nodeProblemDetector := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.3.2"}, &model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
 	}, "kubeconfig", logger)
-	require.NoError(t, err, "should not error when creating new node-problem-detector handler")
+	require.NoError(t, nodeProblemDetector.validate(), "should not error when creating new node-problem-detector handler")
 	require.NotNil(t, nodeProblemDetector, "node-problem-detector should not be nil")
 
 	helmDeployment := nodeProblemDetector.newHelmDeployment(logger)

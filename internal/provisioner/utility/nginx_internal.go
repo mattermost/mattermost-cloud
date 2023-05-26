@@ -30,21 +30,23 @@ type nginxInternal struct {
 	provisioner    string
 }
 
-func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginxInternal, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate NGINX INTERNAL handle with nil logger")
+func newNginxInternalOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.NginxInternalCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.NginxInternalCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.NginxInternalCanonicalName, logger), nil
+	}
+	nginxInternal := newNginxInternalHandle(desired, cluster, kubeconfigPath, awsClient, logger)
+	err := nginxInternal.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "nginx internal utility config is invalid")
 	}
 
-	if cluster == nil {
-		return nil, errors.New("cannot create a connection to Nginx internal if the cluster provided is nil")
-	}
-	if awsClient == nil {
-		return nil, errors.New("cannot create a connection to Nginx internal if the awsClient provided is nil")
-	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
-	}
+	return nginxInternal, nil
+}
 
+func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) *nginxInternal {
 	return &nginxInternal{
 		awsClient:      awsClient,
 		kubeconfigPath: kubeconfigPath,
@@ -53,7 +55,18 @@ func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cl
 		desiredVersion: version,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.NginxInternal,
 		provisioner:    cluster.Provisioner,
-	}, nil
+	}
+}
+
+func (n *nginxInternal) validate() error {
+	if n.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+	if n.awsClient == nil {
+		return errors.New("awsClient cannot be nil")
+	}
+
+	return nil
 }
 
 func (n *nginxInternal) updateVersion(h *helmDeployment) error {

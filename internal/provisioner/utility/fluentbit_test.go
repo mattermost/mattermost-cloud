@@ -20,12 +20,12 @@ func TestNewHelmDeploymentWithDefaultConfiguration(t *testing.T) {
 
 	logger := log.New()
 	awsClient := mocks.NewMockAWS(ctrl)
-	fluentbit, err := newFluentbitHandle(&model.Cluster{
+	fluentbit := newFluentbitHandle(&model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
 	}, &model.HelmUtilityVersion{Chart: "1.2.3"}, "kubeconfig", awsClient, logger)
-	require.NoError(t, err, "should not error when creating new fluentbit handler")
+	require.NoError(t, fluentbit.validate(), "should not error when creating new fluentbit handler")
 	require.NotNil(t, fluentbit, "fluentbit should not be nil")
 
 	helmDeployment := fluentbit.newHelmDeployment()

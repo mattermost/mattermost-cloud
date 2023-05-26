@@ -5,7 +5,6 @@
 package utility
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -21,92 +20,108 @@ type cloudprober struct {
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func newCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*cloudprober, error) {
-	if logger == nil {
-		return nil, fmt.Errorf("cannot instantiate Cloudprober handle with nil logger")
+func newCloudproberOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.CloudproberCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.CloudproberCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.CloudproberCanonicalName, logger), nil
+	}
+	cloudprober := newCloudproberHandle(desired, cluster, kubeconfigPath, logger)
+	err := cloudprober.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "cloudprober utility config is invalid")
 	}
 
-	if cluster == nil {
-		return nil, errors.New("cannot create a connection to Cloudprober if the cluster provided is nil")
-	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
-	}
+	return cloudprober, nil
+}
 
+func newCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) *cloudprober {
 	return &cloudprober{
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.CloudproberCanonicalName),
 		kubeconfigPath: kubeconfigPath,
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Cloudprober,
-	}, nil
+	}
 }
 
-func (f *cloudprober) CreateOrUpgrade() error {
-	logger := f.logger.WithField("cloudprober-action", "upgrade")
-	h := f.newHelmDeployment(logger)
+func (c *cloudprober) validate() error {
+	if c.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+	if c.cluster == nil {
+		return errors.New("cluster cannot be nil")
+	}
+
+	return nil
+}
+
+func (c *cloudprober) CreateOrUpgrade() error {
+	logger := c.logger.WithField("cloudprober-action", "upgrade")
+	h := c.newHelmDeployment(logger)
 
 	err := h.Update()
 	if err != nil {
 		return err
 	}
 
-	err = f.updateVersion(h)
+	err = c.updateVersion(h)
 	return err
 }
 
-func (f *cloudprober) Name() string {
+func (c *cloudprober) Name() string {
 	return model.CloudproberCanonicalName
 }
 
-func (f *cloudprober) Destroy() error {
-	helm := f.newHelmDeployment(f.logger)
+func (c *cloudprober) Destroy() error {
+	helm := c.newHelmDeployment(c.logger)
 	return helm.Delete()
 }
 
-func (f *cloudprober) Migrate() error {
+func (c *cloudprober) Migrate() error {
 	return nil
 }
 
-func (f *cloudprober) DesiredVersion() *model.HelmUtilityVersion {
-	return f.desiredVersion
+func (c *cloudprober) DesiredVersion() *model.HelmUtilityVersion {
+	return c.desiredVersion
 }
 
-func (f *cloudprober) ActualVersion() *model.HelmUtilityVersion {
-	if f.actualVersion == nil {
+func (c *cloudprober) ActualVersion() *model.HelmUtilityVersion {
+	if c.actualVersion == nil {
 		return nil
 	}
 	return &model.HelmUtilityVersion{
-		Chart:      strings.TrimPrefix(f.actualVersion.Version(), "cloudprober-"),
-		ValuesPath: f.actualVersion.Values(),
+		Chart:      strings.TrimPrefix(c.actualVersion.Version(), "cloudprober-"),
+		ValuesPath: c.actualVersion.Values(),
 	}
 }
 
-func (f *cloudprober) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
+func (c *cloudprober) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	return newHelmDeployment(
 		"chartmuseum/cloudprober",
 		"cloudprober",
 		"cloudprober",
-		f.kubeconfigPath,
-		f.desiredVersion,
+		c.kubeconfigPath,
+		c.desiredVersion,
 		defaultHelmDeploymentSetArgument,
 		logger,
 	)
 }
 
-func (f *cloudprober) ValuesPath() string {
-	if f.desiredVersion == nil {
+func (c *cloudprober) ValuesPath() string {
+	if c.desiredVersion == nil {
 		return ""
 	}
-	return f.desiredVersion.Values()
+	return c.desiredVersion.Values()
 }
 
-func (f *cloudprober) updateVersion(h *helmDeployment) error {
+func (c *cloudprober) updateVersion(h *helmDeployment) error {
 	actualVersion, err := h.Version()
 	if err != nil {
 		return err
 	}
 
-	f.actualVersion = actualVersion
+	c.actualVersion = actualVersion
 	return nil
 }
