@@ -21,22 +21,41 @@ type fluentbit struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*fluentbit, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate Fluentbit handle with nil logger")
+func newFluentbitOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.FluentbitCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.FluentbitCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.FluentbitCanonicalName, logger), nil
+	}
+	fluentbit := newFluentbitHandle(cluster, desired, kubeconfigPath, awsClient, logger)
+	err := fluentbit.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "fluentbit utility config is invalid")
 	}
 
-	if awsClient == nil {
-		return nil, errors.New("cannot create a connection to Fluentbit if the awsClient provided is nil")
-	}
+	return fluentbit, nil
+}
 
+func newFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) *fluentbit {
 	return &fluentbit{
 		awsClient:      awsClient,
 		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.FluentbitCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Fluentbit,
-	}, nil
+	}
+}
+
+func (f *fluentbit) validate() error {
+	if f.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+	if f.awsClient == nil {
+		return errors.New("awsClient cannot be nil")
+	}
+
+	return nil
 }
 
 func (f *fluentbit) Destroy() error {

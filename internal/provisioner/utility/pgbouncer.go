@@ -28,14 +28,23 @@ type pgbouncer struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*pgbouncer, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate Pgbouncer handle with nil logger")
+func newPgbouncerOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.PgbouncerCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.PgbouncerCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.PgbouncerCanonicalName, logger), nil
 	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
+	pgbouncer := newPgbouncerHandle(cluster, desired, kubeconfigPath, awsClient, logger)
+	err := pgbouncer.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "pgbouncer utility config is invalid")
 	}
 
+	return pgbouncer, nil
+}
+
+func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) *pgbouncer {
 	return &pgbouncer{
 		awsClient:      awsClient,
 		environment:    awsClient.GetCloudEnvironmentName(),
@@ -44,8 +53,15 @@ func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilit
 		logger:         logger.WithField("cluster-utility", model.PgbouncerCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Pgbouncer,
-	}, nil
+	}
+}
 
+func (p *pgbouncer) validate() error {
+	if p.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+
+	return nil
 }
 
 func (p *pgbouncer) updateVersion(h *helmDeployment) error {

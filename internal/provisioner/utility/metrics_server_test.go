@@ -19,12 +19,12 @@ func TestNewHelmDeploymentWithDefaultConfigurationMetricsServer(t *testing.T) {
 	defer ctrl.Finish()
 
 	logger := log.New()
-	metricsServer, err := newMetricsServerHandle(&model.HelmUtilityVersion{Chart: "3.8.3"}, &model.Cluster{
+	metricsServer := newMetricsServerHandle(&model.HelmUtilityVersion{Chart: "3.8.3"}, &model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
 	}, "kubeconfig", logger)
-	require.NoError(t, err, "should not error when creating new metrics server handler")
+	require.NoError(t, metricsServer.validate(), "should not error when creating new metrics server handler")
 	require.NotNil(t, metricsServer, "metrics server should not be nil")
 
 	helmDeployment := metricsServer.newHelmDeployment(logger)

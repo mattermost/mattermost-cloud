@@ -19,87 +19,104 @@ type nodeProblemDetector struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*nodeProblemDetector, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate NodeProblemDetector handle with nil logger")
+func newNodeProblemDetectorOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.NodeProblemDetectorCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.NodeProblemDetectorCanonicalName, logger), nil
 	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
+	nodeProblemDetector := newNodeProblemDetectorHandle(desired, cluster, kubeconfigPath, logger)
+	err := nodeProblemDetector.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "node problem detector utility config is invalid")
 	}
 
+	return nodeProblemDetector, nil
+}
+
+func newNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) *nodeProblemDetector {
 	return &nodeProblemDetector{
 		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.NodeProblemDetectorCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.NodeProblemDetector,
-	}, nil
+	}
 }
 
-func (f *nodeProblemDetector) Destroy() error {
-	helm := f.newHelmDeployment(f.logger)
-	return helm.Delete()
-}
+func (n *nodeProblemDetector) validate() error {
+	if n.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
 
-func (f *nodeProblemDetector) Migrate() error {
 	return nil
 }
 
-func (f *nodeProblemDetector) CreateOrUpgrade() error {
-	logger := f.logger.WithField("node-problem-detector-action", "upgrade")
-	h := f.newHelmDeployment(logger)
+func (n *nodeProblemDetector) Destroy() error {
+	helm := n.newHelmDeployment(n.logger)
+	return helm.Delete()
+}
+
+func (n *nodeProblemDetector) Migrate() error {
+	return nil
+}
+
+func (n *nodeProblemDetector) CreateOrUpgrade() error {
+	logger := n.logger.WithField("node-problem-detector-action", "upgrade")
+	h := n.newHelmDeployment(logger)
 
 	err := h.Update()
 	if err != nil {
 		return err
 	}
 
-	err = f.updateVersion(h)
+	err = n.updateVersion(h)
 	return err
 }
 
-func (f *nodeProblemDetector) DesiredVersion() *model.HelmUtilityVersion {
-	return f.desiredVersion
+func (n *nodeProblemDetector) DesiredVersion() *model.HelmUtilityVersion {
+	return n.desiredVersion
 }
 
-func (f *nodeProblemDetector) ActualVersion() *model.HelmUtilityVersion {
-	if f.actualVersion == nil {
+func (n *nodeProblemDetector) ActualVersion() *model.HelmUtilityVersion {
+	if n.actualVersion == nil {
 		return nil
 	}
 	return &model.HelmUtilityVersion{
-		Chart:      strings.TrimPrefix(f.actualVersion.Version(), "node-problem-detector-"),
-		ValuesPath: f.actualVersion.Values(),
+		Chart:      strings.TrimPrefix(n.actualVersion.Version(), "node-problem-detector-"),
+		ValuesPath: n.actualVersion.Values(),
 	}
 }
 
-func (f *nodeProblemDetector) Name() string {
+func (n *nodeProblemDetector) Name() string {
 	return model.NodeProblemDetectorCanonicalName
 }
 
-func (f *nodeProblemDetector) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
+func (n *nodeProblemDetector) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	return newHelmDeployment(
 		"deliveryhero/node-problem-detector",
 		"node-problem-detector",
 		"node-problem-detector",
-		f.kubeconfigPath,
-		f.desiredVersion,
+		n.kubeconfigPath,
+		n.desiredVersion,
 		defaultHelmDeploymentSetArgument,
 		logger,
 	)
 }
 
-func (f *nodeProblemDetector) ValuesPath() string {
-	if f.desiredVersion == nil {
+func (n *nodeProblemDetector) ValuesPath() string {
+	if n.desiredVersion == nil {
 		return ""
 	}
-	return f.desiredVersion.Values()
+	return n.desiredVersion.Values()
 }
 
-func (f *nodeProblemDetector) updateVersion(h *helmDeployment) error {
+func (n *nodeProblemDetector) updateVersion(h *helmDeployment) error {
 	actualVersion, err := h.Version()
 	if err != nil {
 		return err
 	}
 
-	f.actualVersion = actualVersion
+	n.actualVersion = actualVersion
 	return nil
 }

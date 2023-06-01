@@ -28,30 +28,43 @@ type nginx struct {
 	provisioner    string
 }
 
-func newNginxHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginx, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate NGINX handle with nil logger")
+func newNginxOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.NginxCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.NginxCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.NginxCanonicalName, logger), nil
 	}
-	if cluster == nil {
-		return nil, errors.New("cannot create a connection to Nginx if the cluster provided is nil")
-	}
-	if awsClient == nil {
-		return nil, errors.New("cannot create a connection to Nginx if the awsClient provided is nil")
-	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
+	nginx := newNginxHandle(desired, cluster, kubeconfigPath, awsClient, logger)
+	err := nginx.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "nginx utility config is invalid")
 	}
 
+	return nginx, nil
+}
+
+func newNginxHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) *nginx {
 	return &nginx{
 		awsClient:      awsClient,
 		kubeconfigPath: kubeconfigPath,
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.NginxCanonicalName),
-		desiredVersion: version,
+		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Nginx,
 		provisioner:    cluster.Provisioner,
-	}, nil
+	}
+}
 
+func (n *nginx) validate() error {
+	if n.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+	if n.awsClient == nil {
+		return errors.New("awsClient cannot be nil")
+	}
+
+	return nil
 }
 
 func (n *nginx) updateVersion(h *helmDeployment) error {

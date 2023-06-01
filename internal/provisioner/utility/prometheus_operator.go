@@ -31,33 +31,43 @@ type prometheusOperator struct {
 	actualVersion      *model.HelmUtilityVersion
 }
 
-func newPrometheusOperatorHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*prometheusOperator, error) {
-	if logger == nil {
-		return nil, fmt.Errorf("cannot instantiate Prometheus Operator handle with nil logger")
+func newPrometheusOperatorOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.PrometheusOperatorCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.PrometheusOperatorCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.PrometheusOperatorCanonicalName, logger), nil
+	}
+	prometheusOperator := newPrometheusOperatorHandle(cluster, desired, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
+	err := prometheusOperator.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "prometheus operator utility config is invalid")
 	}
 
-	if cluster == nil {
-		return nil, errors.New("cannot create a connection to Prometheus Operator if the cluster provided is nil")
-	}
+	return prometheusOperator, nil
+}
 
-	if awsClient == nil {
-		return nil, errors.New("cannot create a connection to Prometheus Operator if the awsClient provided is nil")
-	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
-	}
-
-	chartVersion := cluster.DesiredUtilityVersion(model.PrometheusOperatorCanonicalName)
-
+func newPrometheusOperatorHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) *prometheusOperator {
 	return &prometheusOperator{
 		awsClient:          awsClient,
 		cluster:            cluster,
 		allowCIDRRangeList: allowCIDRRangeList,
 		kubeconfigPath:     kubeconfigPath,
 		logger:             logger.WithField("cluster-utility", model.PrometheusOperatorCanonicalName),
-		desiredVersion:     chartVersion,
+		desiredVersion:     desiredVersion,
 		actualVersion:      cluster.UtilityMetadata.ActualVersions.PrometheusOperator,
-	}, nil
+	}
+}
+
+func (p *prometheusOperator) validate() error {
+	if p.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+	if p.awsClient == nil {
+		return errors.New("awsClient cannot be nil")
+	}
+
+	return nil
 }
 
 func (p *prometheusOperator) CreateOrUpgrade() error {

@@ -321,3 +321,33 @@ func TestUnmarshallUtilityVersion(t *testing.T) {
 		require.Equal(t, (*HelmUtilityVersion)(nil), versions.Nginx)
 	})
 }
+
+func TestUtilityIsUnmanaged(t *testing.T) {
+	tests := []struct {
+		name      string
+		desired   *HelmUtilityVersion
+		actual    *HelmUtilityVersion
+		unmanaged bool
+	}{
+		{"nil, nil", nil, nil, false},
+		{"nil, not unmanaged", nil, &HelmUtilityVersion{Chart: "v1"}, false},
+		{"nil, unmanaged", nil, &HelmUtilityVersion{Chart: UnmanagedUtilityVersion}, true},
+		{"unmanaged, nil", &HelmUtilityVersion{Chart: UnmanagedUtilityVersion}, nil, true},
+		{"unmanaged, unmanaged",
+			&HelmUtilityVersion{Chart: UnmanagedUtilityVersion},
+			&HelmUtilityVersion{Chart: UnmanagedUtilityVersion},
+			true,
+		},
+		{"v1.0.0, unmanaged",
+			&HelmUtilityVersion{Chart: "v1.0.0"},
+			&HelmUtilityVersion{Chart: UnmanagedUtilityVersion},
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.unmanaged, UtilityIsUnmanaged(test.desired, test.actual))
+		})
+	}
+}
