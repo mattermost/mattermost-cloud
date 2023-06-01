@@ -201,7 +201,7 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 
 	for _, utility := range group.utilities {
 		if utility.DesiredVersion().IsEmpty() {
-			logger.Infof("Skipping reprovision of utility %q", utility.Name())
+			logger.WithField("utility", utility.Name()).Info("Skipping reprovision")
 		} else {
 			err := utility.CreateOrUpgrade()
 			if err != nil {
