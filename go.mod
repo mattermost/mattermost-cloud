@@ -34,7 +34,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mattermost/awat v0.2.0
 	github.com/mattermost/mattermost-operator v1.21.0-rc.1
-	github.com/mattermost/rotator v0.2.1-0.20230525162758-11c480370eec
+	github.com/mattermost/rotator v0.2.1-0.20230602082239-661a3981f623
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
@@ -66,7 +66,7 @@ replace (
 
 require (
 	emperror.dev/errors v0.8.0 // indirect
-	github.com/aws/aws-sdk-go v1.44.269 // indirect
+	github.com/aws/aws-sdk-go v1.44.274 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.24 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.3 // indirect
@@ -103,7 +103,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/imdario/mergo v0.3.15 // indirect
+	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
