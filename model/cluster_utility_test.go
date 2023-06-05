@@ -351,3 +351,25 @@ func TestUtilityIsUnmanaged(t *testing.T) {
 		})
 	}
 }
+
+func TestUtilityIsEmpty(t *testing.T) {
+	tests := []struct {
+		name  string
+		helm  *HelmUtilityVersion
+		empty bool
+	}{
+		{"nil", nil, true},
+		{"chart unmanaged, values empty", &HelmUtilityVersion{Chart: UnmanagedUtilityVersion}, false},
+		{"chart unmanaged, values not empty", &HelmUtilityVersion{Chart: UnmanagedUtilityVersion, ValuesPath: "test"}, false},
+		{"chart empty, values empty", &HelmUtilityVersion{}, true},
+		{"chart not empty, values empty", &HelmUtilityVersion{Chart: "test"}, true},
+		{"chart empty, values not empty", &HelmUtilityVersion{ValuesPath: "test"}, true},
+		{"chart not empty, values not empty", &HelmUtilityVersion{Chart: "test", ValuesPath: "test"}, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.empty, test.helm.IsEmpty())
+		})
+	}
+}

@@ -341,13 +341,15 @@ func (u *HelmUtilityVersion) Values() string {
 // values inside are undefined. If HelmUtilityVersion is "unmanaged" then false
 // is returned instead.
 func (u *HelmUtilityVersion) IsEmpty() bool {
+	if u == nil {
+		return true
+	}
+
 	if u.Chart == UnmanagedUtilityVersion {
 		return false
 	}
 
-	return u == nil ||
-		u.ValuesPath == "" ||
-		u.Chart == ""
+	return u.ValuesPath == "" || u.Chart == ""
 }
 
 // UtilityIsUnmanaged returns true if the desired version of a utility is set to
