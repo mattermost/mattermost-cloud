@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package cloudflare
 
 import (
@@ -9,10 +13,10 @@ import (
 // MockCloudflare mocks the Cloudflarer  interface
 type MockCloudflare struct {
 	mockGetZoneID       func(zoneName string) (zoneID string, err error)
-	mockCreateDNSRecord func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
-	mockDeleteDNSRecord func(ctx context.Context, zoneID, recordID string) error
-	mockUpdateDNSRecord func(ctx context.Context, zoneID, recordID string, rr cf.DNSRecord) error
-	mockDNSRecords      func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
+	mockCreateDNSRecord func(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error)
+	mockDeleteDNSRecord func(ctx context.Context, rc *cf.ResourceContainer, recordID string) error
+	mockUpdateDNSRecord func(ctx context.Context, rc *cf.ResourceContainer, params cf.UpdateDNSRecordParams) (cf.DNSRecord, error)
+	mockListDNSRecords  func(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error)
 }
 
 // MockAWSClient mocks the AWS client interface
@@ -31,21 +35,21 @@ func (c *MockCloudflare) ZoneIDByName(zoneName string) (string, error) {
 }
 
 // DNSRecords mocks cloudflare package same method
-func (c *MockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-	return c.mockDNSRecords(ctx, zoneID, rr)
+func (c *MockCloudflare) ListDNSRecords(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error) {
+	return c.mockListDNSRecords(ctx, rc, params)
 }
 
 // CreateDNSRecord mocks cloudflare package same method
-func (c *MockCloudflare) CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-	return c.mockCreateDNSRecord(ctx, zoneID, rr)
+func (c *MockCloudflare) CreateDNSRecord(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error) {
+	return c.mockCreateDNSRecord(ctx, rc, params)
 }
 
 // UpdateDNSRecord mocks cloudflare package same method
-func (c *MockCloudflare) UpdateDNSRecord(ctx context.Context, zoneID, recordID string, rr cf.DNSRecord) error {
-	return c.mockUpdateDNSRecord(ctx, zoneID, recordID, rr)
+func (c *MockCloudflare) UpdateDNSRecord(ctx context.Context, rc *cf.ResourceContainer, params cf.UpdateDNSRecordParams) (cf.DNSRecord, error) {
+	return c.mockUpdateDNSRecord(ctx, rc, params)
 }
 
 // DeleteDNSRecord mocks cloudflare package same method
-func (c *MockCloudflare) DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error {
-	return c.mockDeleteDNSRecord(ctx, zoneID, recordID)
+func (c *MockCloudflare) DeleteDNSRecord(ctx context.Context, rc *cf.ResourceContainer, recordID string) error {
+	return c.mockDeleteDNSRecord(ctx, rc, recordID)
 }

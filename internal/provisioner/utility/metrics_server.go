@@ -20,21 +20,38 @@ type metricsServer struct {
 	provisioner    string
 }
 
-func newMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*metricsServer, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate MetricsServer handle with nil logger")
+func newMetricsServerOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.MetricsServerCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.MetricsServerCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.MetricsServerCanonicalName, logger), nil
 	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
+	metricsServer := newMetricsServerHandle(desired, cluster, kubeconfigPath, logger)
+	err := metricsServer.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "metrics server utility config is invalid")
 	}
 
+	return metricsServer, nil
+}
+
+func newMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) *metricsServer {
 	return &metricsServer{
 		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.MetricsServerCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.MetricsServer,
 		provisioner:    cluster.Provisioner,
-	}, nil
+	}
+}
+
+func (m *metricsServer) validate() error {
+	if m.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+
+	return nil
 }
 
 func (m *metricsServer) Destroy() error {

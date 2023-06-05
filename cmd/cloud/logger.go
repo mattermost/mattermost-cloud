@@ -21,7 +21,7 @@ func init() {
 		FullTimestamp: true,
 	})
 	// Output to stdout instead of the default stderr.
-	log.SetOutput(os.Stdout)
+	logger.SetOutput(os.Stdout)
 }
 
 type logrusWriter struct {

@@ -24,14 +24,23 @@ type teleport struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*teleport, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate Teleport handle with nil logger")
+func newTeleportOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.TeleportCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.TeleportCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.TeleportCanonicalName, logger), nil
 	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
+	teleport := newTeleportHandle(cluster, desired, kubeconfigPath, awsClient, logger)
+	err := teleport.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "teleport utility config is invalid")
 	}
 
+	return teleport, nil
+}
+
+func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) *teleport {
 	return &teleport{
 		awsClient:      awsClient,
 		kubeconfigPath: kubeconfigPath,
@@ -40,81 +49,91 @@ func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtility
 		logger:         logger.WithField("cluster-utility", model.TeleportCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Teleport,
-	}, nil
-
+	}
 }
 
-func (n *teleport) updateVersion(h *helmDeployment) error {
+func (t *teleport) validate() error {
+	if t.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+	if t.awsClient == nil {
+		return errors.New("awsClient cannot be nil")
+	}
+
+	return nil
+}
+
+func (t *teleport) updateVersion(h *helmDeployment) error {
 	actualVersion, err := h.Version()
 	if err != nil {
 		return err
 	}
 
-	n.actualVersion = actualVersion
+	t.actualVersion = actualVersion
 	return nil
 }
 
-func (n *teleport) ValuesPath() string {
-	if n.desiredVersion == nil {
+func (t *teleport) ValuesPath() string {
+	if t.desiredVersion == nil {
 		return ""
 	}
-	return n.desiredVersion.Values()
+	return t.desiredVersion.Values()
 }
 
-func (n *teleport) CreateOrUpgrade() error {
-	h := n.newHelmDeployment()
+func (t *teleport) CreateOrUpgrade() error {
+	h := t.newHelmDeployment()
 
 	err := h.Update()
 	if err != nil {
 		return err
 	}
 
-	err = n.updateVersion(h)
+	err = t.updateVersion(h)
 	return err
 }
 
-func (n *teleport) DesiredVersion() *model.HelmUtilityVersion {
-	return n.desiredVersion
+func (t *teleport) DesiredVersion() *model.HelmUtilityVersion {
+	return t.desiredVersion
 }
 
-func (n *teleport) ActualVersion() *model.HelmUtilityVersion {
-	if n.actualVersion == nil {
+func (t *teleport) ActualVersion() *model.HelmUtilityVersion {
+	if t.actualVersion == nil {
 		return nil
 	}
 	return &model.HelmUtilityVersion{
-		Chart:      strings.TrimPrefix(n.actualVersion.Version(), "teleport-kube-agent-"),
-		ValuesPath: n.actualVersion.Values(),
+		Chart:      strings.TrimPrefix(t.actualVersion.Version(), "teleport-kube-agent-"),
+		ValuesPath: t.actualVersion.Values(),
 	}
 }
 
-func (n *teleport) Destroy() error {
-	teleportClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
-	err := n.awsClient.S3EnsureBucketDeleted(teleportClusterName, n.logger)
+func (t *teleport) Destroy() error {
+	teleportClusterName := fmt.Sprintf("cloud-%s-%s", t.environment, t.cluster.ID)
+	err := t.awsClient.S3EnsureBucketDeleted(teleportClusterName, t.logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to delete Teleport bucket")
 	}
 
-	helm := n.newHelmDeployment()
+	helm := t.newHelmDeployment()
 	return helm.Delete()
 }
 
-func (n *teleport) Migrate() error {
+func (t *teleport) Migrate() error {
 	return nil
 }
 
-func (n *teleport) newHelmDeployment() *helmDeployment {
-	teleportClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
+func (t *teleport) newHelmDeployment() *helmDeployment {
+	teleportClusterName := fmt.Sprintf("cloud-%s-%s", t.environment, t.cluster.ID)
 	return newHelmDeployment(
 		"chartmuseum/teleport-kube-agent",
 		"teleport-kube-agent",
 		"teleport",
-		n.kubeconfigPath,
-		n.desiredVersion,
+		t.kubeconfigPath,
+		t.desiredVersion,
 		fmt.Sprintf("kubeClusterName=%s", teleportClusterName),
-		n.logger,
+		t.logger,
 	)
 }
 
-func (n *teleport) Name() string {
+func (t *teleport) Name() string {
 	return model.TeleportCanonicalName
 }

@@ -112,6 +112,7 @@ func (kc *KubeClient) PatchPodsDaemonSet(namespace, daemonSetName string, payloa
 
 // RemoteCommand executes a kubernetes command against a remote cluster.
 func (kc *KubeClient) RemoteCommand(method string, url *url.URL) ([]byte, error) {
+	ctx := context.Background()
 	exec, err := remotecommand.NewSPDYExecutor(kc.GetConfig(), method, url)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute remote command")
@@ -120,7 +121,7 @@ func (kc *KubeClient) RemoteCommand(method string, url *url.URL) ([]byte, error)
 	var stdin io.Reader
 	var stdout, stderr bytes.Buffer
 
-	err = exec.Stream(remotecommand.StreamOptions{
+	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  stdin,
 		Stdout: &stdout,
 		Stderr: &stderr,

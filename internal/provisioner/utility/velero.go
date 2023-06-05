@@ -21,94 +21,107 @@ type velero struct {
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*velero, error) {
-	if logger == nil {
-		return nil, fmt.Errorf("cannot instantiate Velero handle with nil logger")
+func newVeleroOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.VeleroCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.VeleroCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.VeleroCanonicalName, logger), nil
+	}
+	velero := newVeleroHandle(desired, cluster, kubeconfigPath, logger)
+	err := velero.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "teleport utility config is invalid")
 	}
 
-	if cluster == nil {
-		return nil, errors.New("cannot create a connection to Velero if the cluster provided is nil")
-	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
-	}
+	return velero, nil
+}
 
+func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) *velero {
 	return &velero{
 		cluster:        cluster,
 		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.VeleroCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Velero,
-	}, nil
+	}
 }
 
-func (f *velero) CreateOrUpgrade() error {
-	logger := f.logger.WithField("velero-action", "upgrade")
-	h := f.newHelmDeployment(logger)
+func (v *velero) validate() error {
+	if v.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+
+	return nil
+}
+
+func (v *velero) CreateOrUpgrade() error {
+	logger := v.logger.WithField("velero-action", "upgrade")
+	h := v.newHelmDeployment(logger)
 
 	err := h.Update()
 	if err != nil {
 		return err
 	}
 
-	err = f.updateVersion(h)
+	err = v.updateVersion(h)
 	return err
 }
 
-func (f *velero) Name() string {
+func (v *velero) Name() string {
 	return model.VeleroCanonicalName
 }
 
-func (f *velero) Destroy() error {
-	helm := f.newHelmDeployment(f.logger)
+func (v *velero) Destroy() error {
+	helm := v.newHelmDeployment(v.logger)
 	return helm.Delete()
 }
 
-func (f *velero) Migrate() error {
+func (v *velero) Migrate() error {
 	return nil
 }
 
-func (f *velero) DesiredVersion() *model.HelmUtilityVersion {
-	return f.desiredVersion
+func (v *velero) DesiredVersion() *model.HelmUtilityVersion {
+	return v.desiredVersion
 }
 
-func (f *velero) ActualVersion() *model.HelmUtilityVersion {
-	if f.actualVersion == nil {
+func (v *velero) ActualVersion() *model.HelmUtilityVersion {
+	if v.actualVersion == nil {
 		return nil
 	}
 	return &model.HelmUtilityVersion{
-		Chart:      strings.TrimPrefix(f.actualVersion.Version(), "velero-"),
-		ValuesPath: f.actualVersion.Values(),
+		Chart:      strings.TrimPrefix(v.actualVersion.Version(), "velero-"),
+		ValuesPath: v.actualVersion.Values(),
 	}
 }
 
-func (f *velero) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
-	helmValueArguments := fmt.Sprintf("configuration.backupStorageLocation.prefix=%s", f.cluster.ID)
+func (v *velero) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
+	helmValueArguments := fmt.Sprintf("configuration.backupStorageLocation.prefix=%s", v.cluster.ID)
 
 	return newHelmDeployment(
 		"vmware-tanzu/velero",
 		"velero",
 		"velero",
-		f.kubeconfigPath,
-		f.desiredVersion,
+		v.kubeconfigPath,
+		v.desiredVersion,
 		helmValueArguments,
 		logger,
 	)
 }
 
-func (f *velero) ValuesPath() string {
-	if f.desiredVersion == nil {
+func (v *velero) ValuesPath() string {
+	if v.desiredVersion == nil {
 		return ""
 	}
-	return f.desiredVersion.Values()
+	return v.desiredVersion.Values()
 }
 
-func (f *velero) updateVersion(h *helmDeployment) error {
+func (v *velero) updateVersion(h *helmDeployment) error {
 	actualVersion, err := h.Version()
 	if err != nil {
 		return err
 	}
 
-	f.actualVersion = actualVersion
+	v.actualVersion = actualVersion
 	return nil
 }

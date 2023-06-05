@@ -27,32 +27,43 @@ type thanos struct {
 	desiredVersion     *model.HelmUtilityVersion
 }
 
-func newThanosHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*thanos, error) {
-	if logger == nil {
-		return nil, fmt.Errorf("cannot instantiate Thanos handle with nil logger")
+func newThanosOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.ThanosCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.ThanosCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.ThanosCanonicalName, logger), nil
+	}
+	thanos := newThanosHandle(cluster, desired, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
+	err := thanos.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "teleport utility config is invalid")
 	}
 
-	if cluster == nil {
-		return nil, errors.New("cannot create a connection to Thanos if the cluster provided is nil")
-	}
-	if awsClient == nil {
-		return nil, errors.New("cannot create a connection to Thanos if the awsClient provided is nil")
-	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
-	}
+	return thanos, nil
+}
 
-	version := cluster.DesiredUtilityVersion(model.ThanosCanonicalName)
-
+func newThanosHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) *thanos {
 	return &thanos{
 		awsClient:          awsClient,
 		kubeconfigPath:     kubeconfigPath,
 		allowCIDRRangeList: allowCIDRRangeList,
 		cluster:            cluster,
 		logger:             logger.WithField("cluster-utility", model.ThanosCanonicalName),
-		desiredVersion:     version,
+		desiredVersion:     desiredVersion,
 		actualVersion:      cluster.UtilityMetadata.ActualVersions.Thanos,
-	}, nil
+	}
+}
+
+func (t *thanos) validate() error {
+	if t.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+	if t.awsClient == nil {
+		return errors.New("awsClient cannot be nil")
+	}
+
+	return nil
 }
 
 func (t *thanos) ValuesPath() string {
@@ -153,7 +164,6 @@ func (t *thanos) Destroy() error {
 
 	helm := t.newHelmDeployment(dns, grpcDNS)
 	return helm.Delete()
-
 }
 
 func (t *thanos) Migrate() error {

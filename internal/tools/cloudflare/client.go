@@ -8,16 +8,15 @@ import (
 	"context"
 
 	cf "github.com/cloudflare/cloudflare-go"
-	"github.com/sirupsen/logrus"
 )
 
 // Cloudflarer interface that holds Cloudflare functions
 type Cloudflarer interface {
 	ZoneIDByName(zoneName string) (string, error)
-	DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
-	CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
-	UpdateDNSRecord(ctx context.Context, zoneID, recordID string, rr cf.DNSRecord) error
-	DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error
+	ListDNSRecords(ctx context.Context, rc *cf.ResourceContainer, params cf.ListDNSRecordsParams) ([]cf.DNSRecord, *cf.ResultInfo, error)
+	CreateDNSRecord(ctx context.Context, rc *cf.ResourceContainer, params cf.CreateDNSRecordParams) (cf.DNSRecord, error)
+	UpdateDNSRecord(ctx context.Context, rc *cf.ResourceContainer, params cf.UpdateDNSRecordParams) (cf.DNSRecord, error)
+	DeleteDNSRecord(ctx context.Context, rc *cf.ResourceContainer, recordID string) error
 }
 
 // AWSClient interface that holds AWS client function
@@ -37,24 +36,4 @@ func NewClientWithToken(client Cloudflarer, aws AWSClient) *Client {
 		cfClient: client,
 		aws:      aws,
 	}
-}
-
-// NoopCloudflarer is used as a dummy Cloudflarer interface
-type NoopCloudflarer struct{}
-
-// NoopClient returns an empty noopCloudflarer struct
-func NoopClient() *NoopCloudflarer {
-	return &NoopCloudflarer{}
-}
-
-// CreateDNSRecords returns an empty dummy func for noopCloudflarer
-func (*NoopCloudflarer) CreateDNSRecords(_ []string, _ []string, logger logrus.FieldLogger) error {
-	logger.Debug("Using noop Cloudflare client, CreateDNSRecords function")
-	return nil
-}
-
-// DeleteDNSRecords returns an empty dummy func for noopCloudflarer
-func (*NoopCloudflarer) DeleteDNSRecords(_ []string, logger logrus.FieldLogger) error {
-	logger.Debug("Using noop Cloudflare client, DeleteDNSRecords function")
-	return nil
 }
