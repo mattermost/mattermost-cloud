@@ -402,7 +402,6 @@ func NewKopsMetadata(metadataBytes []byte) (*KopsMetadata, error) {
 	// is done to avoid an issue encountered where the metadata value provided
 	// had a length of 0, but had non-zero capacity.
 	if len(metadataBytes) == 0 || string(metadataBytes) == "null" {
-		// TODO: remove "null" check after sqlite is gone.
 		return nil, nil
 	}
 

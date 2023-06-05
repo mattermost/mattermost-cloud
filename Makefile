@@ -12,6 +12,7 @@ TERRAFORM_VERSION=1.0.7
 KOPS_VERSION=v1.24.5
 HELM_VERSION=v3.11.2
 KUBECTL_VERSION=v1.24.4
+POSTGRES_VERSION=12
 
 ## Docker Build Versions
 DOCKER_BUILD_IMAGE := golang:$(GOLANG_VERSION)
@@ -27,7 +28,12 @@ MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
 BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
 BUILD_HASH := $(shell git rev-parse HEAD)
+
+################################################################################
 TEST_FLAGS ?= -v
+
+TEST_PSQL_NAME ?= cloud-test
+TEST_PSQL_PORT ?= 5439
 
 ################################################################################
 
@@ -201,9 +207,25 @@ check-modules: $(OUTDATED_GEN) ## Check outdated modules
 goverall: $(GOVERALLS_GEN) ## Runs goveralls
 	$(GOVERALLS_GEN) -coverprofile=coverage.out -service=circle-ci -repotoken ${COVERALLS_REPO_TOKEN} || true
 
+ifndef CLOUD_DATABASE
+CLOUD_DATABASE ?= postgres://$(TEST_PSQL_NAME):$(TEST_PSQL_NAME)@localhost:$(TEST_PSQL_PORT)/$(TEST_PSQL_NAME)?sslmode=disable
+
+unittest: unittest-create-db
+
+.PHONY: unittest-create-db
+unittest-create-db: unittest-destroy-db ## Start a postgresql database for unit tests, cleaning up any previous instance
+	@echo Start a docker postgesql database
+	@docker run --detach --rm --name $(TEST_PSQL_NAME) -p $(TEST_PSQL_PORT):5432 -e POSTGRES_USER=$(TEST_PSQL_NAME) -e POSTGRES_PASSWORD=$(TEST_PSQL_NAME) -e POSTGRES_DB=$(TEST_PSQL_NAME) -d postgres:$(POSTGRES_VERSION)-alpine
+
+.PHONY: unittest-destroy-db
+unittest-destroy-db: ## Destroy the postgresql database for unit tests
+	@echo Destroy the docker postgesql database
+	@docker stop $(TEST_PSQL_NAME) || true
+endif
+
 .PHONY: unittest
 unittest:
-	$(GO) test -failfast ./... ${TEST_FLAGS} -covermode=count -coverprofile=coverage.out
+	CLOUD_DATABASE=$(CLOUD_DATABASE) $(GO) test -failfast ./... ${TEST_FLAGS} -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
 verify-mocks: mocks

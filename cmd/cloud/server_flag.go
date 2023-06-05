@@ -220,7 +220,7 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.logFilesPerClusterPath, "log-files-per-cluster-path", "", "Where to store the cluster log files.")
 	command.MarkFlagsRequiredTogether("enable-log-files-per-cluster", "log-files-per-cluster-path")
 
-	command.Flags().StringVar(&flags.database, "database", "sqlite://cloud.db", "The database backing the provisioning server.")
+	command.Flags().StringVar(&flags.database, "database", "", "The database backing the provisioning server.")
 	command.Flags().Int64Var(&flags.maxSchemas, "default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
 	command.Flags().BoolVar(&flags.enableRoute53, "installation-enable-route53", false, "Specifies whether CNAME records for Installation should be created in Route53 as well.")
 
