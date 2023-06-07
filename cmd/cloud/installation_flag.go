@@ -354,3 +354,12 @@ func (flags *installationDeploymentReportFlags) addFlags(command *cobra.Command)
 
 	_ = command.MarkFlagRequired("installation")
 }
+
+type installationDeletionReportFlags struct {
+	clusterFlags
+	days int
+}
+
+func (flags *installationDeletionReportFlags) addFlags(command *cobra.Command) {
+	command.Flags().IntVar(&flags.days, "days", 7, "The number of days include in the deletion report.")
+}
