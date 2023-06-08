@@ -115,6 +115,10 @@ goformat:
 	done
 	@echo "gofmt success"; \
 
+.PHONY: dev-start
+dev-start:
+	docker-compose up -d
+
 ## Checks if imports are formatted correctly.
 .PHONY: goimports
 goimports: $(GOIMPORTS)

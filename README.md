@@ -60,6 +60,7 @@ region = us-east-1
 export GITLAB_OAUTH_TOKEN=YOURTOKEN
 ```
 This is the option when a remote git repo is used for utility values. In case you want to use local values for local testing you can export an empty token value and add the values in the relevant file in `helm-charts` directory and pass it in the cluster creation step.
+6. Get a CloudFlare API Key, and export it with `export CLOUDFLARE_API_KEY=<key>`
 
 Also:
 - Make sure you have a key in your ~/.ssh/
@@ -88,7 +89,10 @@ alias cloud='$HOME/go/bin/cloud'
 
 ### Running
 Before running the server the first time you must set up the DB with:
-
+```bash
+make dev-start
+```
+Then run the database migrations with:
 ```bash
 $ cloud schema migrate
 ```
