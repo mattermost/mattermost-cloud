@@ -107,9 +107,9 @@ tip: if you want to debug, enable `--dev` flag
 
 In a different terminal/window, to create a cluster:
 ```bash
-cloud cluster create --zones <availabiity-zone> --size SizeAlef500
+cloud cluster create --zones <availabiity-zone> --size SizeAlef500 --networking calico
 i.e.
-cloud cluster create --zones us-east-1c --size SizeAlef500
+cloud cluster create --zones=us-east-1a --networking calico
 ```
 Note: Provisioner's default network provider is **amazon-vpc-routed-eni** which can be overridden using `--networking` flag. Supported network providers are weave, canal, calico, amazon-vpc-routed-eni.e.g
 ```bash
