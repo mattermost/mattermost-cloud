@@ -60,6 +60,7 @@ region = us-east-1
 export GITLAB_OAUTH_TOKEN=YOURTOKEN
 ```
 This is the option when a remote git repo is used for utility values. In case you want to use local values for local testing you can export an empty token value and add the values in the relevant file in `helm-charts` directory and pass it in the cluster creation step.
+6. Get a CloudFlare API Key, and export it with `export CLOUDFLARE_API_KEY=<key>`
 
 Also:
 - Make sure you have a key in your ~/.ssh/
@@ -88,7 +89,10 @@ alias cloud='$HOME/go/bin/cloud'
 
 ### Running
 Before running the server the first time you must set up the DB with:
-
+```bash
+make dev-start
+```
+Then run the database migrations with:
 ```bash
 $ cloud schema migrate
 ```
@@ -103,9 +107,9 @@ tip: if you want to debug, enable `--dev` flag
 
 In a different terminal/window, to create a cluster:
 ```bash
-cloud cluster create --zones <availabiity-zone> --size SizeAlef500
+cloud cluster create --zones <availabiity-zone> --size SizeAlef500 --networking calico
 i.e.
-cloud cluster create --zones us-east-1c --size SizeAlef500
+cloud cluster create --zones=us-east-1a --networking calico
 ```
 Note: Provisioner's default network provider is **amazon-vpc-routed-eni** which can be overridden using `--networking` flag. Supported network providers are weave, canal, calico, amazon-vpc-routed-eni.e.g
 ```bash
