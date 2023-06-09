@@ -52,7 +52,7 @@ const (
 
 	// DefaultDatabasePostgresVersion is the default version of PostgreSQL used
 	// when creating databases.
-	DefaultDatabasePostgresVersion = "13.10"
+	DefaultDatabasePostgresVersion = "11.13"
 
 	// DefaultDBSubnetGroupName is the default DB subnet group name used when
 	// creating DB clusters. This group name is defined by the owner of the AWS
