@@ -283,6 +283,12 @@ func provisionCluster(
 	}
 
 	if cluster.Provisioner == model.ProvisionerKops {
+		iamRoleMaster := fmt.Sprintf("masters.%s", cluster.ProvisionerMetadataKops.Name)
+		err = awsClient.AttachPolicyToRole(iamRoleMaster, aws.CustomNodePolicyName, logger)
+		if err != nil {
+			return errors.Wrap(err, "unable to attach custom node policy to master")
+		}
+
 		iamRole := fmt.Sprintf("nodes.%s", cluster.ProvisionerMetadataKops.Name)
 		err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 		if err != nil {
