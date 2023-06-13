@@ -17,15 +17,17 @@ import (
 
 // S3Filestore is a filestore backed by AWS S3.
 type S3Filestore struct {
-	installationID string
-	awsClient      *Client
+	installationID   string
+	awsClient        *Client
+	enableVersioning bool
 }
 
 // NewS3Filestore returns a new S3Filestore interface.
-func NewS3Filestore(installationID string, awsClient *Client) *S3Filestore {
+func NewS3Filestore(installationID string, awsClient *Client, enableVersioning bool) *S3Filestore {
 	return &S3Filestore{
-		installationID: installationID,
-		awsClient:      awsClient,
+		installationID:   installationID,
+		awsClient:        awsClient,
+		enableVersioning: enableVersioning,
 	}
 }
 
@@ -134,7 +136,7 @@ func (f *S3Filestore) s3FilestoreProvision(installationID string, logger log.Fie
 		"iam-user-name":   *user.UserName,
 	}).Debug("AWS IAM policy attached to user")
 
-	err = f.awsClient.s3EnsureBucketCreated(awsID, logger)
+	err = f.awsClient.s3EnsureBucketCreated(awsID, f.enableVersioning, logger)
 	if err != nil {
 		return err
 	}

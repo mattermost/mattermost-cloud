@@ -31,8 +31,9 @@ func (a *Client) GetS3RegionURL() string {
 	return result
 }
 
-func (a *Client) s3EnsureBucketCreated(bucketName string, logger log.FieldLogger) error {
+func (a *Client) s3EnsureBucketCreated(bucketName string, enableVersioning bool, logger log.FieldLogger) error {
 	ctx := context.TODO()
+
 	_, err := a.Service().s3.CreateBucket(
 		ctx,
 		&s3.CreateBucketInput{
@@ -74,6 +75,13 @@ func (a *Client) s3EnsureBucketCreated(bucketName string, logger log.FieldLogger
 		})
 	if err != nil {
 		return errors.Wrap(err, "unable to set bucket encryption default")
+	}
+
+	if enableVersioning {
+		err = a.S3EnableVersioning(bucketName)
+		if err != nil {
+			return errors.Wrap(err, "unable to enable bucket versioning")
+		}
 	}
 
 	return nil
@@ -215,6 +223,22 @@ func (a *Client) S3DisableVersioning(bucketName string) error {
 	return nil
 }
 
+func (a *Client) S3EnableVersioning(bucketName string) error {
+	ctx := context.TODO()
+
+	_, err := a.Service().s3.PutBucketVersioning(ctx, &s3.PutBucketVersioningInput{
+		Bucket: aws.String(bucketName),
+		VersioningConfiguration: &types.VersioningConfiguration{
+			Status: types.BucketVersioningStatusEnabled,
+		},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to enable versioning")
+	}
+
+	return nil
+}
+
 // S3EnsureBucketDeleted is used to check if S3 bucket exists, clean it and delete it.
 func (a *Client) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error {
 	ctx := context.TODO()
@@ -238,7 +262,6 @@ func (a *Client) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger
 
 	if err != nil {
 		logger.WithField("s3-bucket-name", bucketName).WithError(err).Warn("Could not determine if S3 bucket is versioned")
-		// TODO: Continue anyways?
 		return err
 	}
 

@@ -270,7 +270,7 @@ func executeServerCmd(flags serverFlags) error {
 		EtcdManagerEnv:          etcdManagerEnv,
 	}
 
-	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck)
+	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck, flags.enableS3Versioning)
 
 	kopsProvisioner := provisioner.NewKopsProvisioner(
 		provisioningParams,
