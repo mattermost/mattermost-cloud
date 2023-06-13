@@ -631,6 +631,12 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 		return errors.Wrap(err, "unable to attach velero node policy")
 	}
 
+	iamRole = fmt.Sprintf("masters.%s", kopsMetadata.Name)
+	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach custom node policy to master")
+	}
+
 	logger.Info("Successfully upgraded cluster")
 
 	return nil
@@ -801,6 +807,12 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach velero node policy")
+	}
+
+	iamRole = fmt.Sprintf("masters.%s", kopsMetadata.Name)
+	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach custom node policy to master")
 	}
 
 	logger.Info("Successfully resized cluster")
