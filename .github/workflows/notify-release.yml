@@ -7,7 +7,7 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f #v3.4.0
       - shell: bash
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
