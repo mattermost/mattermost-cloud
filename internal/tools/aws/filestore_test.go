@@ -27,7 +27,7 @@ func TestFilestoreProvision(t *testing.T) {
 	logger := logrus.New()
 	filestore := NewS3Filestore(id, &Client{
 		mux: &sync.Mutex{},
-	})
+	}, false)
 
 	logger.Warnf("Provisioning down AWS filestore %s", id)
 
@@ -44,7 +44,7 @@ func TestFilestoreTeardown(t *testing.T) {
 	logger := logrus.New()
 	filestore := NewS3Filestore(id, &Client{
 		mux: &sync.Mutex{},
-	})
+	}, false)
 
 	logger.Warnf("Tearing down AWS filestore %s", id)
 

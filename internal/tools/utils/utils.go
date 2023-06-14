@@ -86,6 +86,7 @@ type ResourceUtil struct {
 	instanceID                   string
 	dbClusterUtilizationSettings DBClusterUtilizationSettings
 	disableDBCheck               bool
+	enableS3Versioning           bool
 }
 
 // DBClusterUtilizationSettings define maximum utilization of database clusters.
@@ -101,12 +102,14 @@ func NewResourceUtil(
 	instanceID string,
 	awsClient *aws.Client,
 	dbClusterUtilization DBClusterUtilizationSettings,
-	disableDBCheck bool) *ResourceUtil {
+	disableDBCheck bool,
+	enableS3Versioning bool) *ResourceUtil {
 	return &ResourceUtil{
 		awsClient:                    awsClient,
 		instanceID:                   instanceID,
 		dbClusterUtilizationSettings: dbClusterUtilization,
 		disableDBCheck:               disableDBCheck,
+		enableS3Versioning:           enableS3Versioning,
 	}
 }
 
@@ -116,7 +119,7 @@ func (r *ResourceUtil) GetFilestore(installation *model.Installation) model.File
 	case model.InstallationFilestoreMinioOperator:
 		return model.NewMinioOperatorFilestore()
 	case model.InstallationFilestoreAwsS3:
-		return aws.NewS3Filestore(installation.ID, r.awsClient)
+		return aws.NewS3Filestore(installation.ID, r.awsClient, r.enableS3Versioning)
 	case model.InstallationFilestoreMultiTenantAwsS3:
 		return aws.NewS3MultitenantFilestore(installation.ID, r.awsClient)
 	case model.InstallationFilestoreBifrost:
