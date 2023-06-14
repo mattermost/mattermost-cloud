@@ -58,9 +58,36 @@ func clusterLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuit
 			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
 		},
 		{
+			Name:              "CreateInstallationWithVersionedAWSS3Filestore",
+			Func:              installationSuite.CreateInstallationWithVersionedAWSS3Filestore,
+			DependsOn:         []string{"DeleteInstallation"},
+			GetExpectedEvents: installationSuite.InstallationCreationEvents,
+		},
+		{
+			Name:      "GetVersionedAWSS3FilestoreCI",
+			Func:      installationSuite.GetCI,
+			DependsOn: []string{"CreateInstallationWithVersionedAWSS3Filestore"},
+		},
+		{
+			Name:      "CheckVersionedAWSS3FilestoreClusterInstallationStatus",
+			Func:      installationSuite.CheckClusterInstallationStatus,
+			DependsOn: []string{"GetVersionedAWSS3FilestoreCI"},
+		},
+		{
+			Name:      "CheckVersionedAWSS3FilestoreInstallation",
+			Func:      installationSuite.CheckHealth,
+			DependsOn: []string{"CheckVersionedAWSS3FilestoreClusterInstallationStatus"},
+		},
+		{
+			Name:              "DeleteVersionedAWSS3FilestoreInstallation",
+			Func:              installationSuite.Cleanup,
+			DependsOn:         []string{"CheckVersionedAWSS3FilestoreInstallation"},
+			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
+		},
+		{
 			Name:              "DeleteCluster",
 			Func:              clusterSuite.DeleteCluster,
-			DependsOn:         []string{"DeleteInstallation"},
+			DependsOn:         []string{"DeleteVersionedAWSS3FilestoreInstallation"},
 			GetExpectedEvents: clusterSuite.ClusterDeletionEvents,
 		},
 	}

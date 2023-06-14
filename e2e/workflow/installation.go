@@ -106,6 +106,36 @@ func (w *InstallationSuite) CreateInstallation(ctx context.Context) error {
 	return nil
 }
 
+// CreateInstallation creates new Installation and waits for it to reach stable state.
+func (w *InstallationSuite) CreateInstallationWithVersionedAWSS3Filestore(ctx context.Context) error {
+	installationBuilder := pkg.NewInstallationBuilderWithDefaults().
+		DNS(pkg.GetDNS(w.dnsSubdomain)).
+		DB(w.Params.DBType).
+		FileStore(model.InstallationFilestoreAwsS3).
+		Annotations(w.Params.Annotations)
+
+	installation, err := w.client.CreateInstallation(installationBuilder.CreateRequest())
+	if err != nil {
+		return errors.Wrap(err, "while creating installation")
+	}
+	w.logger.Infof("Installation created: %s", installation.ID)
+	w.Meta.InstallationID = installation.ID
+	w.Meta.InstallationDNS = installation.DNS
+	state.InstallationID = installation.ID
+
+	err = pkg.WaitForInstallationToBeStable(ctx, w.Meta.InstallationID, w.whChan, w.logger)
+	if err != nil {
+		return errors.Wrap(err, "while waiting for installation creation")
+	}
+
+	err = pkg.WaitForInstallationAvailability(w.Meta.InstallationDNS, w.logger)
+	if err != nil {
+		return errors.Wrap(err, "while waiting for installation DNS")
+	}
+
+	return nil
+}
+
 // GetCI gets ClusterInstallation for an Installation being the part of test suite and saves it in metadata.
 func (w *InstallationSuite) GetCI(ctx context.Context) error {
 	ci, err := w.client.GetClusterInstallations(&model.GetClusterInstallationsRequest{InstallationID: w.Meta.InstallationID, Paging: model.AllPagesNotDeleted()})
