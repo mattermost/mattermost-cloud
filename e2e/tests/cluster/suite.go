@@ -56,8 +56,7 @@ type Test struct {
 	Cleanup           bool
 }
 
-// SetupClusterLifecycleTest sets up cluster lifecycle test.
-func SetupClusterLifecycleTest() (*Test, error) {
+func setupTestWithDefaults() (*Test, error) {
 	testID := model.NewID()
 	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
@@ -137,19 +136,46 @@ func SetupClusterLifecycleTest() (*Test, error) {
 
 	eventsRecorder := eventstest.NewEventsRecorder(subOwner, config.EventListenerAddress, logger.WithField("component", "event-recorder"), eventstest.RecordAll)
 
-	testWorkflowSteps := clusterLifecycleSteps(clusterSuite, installationSuite)
-
 	return &Test{
 		Logger:            logger,
 		ProvisionerClient: client,
 		WebhookCleanup:    cleanup,
-		Workflow:          workflow.NewWorkflow(testWorkflowSteps),
-		Steps:             testWorkflowSteps,
 		ClusterSuite:      clusterSuite,
 		InstallationSuite: installationSuite,
 		EventsRecorder:    eventsRecorder,
 		Cleanup:           config.Cleanup,
 	}, nil
+}
+
+func SetupInstallationLifecycleTest() (*Test, error) {
+
+	test, err := setupTestWithDefaults()
+
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to setup test environment")
+	}
+
+	testWorkflowSteps := installationLifecycleSteps(test.ClusterSuite, test.InstallationSuite)
+
+	test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
+	test.Steps = testWorkflowSteps
+
+	return test, nil
+}
+
+// SetupClusterLifecycleTest sets up cluster lifecycle test.
+func SetupClusterLifecycleTest() (*Test, error) {
+	test, err := setupTestWithDefaults()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to setup test environment")
+	}
+
+	testWorkflowSteps := clusterLifecycleSteps(test.ClusterSuite, test.InstallationSuite)
+
+	test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
+	test.Steps = testWorkflowSteps
+
+	return test, nil
 }
 
 func testAnnotations(testID string) []string {

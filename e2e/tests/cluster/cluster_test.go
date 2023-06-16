@@ -67,9 +67,46 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func Test_InstallationLifecycle(t *testing.T) {
+	rand.Seed(time.Now().UnixNano())
+
+	test, err := SetupInstallationLifecycleTest()
+	require.NoError(t, err)
+	// Always cleanup webhook
+	defer func() {
+		err := test.WebhookCleanup()
+		assert.NoError(t, err)
+	}()
+	if test.Cleanup {
+		defer func() {
+			err = test.InstallationSuite.Cleanup(context.Background())
+			if err != nil {
+				test.Logger.WithError(err).Error("Error cleaning up installation")
+			}
+			err := test.ClusterSuite.Cleanup(context.Background())
+			if err != nil {
+				test.Logger.WithError(err).Error("Error cleaning up cluster")
+			}
+		}()
+	}
+	err = test.EventsRecorder.Start(test.ProvisionerClient, test.Logger)
+	require.NoError(t, err)
+	defer test.EventsRecorder.ShutDown(test.ProvisionerClient)
+
+	err = test.Run()
+	require.NoError(t, err)
+
+	// Make sure we wait for all subscription events
+	time.Sleep(time.Second * 1)
+
+	// Make sure that expected events occurred in correct order.
+	expectedEvents := workflow.GetExpectedEvents(test.Steps)
+	err = test.EventsRecorder.VerifyInOrder(expectedEvents)
+	require.NoError(t, err)
+}
+
 func Test_ClusterLifecycle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	t.Parallel()
 
 	test, err := SetupClusterLifecycleTest()
 	require.NoError(t, err)
