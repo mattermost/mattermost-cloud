@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   lint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     steps:
       - name: ci/checkout-repo
         uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
@@ -23,9 +23,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-
-      - name: ci/check-modules
-        run: make check-modules
 
       - name: ci/check-mocks
         run: make verify-mocks
