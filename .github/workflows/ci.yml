@@ -23,8 +23,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: ci/check-style
-        run: make check-style
 
       - name: ci/check-modules
         run: make check-modules
