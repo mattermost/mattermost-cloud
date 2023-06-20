@@ -33,8 +33,8 @@ func ClusterNewID() string {
 	strID := NewID()
 	if unicode.IsNumber(rune(strID[0])) {
 		//Generate a lower case random character between a to z
-		rand.Seed(time.Now().Unix())
-		randomChar := 'a' + rune(rand.Intn(26))
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		randomChar := 'a' + rune(r.Intn(26))
 		strID = string(randomChar) + strID[1:]
 	}
 	return strID
