@@ -234,6 +234,8 @@ unittest:
 .PHONY: verify-mocks
 verify-mocks: mocks
 	@if !(git diff --quiet HEAD); then \
+		git status \
+		git diff \
 		echo "generated files are out of date, run make mocks"; exit 1; \
 	fi
 
