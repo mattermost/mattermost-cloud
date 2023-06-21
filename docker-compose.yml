@@ -1,0 +1,26 @@
+version: "3.7"
+services:
+  postgres:
+    image: "postgres:12.5"
+    container_name: "cloud-postgres"
+    restart: on-failure
+    networks:
+    - cloud
+    ports:
+    - "5430:5432"
+    environment:
+      POSTGRES_USER: provisioner
+      POSTGRES_PASSWORD: provisionerdev
+    volumes:
+    - "./build/localdev/create-database.sql:/docker-entrypoint-initdb.d/create-database.sql"
+networks:
+  cloud:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        # Range chosen to avoid conflicting with some of the # 10.*.*.* addresses
+        # used by Tailscale on Linux. Tailscale's use of these addresses
+        # meant no traffic reached the local container.
+        - subnet: 192.168.255.0/24
+          ip_range: 192.168.255.0/24

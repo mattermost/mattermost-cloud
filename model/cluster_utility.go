@@ -38,6 +38,9 @@ const (
 	VeleroCanonicalName = "velero"
 	// CloudproberCanonicalName is the canonical string representation of Cloudprber
 	CloudproberCanonicalName = "cloudprober"
+	// UnmanagedUtilityVersion is the value of utility versions where the
+	// provisioner will no longer manage the helm chart.
+	UnmanagedUtilityVersion = "unmanaged"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -184,7 +187,6 @@ func NewUtilityMetadata(metadataBytes []byte) (*UtilityMetadata, error) {
 	// is done to avoid an issue encountered where the metadata value provided
 	// had a length of 0, but had non-zero capacity.
 	if len(metadataBytes) == 0 || string(metadataBytes) == "null" {
-		// TODO: remove "null" check after sqlite is gone.
 		return nil, nil
 	}
 
@@ -306,8 +308,7 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 	}
 }
 
-// HelmUtilityVersion holds the chart version and the version of the
-// values file
+// HelmUtilityVersion holds the chart version and the values path.
 type HelmUtilityVersion struct {
 	Chart      string
 	ValuesPath string
@@ -335,10 +336,42 @@ func (u *HelmUtilityVersion) Values() string {
 	return u.ValuesPath
 }
 
-// IsEmpty returns true if the HelmUtilityVersion is nil or if either
-// of the values inside are undefined
+// IsEmpty returns true if the HelmUtilityVersion is nil or if either of the
+// values inside are undefined. If HelmUtilityVersion is "unmanaged" then false
+// is returned instead.
 func (u *HelmUtilityVersion) IsEmpty() bool {
-	return u == nil ||
-		u.ValuesPath == "" ||
-		u.Chart == ""
+	if u == nil {
+		return true
+	}
+
+	if u.Chart == UnmanagedUtilityVersion {
+		return false
+	}
+
+	return u.ValuesPath == "" || u.Chart == ""
+}
+
+// UtilityIsUnmanaged returns true if the desired version of a utility is set to
+// "unmanaged" or if the actual version is "unmanaged" and there is no new
+// desired version.
+func UtilityIsUnmanaged(desired *HelmUtilityVersion, actual *HelmUtilityVersion) bool {
+	// Perform nil checks to derive version strings safely and help simplify the
+	// logic later.
+	var desiredVersion string
+	if desired != nil {
+		desiredVersion = desired.Version()
+	}
+	var actualVersion string
+	if actual != nil {
+		actualVersion = actual.Version()
+	}
+
+	if desiredVersion == UnmanagedUtilityVersion {
+		return true
+	}
+	if desiredVersion == "" && actualVersion == UnmanagedUtilityVersion {
+		return true
+	}
+
+	return false
 }

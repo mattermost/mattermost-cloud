@@ -177,6 +177,26 @@ func (mr *MockS3APIMockRecorder) GetBucketTagging(arg0, arg1 interface{}, arg2 .
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBucketTagging", reflect.TypeOf((*MockS3API)(nil).GetBucketTagging), varargs...)
 }
 
+// GetBucketVersioning mocks base method
+func (m *MockS3API) GetBucketVersioning(arg0 context.Context, arg1 *s3.GetBucketVersioningInput, arg2 ...func(*s3.Options)) (*s3.GetBucketVersioningOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetBucketVersioning", varargs...)
+	ret0, _ := ret[0].(*s3.GetBucketVersioningOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBucketVersioning indicates an expected call of GetBucketVersioning
+func (mr *MockS3APIMockRecorder) GetBucketVersioning(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBucketVersioning", reflect.TypeOf((*MockS3API)(nil).GetBucketVersioning), varargs...)
+}
+
 // HeadBucket mocks base method
 func (m *MockS3API) HeadBucket(arg0 context.Context, arg1 *s3.HeadBucketInput, arg2 ...func(*s3.Options)) (*s3.HeadBucketOutput, error) {
 	m.ctrl.T.Helper()
@@ -217,6 +237,26 @@ func (mr *MockS3APIMockRecorder) HeadObject(arg0, arg1 interface{}, arg2 ...inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadObject", reflect.TypeOf((*MockS3API)(nil).HeadObject), varargs...)
 }
 
+// ListObjectVersions mocks base method
+func (m *MockS3API) ListObjectVersions(arg0 context.Context, arg1 *s3.ListObjectVersionsInput, arg2 ...func(*s3.Options)) (*s3.ListObjectVersionsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListObjectVersions", varargs...)
+	ret0, _ := ret[0].(*s3.ListObjectVersionsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListObjectVersions indicates an expected call of ListObjectVersions
+func (mr *MockS3APIMockRecorder) ListObjectVersions(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListObjectVersions", reflect.TypeOf((*MockS3API)(nil).ListObjectVersions), varargs...)
+}
+
 // ListObjectsV2 mocks base method
 func (m *MockS3API) ListObjectsV2(arg0 context.Context, arg1 *s3.ListObjectsV2Input, arg2 ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
 	m.ctrl.T.Helper()
@@ -255,6 +295,26 @@ func (mr *MockS3APIMockRecorder) PutBucketEncryption(arg0, arg1 interface{}, arg
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutBucketEncryption", reflect.TypeOf((*MockS3API)(nil).PutBucketEncryption), varargs...)
+}
+
+// PutBucketVersioning mocks base method
+func (m *MockS3API) PutBucketVersioning(arg0 context.Context, arg1 *s3.PutBucketVersioningInput, arg2 ...func(*s3.Options)) (*s3.PutBucketVersioningOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PutBucketVersioning", varargs...)
+	ret0, _ := ret[0].(*s3.PutBucketVersioningOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PutBucketVersioning indicates an expected call of PutBucketVersioning
+func (mr *MockS3APIMockRecorder) PutBucketVersioning(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutBucketVersioning", reflect.TypeOf((*MockS3API)(nil).PutBucketVersioning), varargs...)
 }
 
 // PutPublicAccessBlock mocks base method

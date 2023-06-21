@@ -7,11 +7,12 @@
 
 ## Tool Versions
 GOLANG_VERSION := $(shell cat go.mod | grep "^go " | cut -d " " -f 2)
-ALPINE_VERSION = 3.16
+ALPINE_VERSION = 3.18.2
 TERRAFORM_VERSION=1.0.7
-KOPS_VERSION=v1.23.4
+KOPS_VERSION=v1.24.5
 HELM_VERSION=v3.11.2
 KUBECTL_VERSION=v1.24.4
+POSTGRES_VERSION=12
 
 ## Docker Build Versions
 DOCKER_BUILD_IMAGE := golang:$(GOLANG_VERSION)
@@ -27,7 +28,12 @@ MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
 BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
 BUILD_HASH := $(shell git rev-parse HEAD)
+
+################################################################################
 TEST_FLAGS ?= -v
+
+TEST_PSQL_NAME ?= cloud-test
+TEST_PSQL_PORT ?= 5439
 
 ################################################################################
 
@@ -37,6 +43,7 @@ LDFLAGS += -X "github.com/mattermost/mattermost-cloud/model.BuildHash=$(BUILD_HA
 # Binaries.
 TOOLS_BIN_DIR := $(abspath bin)
 GO_INSTALL = ./scripts/go_install.sh
+ENSURE_GOLANGCI_LINT = ./scripts/ensure_golangci-lint.sh
 
 MOCKGEN_VER := v1.4.3
 MOCKGEN_BIN := mockgen
@@ -54,7 +61,7 @@ GOIMPORTS_VER := master
 GOIMPORTS_BIN := goimports
 GOIMPORTS := $(TOOLS_BIN_DIR)/$(GOIMPORTS_BIN)
 
-GOLANGCILINT_VER := v1.50.1
+GOLANGCILINT_VER := v1.53.3
 GOLANGCILINT_BIN := golangci-lint
 GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 
@@ -108,6 +115,10 @@ goformat:
 		fi; \
 	done
 	@echo "gofmt success"; \
+
+.PHONY: dev-start
+dev-start:
+	docker-compose up -d
 
 ## Checks if imports are formatted correctly.
 .PHONY: goimports
@@ -201,13 +212,31 @@ check-modules: $(OUTDATED_GEN) ## Check outdated modules
 goverall: $(GOVERALLS_GEN) ## Runs goveralls
 	$(GOVERALLS_GEN) -coverprofile=coverage.out -service=circle-ci -repotoken ${COVERALLS_REPO_TOKEN} || true
 
+ifndef CLOUD_DATABASE
+CLOUD_DATABASE ?= postgres://$(TEST_PSQL_NAME):$(TEST_PSQL_NAME)@localhost:$(TEST_PSQL_PORT)/$(TEST_PSQL_NAME)?sslmode=disable
+
+unittest: unittest-create-db
+
+.PHONY: unittest-create-db
+unittest-create-db: unittest-destroy-db ## Start a postgresql database for unit tests, cleaning up any previous instance
+	@echo Start a docker postgesql database
+	@docker run --detach --rm --name $(TEST_PSQL_NAME) -p $(TEST_PSQL_PORT):5432 -e POSTGRES_USER=$(TEST_PSQL_NAME) -e POSTGRES_PASSWORD=$(TEST_PSQL_NAME) -e POSTGRES_DB=$(TEST_PSQL_NAME) -d postgres:$(POSTGRES_VERSION)-alpine
+
+.PHONY: unittest-destroy-db
+unittest-destroy-db: ## Destroy the postgresql database for unit tests
+	@echo Destroy the docker postgesql database
+	@docker stop $(TEST_PSQL_NAME) || true
+endif
+
 .PHONY: unittest
 unittest:
-	$(GO) test -failfast ./... ${TEST_FLAGS} -covermode=count -coverprofile=coverage.out
+	CLOUD_DATABASE=$(CLOUD_DATABASE) $(GO) test -failfast ./... ${TEST_FLAGS} -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
 verify-mocks: mocks
 	@if !(git diff --quiet HEAD); then \
+		git status \
+		git diff \
 		echo "generated files are out of date, run make mocks"; exit 1; \
 	fi
 
@@ -250,4 +279,4 @@ $(GOIMPORTS): ## Build goimports.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/tools/cmd/goimports $(GOIMPORTS_BIN) $(GOIMPORTS_VER)
 
 $(GOLANGCILINT): ## Build golangci-lint
-	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCILINT_BIN) $(GOLANGCILINT_VER)
+	BINDIR=$(TOOLS_BIN_DIR) TAG=$(GOLANGCILINT_VER) $(ENSURE_GOLANGCI_LINT)

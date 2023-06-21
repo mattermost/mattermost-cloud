@@ -31,8 +31,9 @@ func (a *Client) GetS3RegionURL() string {
 	return result
 }
 
-func (a *Client) s3EnsureBucketCreated(bucketName string, logger log.FieldLogger) error {
+func (a *Client) s3EnsureBucketCreated(bucketName string, enableVersioning bool, logger log.FieldLogger) error {
 	ctx := context.TODO()
+
 	_, err := a.Service().s3.CreateBucket(
 		ctx,
 		&s3.CreateBucketInput{
@@ -74,6 +75,66 @@ func (a *Client) s3EnsureBucketCreated(bucketName string, logger log.FieldLogger
 		})
 	if err != nil {
 		return errors.Wrap(err, "unable to set bucket encryption default")
+	}
+
+	if enableVersioning {
+		err = a.S3EnableVersioning(bucketName)
+		if err != nil {
+			return errors.Wrap(err, "unable to enable bucket versioning")
+		}
+	}
+
+	return nil
+}
+
+func (a *Client) S3BatchDeleteVersions(bucketName string, prefix *string) error {
+	ctx := context.TODO()
+
+	versionsPaginator := s3.NewListObjectVersionsPaginator(
+		a.service.s3,
+		&s3.ListObjectVersionsInput{
+			Bucket:  aws.String(bucketName),
+			MaxKeys: 1000, // The maximum number of objects we can retrieve on a single request
+			Prefix:  prefix,
+		},
+	)
+
+	for versionsPaginator.HasMorePages() {
+		versionsPage, err := versionsPaginator.NextPage(ctx)
+		if err != nil {
+			return errors.Wrap(err, "couldn't get object versions page")
+		}
+
+		if versionsPage == nil {
+			break
+		}
+
+		var objectVersions []types.ObjectIdentifier
+		for _, obj := range versionsPage.Versions {
+			objectVersions = append(objectVersions, types.ObjectIdentifier{
+				Key:       obj.Key,
+				VersionId: obj.VersionId,
+			})
+		}
+
+		// Ensure we have object versions, otherwise there's nothing to do
+		if len(objectVersions) == 0 {
+			a.logger.Warnf("received empty page while emptying bucket versions %s, assuming finished", bucketName)
+			break
+		}
+
+		_, err = a.service.s3.DeleteObjects(
+			ctx,
+			&s3.DeleteObjectsInput{
+				Bucket: aws.String(bucketName),
+				Delete: &types.Delete{
+					Objects: objectVersions,
+				},
+			},
+		)
+		if err != nil {
+			return errors.Wrap(err, "couldn't delete object versions from bucket")
+		}
 	}
 
 	return nil
@@ -128,6 +189,53 @@ func (a *Client) S3BatchDelete(bucketName string, prefix *string) error {
 			return errors.Wrap(err, "couldn't delete objects from bucket")
 		}
 	}
+
+	return nil
+}
+
+func (a *Client) S3IsVersioningEnabled(bucketName string) (bool, error) {
+	ctx := context.TODO()
+	result, err := a.Service().s3.GetBucketVersioning(
+		ctx,
+		&s3.GetBucketVersioningInput{
+			Bucket: aws.String(bucketName),
+		})
+	if err != nil {
+		return false, errors.Wrap(err, "unable to get bucket versioning")
+	}
+
+	return result.Status == types.BucketVersioningStatusEnabled, nil
+}
+
+func (a *Client) S3DisableVersioning(bucketName string) error {
+	ctx := context.TODO()
+
+	_, err := a.Service().s3.PutBucketVersioning(ctx, &s3.PutBucketVersioningInput{
+		Bucket: aws.String(bucketName),
+		VersioningConfiguration: &types.VersioningConfiguration{
+			Status: types.BucketVersioningStatusSuspended,
+		},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to disable versioning")
+	}
+
+	return nil
+}
+
+func (a *Client) S3EnableVersioning(bucketName string) error {
+	ctx := context.TODO()
+
+	_, err := a.Service().s3.PutBucketVersioning(ctx, &s3.PutBucketVersioningInput{
+		Bucket: aws.String(bucketName),
+		VersioningConfiguration: &types.VersioningConfiguration{
+			Status: types.BucketVersioningStatusEnabled,
+		},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to enable versioning")
+	}
+
 	return nil
 }
 
@@ -148,6 +256,24 @@ func (a *Client) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger
 			return nil
 		}
 		logger.WithField("s3-bucket-name", bucketName).WithError(err).Warn("Could not determine if S3 bucket exists")
+	}
+
+	isVersioned, err := a.S3IsVersioningEnabled(bucketName)
+
+	if err != nil {
+		logger.WithField("s3-bucket-name", bucketName).WithError(err).Warn("Could not determine if S3 bucket is versioned")
+		return err
+	}
+
+	if isVersioned {
+		if err = a.S3DisableVersioning(bucketName); err != nil {
+			logger.WithField("s3-bucket-name", bucketName).WithError(err).Warn("Could not disable versioning on bucket")
+			return err
+		}
+	}
+
+	if err = a.S3BatchDeleteVersions(bucketName, nil); err != nil {
+		return errors.Wrap(err, "can't empty bucket versions")
 	}
 
 	if err = a.S3BatchDelete(bucketName, nil); err != nil {

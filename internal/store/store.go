@@ -7,7 +7,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -17,8 +16,6 @@ import (
 
 	// enable the pq driver
 	_ "github.com/lib/pq"
-	// enable the sqlite3 driver
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // SQLStore abstracts access to the database.
@@ -41,18 +38,6 @@ func New(dsn string, logger logrus.FieldLogger) (*SQLStore, error) {
 	var db *sqlx.DB
 
 	switch strings.ToLower(url.Scheme) {
-	case "sqlite", "sqlite3":
-		db, err = sqlx.Connect("sqlite3", fmt.Sprintf("%s?%s", url.Host, url.RawQuery))
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to connect to sqlite database")
-		}
-
-		// Serialize all access to the database. Sqlite3 doesn't allow multiple writers.
-		db.SetMaxOpenConns(1)
-
-		// Override the default mapper to use the field names "as-is"
-		db.MapperFunc(func(s string) string { return s })
-
 	case "postgres", "postgresql":
 		url.Scheme = "postgres"
 

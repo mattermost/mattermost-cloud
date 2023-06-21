@@ -23,14 +23,23 @@ type promtail struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*promtail, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate Promtail handle with nil logger")
+func newPromtailOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.PromtailCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.PromtailCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.PromtailCanonicalName, logger), nil
 	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
+	promtail := newPromtailHandle(cluster, desired, kubeconfigPath, awsClient, logger)
+	err := promtail.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "promtail utility config is invalid")
 	}
 
+	return promtail, nil
+}
+
+func newPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) *promtail {
 	return &promtail{
 		environment:    awsClient.GetCloudEnvironmentName(),
 		cluster:        cluster,
@@ -38,8 +47,15 @@ func newPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtility
 		logger:         logger.WithField("cluster-utility", model.PromtailCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Promtail,
-	}, nil
+	}
+}
 
+func (p *promtail) validate() error {
+	if p.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+
+	return nil
 }
 
 func (p *promtail) updateVersion(h *helmDeployment) error {

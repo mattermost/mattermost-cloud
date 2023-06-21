@@ -336,7 +336,7 @@ type installationRecoveryFlags struct {
 func (flags *installationRecoveryFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to be recovered.")
 	command.Flags().StringVar(&flags.databaseID, "installation-database", "", "The original multitenant database id of the installation to be recovered.")
-	command.Flags().StringVar(&flags.database, "database", "sqlite://cloud.db", "The database backing the provisioning server.")
+	command.Flags().StringVar(&flags.database, "database", "", "The database backing the provisioning server.")
 
 	_ = command.MarkFlagRequired("installation")
 	_ = command.MarkFlagRequired("installation-database")
@@ -353,4 +353,13 @@ func (flags *installationDeploymentReportFlags) addFlags(command *cobra.Command)
 	command.Flags().IntVar(&flags.eventCount, "event-count", 10, "The number of recent installation events to include in the report.")
 
 	_ = command.MarkFlagRequired("installation")
+}
+
+type installationDeletionReportFlags struct {
+	clusterFlags
+	days int
+}
+
+func (flags *installationDeletionReportFlags) addFlags(command *cobra.Command) {
+	command.Flags().IntVar(&flags.days, "days", 7, "The number of days include in the deletion report.")
 }

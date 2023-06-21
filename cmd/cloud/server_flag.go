@@ -133,6 +133,7 @@ type installationOptions struct {
 	gitlabOAuthToken              string
 	forceCRUpgrade                bool
 	utilitiesGitURL               string
+	enableS3Versioning            bool
 }
 
 func (flags *installationOptions) addFlags(command *cobra.Command) {
@@ -142,6 +143,7 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.gitlabOAuthToken, "gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
 	command.Flags().BoolVar(&flags.forceCRUpgrade, "force-cr-upgrade", false, "If specified installation CRVersions will be updated to the latest version when supervised.")
 	command.Flags().StringVar(&flags.utilitiesGitURL, "utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
+	command.Flags().BoolVar(&flags.enableS3Versioning, "enable-s3-versioning", false, "Whether to enable S3 versioning for the installation bucket or not")
 }
 
 type dbUtilizationSettings struct {
@@ -220,7 +222,7 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.logFilesPerClusterPath, "log-files-per-cluster-path", "", "Where to store the cluster log files.")
 	command.MarkFlagsRequiredTogether("enable-log-files-per-cluster", "log-files-per-cluster-path")
 
-	command.Flags().StringVar(&flags.database, "database", "sqlite://cloud.db", "The database backing the provisioning server.")
+	command.Flags().StringVar(&flags.database, "database", "", "The database backing the provisioning server.")
 	command.Flags().Int64Var(&flags.maxSchemas, "default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
 	command.Flags().BoolVar(&flags.enableRoute53, "installation-enable-route53", false, "Specifies whether CNAME records for Installation should be created in Route53 as well.")
 

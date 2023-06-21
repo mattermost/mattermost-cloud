@@ -25,9 +25,7 @@ func (wh Headers) Value() (driver.Value, error) {
 
 func (wh *Headers) Scan(databaseValue interface{}) error {
 	switch value := databaseValue.(type) {
-	case string: // sqlite's text
-		return json.Unmarshal([]byte(value), wh)
-	case []byte: // psqls jsonb
+	case []byte: // JSON estored in a JSON/JSONB field
 		return json.Unmarshal(value, wh)
 	case nil:
 		return nil

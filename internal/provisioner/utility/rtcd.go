@@ -22,17 +22,23 @@ type rtcd struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newRtcdHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*rtcd, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate RTCD handle with nil logger")
+func newRtcdOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+	desired := cluster.DesiredUtilityVersion(model.RtcdCanonicalName)
+	actual := cluster.ActualUtilityVersion(model.RtcdCanonicalName)
+
+	if model.UtilityIsUnmanaged(desired, actual) {
+		return newUnmanagedHandle(model.RtcdCanonicalName, logger), nil
 	}
-	if awsClient == nil {
-		return nil, errors.New("cannot create a connection to RTCD if the awsClient provided is nil")
-	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
+	rtcd := newRtcdHandle(cluster, desired, kubeconfigPath, awsClient, logger)
+	err := rtcd.validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "rtcd utility config is invalid")
 	}
 
+	return rtcd, nil
+}
+
+func newRtcdHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) *rtcd {
 	return &rtcd{
 		environment:    awsClient.GetCloudEnvironmentName(),
 		kubeconfigPath: kubeconfigPath,
@@ -40,8 +46,15 @@ func newRtcdHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVers
 		logger:         logger.WithField("cluster-utility", model.RtcdCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Rtcd,
-	}, nil
+	}
+}
 
+func (r *rtcd) validate() error {
+	if r.kubeconfigPath == "" {
+		return errors.New("kubeconfig path cannot be empty")
+	}
+
+	return nil
 }
 
 func (r *rtcd) updateVersion(h *helmDeployment) error {
