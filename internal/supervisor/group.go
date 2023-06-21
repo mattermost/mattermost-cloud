@@ -111,8 +111,8 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 		return
 	}
 
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(groupMetadata.InstallationIDsToBeRolled), func(i, j int) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(groupMetadata.InstallationIDsToBeRolled), func(i, j int) {
 		groupMetadata.InstallationIDsToBeRolled[i], groupMetadata.InstallationIDsToBeRolled[j] =
 			groupMetadata.InstallationIDsToBeRolled[j], groupMetadata.InstallationIDsToBeRolled[i]
 	})
