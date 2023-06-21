@@ -29,7 +29,7 @@ The following is required to properly run the cloud server.
 1. Install [Go](https://golang.org/doc/install)
 2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v1.0.7
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
-3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.23.X
+3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.24.X
 4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.11.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [golang/mock](https://github.com/golang/mock#installation) version 1.4.x
@@ -42,25 +42,30 @@ The following is required to properly run the cloud server.
 [profile mm-cloud]
 region = us-east-1
 ```
+
 2. Generate an AWS Access and Secret key pair, then export them in your bash profile:
-  ```
-  export AWS_ACCESS_KEY_ID=YOURACCESSKEYID
-  export AWS_SECRET_ACCESS_KEY=YOURSECRETACCESSKEY
-  export AWS_PROFILE=mm-cloud
-  ```
+```
+export AWS_ACCESS_KEY_ID=YOURACCESSKEYID
+export AWS_SECRET_ACCESS_KEY=YOURSECRETACCESSKEY
+export AWS_PROFILE=mm-cloud
+```
 3. Create an S3 bucket to store the kops state. The name of the bucket **MUST** start with `cloud-` prefix and
   has to be created using the provisioner account credentials. To do it run the following:
-  ```bash
-  aws s3api create-bucket --bucket cloud-<yourname>-kops-state --region us-east-1
-  ```
+```
+aws s3api create-bucket --bucket cloud-<yourname>-kops-state --region us-east-1
+```
 4. Clone this repository into your GOPATH (or anywhere if you have Go Modules enabled)
 
-5. Generate a Gitlab Token for access to the utities Helm values repo.  Then export:
+5. Generate a Gitlab Token for access to the utilities Helm values repo. Then export:
 ```
-export GITLAB_OAUTH_TOKEN=YOURTOKEN
+export GITLAB_OAUTH_TOKEN=<token>
 ```
 This is the option when a remote git repo is used for utility values. In case you want to use local values for local testing you can export an empty token value and add the values in the relevant file in `helm-charts` directory and pass it in the cluster creation step.
-6. Get a CloudFlare API Key, and export it with `export CLOUDFLARE_API_KEY=<key>`
+
+6. Get a CloudFlare API Key, and export it with
+```
+export CLOUDFLARE_API_KEY=<key>
+```
 
 Also:
 - Make sure you have a key in your ~/.ssh/
@@ -74,47 +79,51 @@ Also:
     ssh-keygen -t rsa -C "<your-email>"
     ```
 
-- Make sure you have `helm version` different than 2.16.4 as there is an issue with
-  nginx: https://stackoverflow.com/questions/60836127/error-validation-failed-serviceaccounts-nginx-ingress-not-found-serviceacc
-
 ### Building
 
-Simply run the following:
+The provisioning server can be built and installed by running the following:
 
 ```bash
 go install ./cmd/cloud
-alias cloud='$HOME/go/bin/cloud'
 ```
 
+This will install the cloud binary to your `$GOPATH/bin` directory. If you haven't already, it's generally a good idea to add this directory to your `$PATH` to easily reference.
+
+### Notes on the Cloud Server Database
+
+The cloud server makes use of a PostgreSQL database to store information on currently-deployed resources. Maintaining this database is important so that the provisioner can update and delete resources in the future.
+
+NOTE: the cloud server recently deprecated SQLite support. If you were using a SQLite database for development then review the deprecation notes at the end of the README.
 
 ### Running
 Before running the server the first time you must set up the DB with:
 ```bash
 make dev-start
 ```
-Then run the database migrations with:
+
+This will start a docker PostgreSQL container `cloud-postgres` for your provisioning server to store resource information in.
+
+Before using the new database we need to ensure it has the latest schema by running the following:
 ```bash
-$ cloud schema migrate
+$ cloud schema migrate --database 'postgres://provisioner:provisionerdev@localhost:5430/cloud?sslmode=disable'
 ```
 
-Run the server with:
+You are now ready to start the provisioning server. Here is a command with some required flags as well as some flags which help with development.
 
 ```bash
-cloud server --state-store=<your-s3-bucket> --utilities-git-url=<https://gitlab.example.com>
+cloud server --dev --database=postgres://provisioner:provisionerdev@localhost:5430/cloud?sslmode=disable --state-store=<your-s3-bucket> --utilities-git-url=<https://gitlab.example.com>
 ```
-tip: if you want to debug, enable `--dev` flag
 
+### Creating your First Cluster
 
-In a different terminal/window, to create a cluster:
+Before you can create a Mattermost installation you will need a kubernetes cluster. You can create one by running the following command in a new terminal window.
 ```bash
 cloud cluster create --zones <availabiity-zone> --size SizeAlef500 --networking calico
 i.e.
 cloud cluster create --zones=us-east-1a --networking calico
 ```
-Note: Provisioner's default network provider is **amazon-vpc-routed-eni** which can be overridden using `--networking` flag. Supported network providers are weave, canal, calico, amazon-vpc-routed-eni.e.g
-```bash
-    cloud cluster create --networking weave
-```
+Note: Provisioner's default network provider is **amazon-vpc-routed-eni** which can be overridden using `--networking` flag. Supported network providers are weave, canal, calico, amazon-vpc-routed-eni.
+
 You will get a response like this one:
 ```bash
 [
@@ -136,8 +145,8 @@ You will get a response like this one:
     }
 ]
 ```
-Check its creation progress on the first window where the API runs or run `cloud cluster list`
- to check cluster status
+
+The terminal window where the cloud server is running should produce logs as it creates the cluster. At any time you can run `cloud cluster list` to check on the status of the cluster.
 
 If something breaks and reprovisioning is needed, run
 ```bash
@@ -174,7 +183,7 @@ on your <your-dns-record>
 Run the go tests to test:
 
 ```bash
-$ go test ./...
+$ make unittest
 ```
 
 ### End-to-end tests
@@ -243,27 +252,16 @@ kops create secret --name <cluster-ID>-kops.k8s.local sshpublickey admin -i ~/.s
 
 ### Deprecation Instructions
 
-#### Manual Terraform 0.12 Migration Steps
+#### Cloud Server SQLite to PostgreSQL Migration
 
-Kops version 1.18.0 should introduce terraform 0.12 as the default version. Before migrating to the new terraform version, manual terraform state migration may be required. To perform a check if migration is needed, follow these instructions provided by kops:
+The cloud server recently deprecated SQLite database support.
 
-```
-kops update cluster --target terraform ...
-terraform plan
-# Observe any aws_route or aws_vpc_ipv4_cidr_block_association resources being destroyed and recreated
-# Run these commands as necessary. The exact names may differ; use what is outputted by terraform plan
-terraform state mv aws_route.0-0-0-0--0 aws_route.route-0-0-0-0--0
-terraform state mv aws_vpc_ipv4_cidr_block_association.10-1-0-0--16 aws_vpc_ipv4_cidr_block_association.cidr-10-1-0-0--16
-terraform state list | grep aws_autoscaling_attachment | xargs -L1 terraform state rm
-terraform plan
-# Ensure these resources are no longer being destroyed and recreated
-terraform apply
-```
+The simplest migration method to PostgreSQL is to remove all running resources and then migrate to PostgreSQL by doing the following:
+1. Run `cloud installation delete` for all active installations.
+2. Run `cloud cluster delete` for all active clusters.
+3. Run `make dev-start` to build a new PG docker container
 
-Tip: a quick and reliable way to get access to a cluster's terraform files and state is to use the `cloud workbench cluster` command. This will checkout the correct files locally in the same manner that the provisioning process uses.
-
-For more information on this change and reasoning for it, check out the [kops release notes](https://github.com/kubernetes/kops/releases/tag/v1.18.3).
-
+Your existing `cloud.db` SQLite database will remain and can by kept for historical purposes if you want to lookup old resource IDs or events.
 #### Cluster reprovisioning steps for new NGINX deployment
 
 This is related to the changes introduced in [PR-263](https://github.com/mattermost/mattermost-cloud/pull/263)

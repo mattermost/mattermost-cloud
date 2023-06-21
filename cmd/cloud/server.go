@@ -72,13 +72,15 @@ func newCmdServer() *cobra.Command {
 }
 
 func executeServerCmd(flags serverFlags) error {
-
-	debugMode := flags.debug || (flags.devMode && !flags.isDebugChanged)
-	if debugMode {
+	if flags.devMode {
 		logger.SetLevel(logrus.DebugLevel)
+		helm.SetVerboseHelmLogging(true)
+	} else {
+		if flags.debug {
+			logger.SetLevel(logrus.DebugLevel)
+		}
+		helm.SetVerboseHelmLogging(flags.debugHelm)
 	}
-
-	helm.SetVerboseHelmLogging(flags.debugHelm)
 
 	if flags.enableLogFilesPerCluster && flags.logFilesPerClusterPath == "" {
 		return fmt.Errorf("log files per cluster path must not be empty")
@@ -215,7 +217,7 @@ func executeServerCmd(flags serverFlags) error {
 		"force-cr-upgrade":                              flags.forceCRUpgrade,
 		"backup-restore-tool-image":                     flags.backupRestoreToolImage,
 		"backup-job-ttl-seconds":                        flags.backupJobTTL,
-		"debug":                                         debugMode,
+		"debug":                                         flags.debug,
 		"dev-mode":                                      flags.devMode,
 		"deploy-mysql-operator":                         flags.deployMySQLOperator,
 		"deploy-minio-operator":                         flags.deployMinioOperator,
