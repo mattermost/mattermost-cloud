@@ -151,8 +151,8 @@ func (a *Client) rdsEnsureDBClusterCreated(
 	// default to at least 2 AZ
 	rdsAZs := azs[0:2]
 	if len(azs) >= 3 {
-		rand.Seed(time.Now().UnixNano())
-		rand.Shuffle(len(azs), func(i, j int) { azs[i], azs[j] = azs[j], azs[i] })
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		r.Shuffle(len(azs), func(i, j int) { azs[i], azs[j] = azs[j], azs[i] })
 		rdsAZs = azs[0:3]
 	}
 
