@@ -257,7 +257,14 @@ e2e-db-migration:
 .PHONY: e2e-cluster
 e2e-cluster:
 	@echo Starting cluster e2e test.
-	go test ./e2e/tests/cluster -tags=e2e -v -timeout 90m -p 1
+	go test ./e2e/tests/cluster -tags=e2e -v -timeout 90m
+
+
+.PHONE: e2e-installation
+e2e-installation:
+	@echo Starting installation e2e test
+	go test ./e2e/tests/installation -tags=e2e -v -timeout 90m
+
 
 ## --------------------------------------
 ## Tooling Binaries

@@ -5,14 +5,13 @@
 //go:build e2e
 // +build e2e
 
-package cluster
+package installation
 
 import (
 	"github.com/mattermost/mattermost-cloud/e2e/workflow"
 )
 
-func clusterLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
-
+func installationLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
 	return []*workflow.Step{
 		{
 			Name:              "CreateCluster",
@@ -21,47 +20,36 @@ func clusterLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuit
 			GetExpectedEvents: clusterSuite.ClusterCreationEvents,
 		},
 		{
-			Name:              "CreateInstallation",
-			Func:              installationSuite.CreateInstallation,
+			Name:              "CreateInstallationWithVersionedAWSS3Filestore",
+			Func:              installationSuite.CreateInstallationWithVersionedAWSS3Filestore,
 			DependsOn:         []string{"CreateCluster"},
 			GetExpectedEvents: installationSuite.InstallationCreationEvents,
 		},
 		{
-			Name:      "GetCI",
+			Name:      "GetVersionedAWSS3FilestoreCI",
 			Func:      installationSuite.GetCI,
-			DependsOn: []string{"CreateInstallation"},
+			DependsOn: []string{"CreateInstallationWithVersionedAWSS3Filestore"},
 		},
 		{
-			Name:      "CheckClusterInstallationStatus",
+			Name:      "CheckVersionedAWSS3FilestoreClusterInstallationStatus",
 			Func:      installationSuite.CheckClusterInstallationStatus,
-			DependsOn: []string{"GetCI"},
+			DependsOn: []string{"GetVersionedAWSS3FilestoreCI"},
 		},
 		{
-			Name:      "PopulateSampleData",
-			Func:      installationSuite.PopulateSampleData,
-			DependsOn: []string{"CheckClusterInstallationStatus"},
-		},
-		{
-			Name:              "ProvisionCluster",
-			Func:              clusterSuite.ProvisionCluster,
-			DependsOn:         []string{"PopulateSampleData"},
-			GetExpectedEvents: clusterSuite.ClusterReprovisionEvents,
-		},
-		{
-			Name:      "CheckInstallation",
+			Name:      "CheckVersionedAWSS3FilestoreInstallation",
 			Func:      installationSuite.CheckHealth,
-			DependsOn: []string{"ProvisionCluster"},
+			DependsOn: []string{"CheckVersionedAWSS3FilestoreClusterInstallationStatus"},
 		},
 		{
-			Name:              "DeleteInstallation",
+			Name:              "DeleteVersionedAWSS3FilestoreInstallation",
 			Func:              installationSuite.Cleanup,
-			DependsOn:         []string{"CheckInstallation"},
+			DependsOn:         []string{"CheckVersionedAWSS3FilestoreInstallation"},
 			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
 		},
 		{
 			Name:              "DeleteCluster",
 			Func:              clusterSuite.DeleteCluster,
-			DependsOn:         []string{"DeleteInstallation"},
+			DependsOn:         []string{"DeleteVersionedAWSS3FilestoreInstallation"},
 			GetExpectedEvents: clusterSuite.ClusterDeletionEvents,
 		},
 	}

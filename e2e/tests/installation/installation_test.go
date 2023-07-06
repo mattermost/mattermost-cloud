@@ -5,9 +5,10 @@
 //go:build e2e
 // +build e2e
 
-package cluster
+package installation
 
 import (
+	"context"
 	"github.com/pkg/errors"
 	"math/rand"
 	"testing"
@@ -20,14 +21,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// This is mainly used to send a notification when tests are finished to a mattermost webhook
-	// provided with the WEBHOOOK_URL environment variable.
 	shared.TestMain(m)
 }
 
-// SetupClusterLifecycleTest sets up cluster lifecycle test.
-func SetupClusterLifecycleTest() (*shared.Test, error) {
+func SetupInstallationLifecycleTest() (*shared.Test, error) {
+
 	test, err := shared.SetupTestWithDefaults()
+
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup test environment")
 	}
@@ -35,19 +35,17 @@ func SetupClusterLifecycleTest() (*shared.Test, error) {
 	return test, nil
 }
 
-func Test_ClusterLifecycle(t *testing.T) {
+func Test_InstallationLifecycle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	t.Parallel()
 
-	test, err := SetupClusterLifecycleTest()
+	test, err := SetupInstallationLifecycleTest()
 	require.NoError(t, err)
-	testWorkflowSteps := clusterLifecycleSteps(test.ClusterSuite, test.InstallationSuite)
+	testWorkflowSteps := installationLifecycleSteps(test.ClusterSuite, test.InstallationSuite)
 
 	test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
 	test.Steps = testWorkflowSteps
 
 	defer test.CleanupTest(t)
-
 	err = test.EventsRecorder.Start(test.ProvisionerClient, test.Logger)
 	require.NoError(t, err)
 	defer test.EventsRecorder.ShutDown(test.ProvisionerClient)

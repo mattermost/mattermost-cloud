@@ -1,14 +1,14 @@
-// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
-// See LICENSE.txt for license information.
-//
-
-//go:build e2e
-
-package cluster
+package shared
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"testing"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
@@ -18,7 +18,17 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/vrischmann/envconfig"
+)
+
+const (
+	webhookSuccessfulMessage      = "Provisioner E2E tests passed successfully"
+	webhookFailedMessage          = `Provisioner E2E tests failed`
+	webhookSuccessEmoji           = "large_green_circle"
+	webhookFailedEmoji            = "red_circle"
+	webhookAttachmentColorSuccess = "#009E60"
+	webhookAttachmentColorError   = "#FF0000"
 )
 
 // TODO: we can further parametrize the test according to our needs
@@ -56,7 +66,7 @@ type Test struct {
 	Cleanup           bool
 }
 
-func setupTestWithDefaults() (*Test, error) {
+func SetupTestWithDefaults() (*Test, error) {
 	testID := model.NewID()
 	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
@@ -147,37 +157,6 @@ func setupTestWithDefaults() (*Test, error) {
 	}, nil
 }
 
-func SetupInstallationLifecycleTest() (*Test, error) {
-
-	test, err := setupTestWithDefaults()
-
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to setup test environment")
-	}
-
-	testWorkflowSteps := installationLifecycleSteps(test.ClusterSuite, test.InstallationSuite)
-
-	test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
-	test.Steps = testWorkflowSteps
-
-	return test, nil
-}
-
-// SetupClusterLifecycleTest sets up cluster lifecycle test.
-func SetupClusterLifecycleTest() (*Test, error) {
-	test, err := setupTestWithDefaults()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to setup test environment")
-	}
-
-	testWorkflowSteps := clusterLifecycleSteps(test.ClusterSuite, test.InstallationSuite)
-
-	test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
-	test.Steps = testWorkflowSteps
-
-	return test, nil
-}
-
 func testAnnotations(testID string) []string {
 	return []string{"e2e-test-cluster-lifecycle", fmt.Sprintf("test-id-%s", testID)}
 }
@@ -208,6 +187,25 @@ func (w *Test) Run() error {
 	return nil
 }
 
+func (w *Test) CleanupTest(t *testing.T) error {
+	// Always cleanup webhook
+
+	err := w.WebhookCleanup()
+	assert.NoError(t, err)
+	if w.Cleanup {
+		err = w.InstallationSuite.Cleanup(context.Background())
+		if err != nil {
+			w.Logger.WithError(err).Error("Error cleaning up installation")
+		}
+		err = w.ClusterSuite.Cleanup(context.Background())
+		if err != nil {
+			w.Logger.WithError(err).Error("Error cleaning up cluster")
+		}
+	}
+
+	return nil
+}
+
 func fetchAMI(cloudClient *model.Client, logger logrus.FieldLogger) (string, error) {
 	clusters, err := cloudClient.GetClusters(&model.GetClustersRequest{Paging: model.AllPagesNotDeleted()})
 	if err != nil {
@@ -221,4 +219,37 @@ func fetchAMI(cloudClient *model.Client, logger logrus.FieldLogger) (string, err
 	logrus.Infof("Fetched AMI from existing cluster: %q", ami)
 
 	return ami, nil
+}
+
+func TestMain(m *testing.M) {
+	// This is mainly used to send a notification when tests are finished to a mattermost webhook
+	// provided with the WEBHOOOK_URL environment variable.
+	state.StartTime = time.Now()
+	code := m.Run()
+	state.EndTime = time.Now()
+
+	// Notify if we receive any signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		for sig := range c {
+			fmt.Printf("caught signal: %s", sig)
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	var err error
+	if code != 0 {
+		err = pkg.SendE2EResult(ctx, webhookFailedEmoji, webhookFailedMessage, webhookAttachmentColorError)
+	} else {
+		err = pkg.SendE2EResult(ctx, webhookSuccessEmoji, webhookSuccessfulMessage, webhookAttachmentColorSuccess)
+	}
+
+	if err != nil {
+		fmt.Printf("error sending webhook: %s", err)
+	}
+
+	os.Exit(code)
 }
