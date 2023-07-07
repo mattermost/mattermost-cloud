@@ -19,11 +19,11 @@ const (
 
 // NewRandomPassword generates a random password of the provided length
 func NewRandomPassword(length int) string {
-	rand.Seed(time.Now().UnixNano())
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	b := make([]byte, length)
 	for i := range b {
-		b[i] = passwordBytes[rand.Intn(len(passwordBytes))]
+		b[i] = passwordBytes[r.Intn(len(passwordBytes))]
 	}
 
 	return string(b)

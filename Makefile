@@ -7,7 +7,7 @@
 
 ## Tool Versions
 GOLANG_VERSION := $(shell cat go.mod | grep "^go " | cut -d " " -f 2)
-ALPINE_VERSION = 3.16
+ALPINE_VERSION = 3.18.2
 TERRAFORM_VERSION=1.0.7
 KOPS_VERSION=v1.24.5
 HELM_VERSION=v3.11.2
@@ -43,6 +43,7 @@ LDFLAGS += -X "github.com/mattermost/mattermost-cloud/model.BuildHash=$(BUILD_HA
 # Binaries.
 TOOLS_BIN_DIR := $(abspath bin)
 GO_INSTALL = ./scripts/go_install.sh
+ENSURE_GOLANGCI_LINT = ./scripts/ensure_golangci-lint.sh
 
 MOCKGEN_VER := v1.4.3
 MOCKGEN_BIN := mockgen
@@ -60,7 +61,7 @@ GOIMPORTS_VER := master
 GOIMPORTS_BIN := goimports
 GOIMPORTS := $(TOOLS_BIN_DIR)/$(GOIMPORTS_BIN)
 
-GOLANGCILINT_VER := v1.50.1
+GOLANGCILINT_VER := v1.53.3
 GOLANGCILINT_BIN := golangci-lint
 GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 
@@ -234,6 +235,8 @@ unittest:
 .PHONY: verify-mocks
 verify-mocks: mocks
 	@if !(git diff --quiet HEAD); then \
+		git status \
+		git diff \
 		echo "generated files are out of date, run make mocks"; exit 1; \
 	fi
 
@@ -283,4 +286,4 @@ $(GOIMPORTS): ## Build goimports.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/tools/cmd/goimports $(GOIMPORTS_BIN) $(GOIMPORTS_VER)
 
 $(GOLANGCILINT): ## Build golangci-lint
-	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCILINT_BIN) $(GOLANGCILINT_VER)
+	BINDIR=$(TOOLS_BIN_DIR) TAG=$(GOLANGCILINT_VER) $(ENSURE_GOLANGCI_LINT)

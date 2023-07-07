@@ -29,6 +29,20 @@ jobs:
       - name: ci/check-modules
         run: make check-modules
 
+  mocks:
+    runs-on: ubuntu-20.04 # TODO: move check-mocks back to the newest Ubuntu release
+    steps:
+      - name: ci/checkout-repo
+        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
       - name: ci/check-mocks
         run: make verify-mocks
 
