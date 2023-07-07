@@ -74,6 +74,13 @@ func (ev *EventsRecorder) Start(client *model.Client, logger log.FieldLogger) er
 	return nil
 }
 
+func (ev *EventsRecorder) FlushEvents() {
+	ev.Lock()
+	defer ev.Unlock()
+
+	ev.RecordedEvents = []model.StateChangeEventPayload{}
+}
+
 func (ev *EventsRecorder) runServer() error {
 	eventsURL, err := url.Parse(ev.listenerAddress)
 	if err != nil {

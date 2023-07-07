@@ -40,24 +40,35 @@ func Test_InstallationLifecycle(t *testing.T) {
 
 	test, err := SetupInstallationLifecycleTest()
 	require.NoError(t, err)
-	testWorkflowSteps := installationLifecycleSteps(test.ClusterSuite, test.InstallationSuite)
-
-	test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
-	test.Steps = testWorkflowSteps
 
 	defer test.CleanupTest(t)
 	err = test.EventsRecorder.Start(test.ProvisionerClient, test.Logger)
 	require.NoError(t, err)
 	defer test.EventsRecorder.ShutDown(test.ProvisionerClient)
 
-	err = test.Run()
-	require.NoError(t, err)
+	cases := []struct {
+		Name              string
+		WorkflowStepsFunc func(*workflow.ClusterSuite, *workflow.InstallationSuite) []*workflow.Step
+	}{
+		{
+			Name:              "Create and delete installation with a versioned s3 bucket",
+			WorkflowStepsFunc: versionedS3BucketInstallationLifecycleSteps,
+		},
+	}
 
-	// Make sure we wait for all subscription events
-	time.Sleep(time.Second * 1)
-
-	// Make sure that expected events occurred in correct order.
-	expectedEvents := workflow.GetExpectedEvents(test.Steps)
-	err = test.EventsRecorder.VerifyInOrder(expectedEvents)
-	require.NoError(t, err)
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			defer test.InstallationSuite.Cleanup(context.Background())
+			defer test.EventsRecorder.FlushEvents()
+			testWorkflowSteps := c.WorkflowStepsFunc(test.ClusterSuite, test.InstallationSuite)
+			test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
+			test.Steps = testWorkflowSteps
+			err = test.Run()
+			require.NoError(t, err)
+			time.Sleep(time.Second * 1)
+			expectedEvents := workflow.GetExpectedEvents(test.Steps)
+			err = test.EventsRecorder.VerifyInOrder(expectedEvents)
+			require.NoError(t, err)
+		})
+	}
 }

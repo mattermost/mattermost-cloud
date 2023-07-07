@@ -11,7 +11,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/e2e/workflow"
 )
 
-func installationLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
+func versionedS3BucketInstallationLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
 	return []*workflow.Step{
 		{
 			Name:              "CreateCluster",
