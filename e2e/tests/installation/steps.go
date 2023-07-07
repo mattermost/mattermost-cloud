@@ -46,11 +46,48 @@ func versionedS3BucketInstallationLifecycleSteps(clusterSuite *workflow.ClusterS
 			DependsOn:         []string{"CheckVersionedAWSS3FilestoreInstallation"},
 			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
 		},
+	}
+}
+
+func basicCreateDeleteInstallationSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
+	return []*workflow.Step{
 		{
-			Name:              "DeleteCluster",
-			Func:              clusterSuite.DeleteCluster,
-			DependsOn:         []string{"DeleteVersionedAWSS3FilestoreInstallation"},
-			GetExpectedEvents: clusterSuite.ClusterDeletionEvents,
+			Name:              "CreateCluster",
+			Func:              clusterSuite.CreateCluster,
+			DependsOn:         []string{},
+			GetExpectedEvents: clusterSuite.ClusterCreationEvents,
+		},
+		{
+			Name:              "CreateInstallation",
+			Func:              installationSuite.CreateInstallation,
+			DependsOn:         []string{"CreateCluster"},
+			GetExpectedEvents: installationSuite.InstallationCreationEvents,
+		},
+		{
+			Name:      "GetCI",
+			Func:      installationSuite.GetCI,
+			DependsOn: []string{"CreateInstallation"},
+		},
+		{
+			Name:      "CheckClusterInstallationStatus",
+			Func:      installationSuite.CheckClusterInstallationStatus,
+			DependsOn: []string{"GetCI"},
+		},
+		{
+			Name:      "PopulateSampleData",
+			Func:      installationSuite.PopulateSampleData,
+			DependsOn: []string{"CheckClusterInstallationStatus"},
+		},
+		{
+			Name:      "CheckInstallation",
+			Func:      installationSuite.CheckHealth,
+			DependsOn: []string{"PopulateSampleData"},
+		},
+		{
+			Name:              "DeleteInstallation",
+			Func:              installationSuite.Cleanup,
+			DependsOn:         []string{"CheckInstallation"},
+			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
 		},
 	}
 }

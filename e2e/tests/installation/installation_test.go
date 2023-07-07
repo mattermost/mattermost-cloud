@@ -51,6 +51,10 @@ func Test_InstallationLifecycle(t *testing.T) {
 		WorkflowStepsFunc func(*workflow.ClusterSuite, *workflow.InstallationSuite) []*workflow.Step
 	}{
 		{
+			Name:              "Create installation, populate sample data, then delete installation",
+			WorkflowStepsFunc: basicCreateDeleteInstallationSteps,
+		},
+		{
 			Name:              "Create and delete installation with a versioned s3 bucket",
 			WorkflowStepsFunc: versionedS3BucketInstallationLifecycleSteps,
 		},
