@@ -72,5 +72,4 @@ func Test_InstallationLifecycle(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-	test.Logger.Info("Finished, on to deferred actions")
 }
