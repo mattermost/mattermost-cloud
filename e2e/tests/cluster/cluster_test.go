@@ -46,11 +46,10 @@ func Test_ClusterLifecycle(t *testing.T) {
 	test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
 	test.Steps = testWorkflowSteps
 
-	defer test.CleanupTest(t)
-
 	err = test.EventsRecorder.Start(test.ProvisionerClient, test.Logger)
 	require.NoError(t, err)
 	defer test.EventsRecorder.ShutDown(test.ProvisionerClient)
+	defer test.CleanupTest(t)
 
 	err = test.Run()
 	require.NoError(t, err)
