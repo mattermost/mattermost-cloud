@@ -8,7 +8,6 @@
 package installation
 
 import (
-	"context"
 	"github.com/pkg/errors"
 	"math/rand"
 	"testing"
@@ -26,7 +25,7 @@ func TestMain(m *testing.M) {
 
 func SetupInstallationLifecycleTest() (*shared.Test, error) {
 
-	test, err := shared.SetupTestWithDefaults()
+	test, err := shared.SetupTestWithDefaults("installation-lifecycle")
 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup test environment")
@@ -41,10 +40,10 @@ func Test_InstallationLifecycle(t *testing.T) {
 	test, err := SetupInstallationLifecycleTest()
 	require.NoError(t, err)
 
-	defer test.CleanupTest(t)
 	err = test.EventsRecorder.Start(test.ProvisionerClient, test.Logger)
 	require.NoError(t, err)
 	defer test.EventsRecorder.ShutDown(test.ProvisionerClient)
+	defer test.CleanupTest(t)
 
 	cases := []struct {
 		Name              string
@@ -62,8 +61,6 @@ func Test_InstallationLifecycle(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			defer test.InstallationSuite.Cleanup(context.Background())
-			defer test.EventsRecorder.FlushEvents()
 			testWorkflowSteps := c.WorkflowStepsFunc(test.ClusterSuite, test.InstallationSuite)
 			test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
 			test.Steps = testWorkflowSteps
@@ -75,4 +72,5 @@ func Test_InstallationLifecycle(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+	test.Logger.Info("Finished, on to deferred actions")
 }

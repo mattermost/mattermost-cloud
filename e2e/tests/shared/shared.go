@@ -66,11 +66,11 @@ type Test struct {
 	Cleanup           bool
 }
 
-func SetupTestWithDefaults() (*Test, error) {
+func SetupTestWithDefaults(testName string) (*Test, error) {
 	testID := model.NewID()
 	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
-		"test":   "cluster-lifecycle",
+		"test":   testName,
 		"testID": testID,
 	})
 
@@ -188,12 +188,8 @@ func (w *Test) Run() error {
 }
 
 func (w *Test) CleanupTest(t *testing.T) error {
-	// Always cleanup webhook
-
-	err := w.WebhookCleanup()
-	assert.NoError(t, err)
 	if w.Cleanup {
-		err = w.InstallationSuite.Cleanup(context.Background())
+		err := w.InstallationSuite.Cleanup(context.Background())
 		if err != nil {
 			w.Logger.WithError(err).Error("Error cleaning up installation")
 		}
@@ -203,6 +199,9 @@ func (w *Test) CleanupTest(t *testing.T) error {
 		}
 	}
 
+	// Always cleanup webhook
+	err := w.WebhookCleanup()
+	assert.NoError(t, err)
 	return nil
 }
 
