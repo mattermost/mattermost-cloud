@@ -83,8 +83,6 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 func (a *Client) IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error) {
 	ctx := context.TODO()
 
-	return true, nil
-
 	// if AMI image is blank it will use the default KOPS image
 	if AMIImage == "" {
 		return true, nil

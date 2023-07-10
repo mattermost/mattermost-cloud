@@ -174,7 +174,7 @@ func (ev *EventsRecorder) VerifyInOrder(expectedEvents []EventOccurrence) error 
 	// This might be a little hard to troubleshoot in case of error,
 	// so we leave here some Debug logs for such scenarios.
 	for i, e := range ev.RecordedEvents {
-		ev.logger.WithField("event", e).Infof("Recorderd event %d", i)
+		ev.logger.WithField("event", e).Debugf("Recorderd event %d", i)
 		if len(expectedEvents) == 0 {
 			break
 		}
