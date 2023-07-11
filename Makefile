@@ -262,11 +262,14 @@ e2e-cluster:
 	@echo Starting cluster e2e test.
 	go test ./e2e/tests/cluster -tags=e2e -v -timeout 90m
 
-
-.PHONE: e2e-installation
+.PHONY: e2e-installation
 e2e-installation:
 	@echo Starting installation e2e test
 	go test ./e2e/tests/installation -tags=e2e -v -timeout 90m
+
+
+.PHONY: e2e
+e2e: e2e-cluster e2e-installation
 
 
 ## --------------------------------------
