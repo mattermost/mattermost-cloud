@@ -27,7 +27,7 @@ func init() {
 			"Affinity", "GroupID", "GroupSequence", "Installation.State", "License",
 			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
 			"Installation.CreateAt", "Installation.DeleteAt", "Installation.DeletionPendingExpiry",
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked", "AllowedRanges",
 		).
 		From(installationTable)
 }
@@ -449,6 +449,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"LockAcquiredAt":        0,
 		"CRVersion":             installation.CRVersion,
 		"DeletionLocked":        installation.DeletionLocked,
+		"AllowedRanges":         installation.AllowedRanges,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -519,6 +520,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"State":                 installation.State,
 			"CRVersion":             installation.CRVersion,
 			"DeletionPendingExpiry": installation.DeletionPendingExpiry,
+			"AllowedRanges":         installation.AllowedRanges,
 		}).
 		Where("ID = ?", installation.ID),
 	)

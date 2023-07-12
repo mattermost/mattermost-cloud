@@ -291,6 +291,7 @@ type GetInstallationsRequest struct {
 	State                       string
 	DNS                         string
 	Name                        string
+	AllowedRanges               string
 	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
 }
@@ -303,6 +304,7 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q.Add("state", request.State)
 	q.Add("dns_name", request.DNS)
 	q.Add("name", request.Name)
+	q.Add("allowed-ranges", request.AllowedRanges)
 	if !request.IncludeGroupConfig {
 		q.Add("include_group_config", "false")
 	}
@@ -321,6 +323,7 @@ type PatchInstallationRequest struct {
 	Version       *string
 	Size          *string
 	License       *string
+	AllowedRanges *string
 	PriorityEnv   EnvVarMap
 	MattermostEnv EnvVarMap
 }
@@ -332,6 +335,9 @@ func (p *PatchInstallationRequest) Validate() error {
 	}
 	if p.Image != nil && len(*p.Image) == 0 {
 		return errors.New("provided image update value was blank")
+	}
+	if p.AllowedRanges != nil && len(*p.AllowedRanges) == 0 {
+		return errors.New("provided ip ranges update value was blank")
 	}
 	if p.Size != nil {
 		_, err := GetInstallationSize(*p.Size)
@@ -368,6 +374,10 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 	if p.License != nil && *p.License != installation.License {
 		applied = true
 		installation.License = *p.License
+	}
+	if p.AllowedRanges != nil && *p.AllowedRanges != installation.AllowedRanges {
+		applied = true
+		installation.AllowedRanges = *p.AllowedRanges
 	}
 	if p.MattermostEnv != nil {
 		if installation.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {

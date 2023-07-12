@@ -187,7 +187,6 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 	}
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
-
 	mattermost := &mmv1beta1.Mattermost{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      installationName,
@@ -198,7 +197,7 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 			Version:       translateMattermostVersion(installation.Version),
 			Image:         installation.Image,
 			MattermostEnv: mattermostEnv.ToEnvList(),
-			Ingress:       makeIngressSpec(installationDNS),
+			Ingress:       makeIngressSpec(installationDNS, getIngressAnnotations()),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation),
 			Scheduling: mmv1beta1.Scheduling{
@@ -474,7 +473,19 @@ func (provisioner Provisioner) updateClusterInstallation(
 	// Just to be sure, for the update we reset deprecated fields.
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
-	mattermost.Spec.Ingress = makeIngressSpec(installationDNS)
+	annotations := mattermost.Spec.Ingress.Annotations
+	var allowedRanges string
+	if installation.AllowedRanges != "" {
+		if installation.OverrideRanges == true {
+			annotations, allowedRanges = overrideIngressSourceRanges(installation.AllowedRanges, provisioner.params.InternalRanges)
+		} else {
+			annotations, allowedRanges = addMissingIngressSourceRanges(annotations, installation.AllowedRanges, provisioner.params.InternalRanges)
+		}
+		installation.AllowedRanges = allowedRanges
+		logger.Debug(installation)
+		provisioner.store.UpdateInstallation(installation)
+	}
+	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
@@ -835,7 +846,7 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, insta
 	mattermost.Spec.ResourceLabels = clusterInstallationHibernatedLabels(installation, clusterInstallation)
 }
 
-func makeIngressSpec(installationDNS []*model.InstallationDNS) *mmv1beta1.Ingress {
+func makeIngressSpec(installationDNS []*model.InstallationDNS, annotations map[string]string) *mmv1beta1.Ingress {
 	primaryRecord := installationDNS[0]
 	for _, rec := range installationDNS {
 		if rec.IsPrimary {
@@ -849,7 +860,7 @@ func makeIngressSpec(installationDNS []*model.InstallationDNS) *mmv1beta1.Ingres
 		Enabled:      true,
 		Host:         primaryRecord.DomainName,
 		Hosts:        mapDomains(installationDNS),
-		Annotations:  getIngressAnnotations(),
+		Annotations:  annotations,
 		IngressClass: &ingressClass,
 	}
 }
@@ -1071,6 +1082,64 @@ func getHibernatingIngressAnnotations() map[string]string {
 	return annotations
 }
 
+func addMissingIngressSourceRanges(annotations map[string]string, allowedRanges string, internalRanges string) (map[string]string, string) {
+
+	existingRanges := strings.Split(annotations["nginx.ingress.kubernetes.io/whitelist-source-range"], ",")
+	fmt.Println(existingRanges)
+
+	if allowedRanges != "" {
+		ips := strings.Split(allowedRanges, ",")
+		for _, ip := range ips {
+			if !contains(existingRanges, ip) {
+				existingRanges = append(existingRanges, ip)
+			}
+		}
+	}
+
+	allowListNoInternalRanges := strings.Join(existingRanges, ",")
+	allowListNoInternalRanges = strings.TrimPrefix(allowListNoInternalRanges, ",")
+	fmt.Println(allowListNoInternalRanges)
+
+	if internalRanges != "" {
+		ips := strings.Split(internalRanges, ",")
+		for _, ip := range ips {
+			if !contains(existingRanges, ip) {
+				existingRanges = append(existingRanges, ip)
+			}
+		}
+	}
+	allowlistRange := strings.Join(existingRanges, ",")
+	allowlistRange = strings.TrimPrefix(allowlistRange, ",")
+	fmt.Println(allowlistRange)
+	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = allowlistRange
+
+	return annotations, allowListNoInternalRanges
+}
+
+func overrideIngressSourceRanges(allowedRanges string, internalRanges string) (map[string]string, string) {
+	annotations := getIngressAnnotations()
+
+	existingRanges := make([]string, 0)
+
+	if allowedRanges != "" {
+		existingRanges = append(existingRanges, strings.Split(allowedRanges, ",")...)
+	}
+
+	allowListNoInternalRanges := strings.Join(existingRanges, ",")
+	allowListNoInternalRanges = strings.TrimPrefix(allowListNoInternalRanges, ",")
+	fmt.Println(allowListNoInternalRanges)
+
+	if internalRanges != "" {
+		existingRanges = append(existingRanges, strings.Split(internalRanges, ",")...)
+	}
+	allowlistRange := strings.Join(existingRanges, ",")
+	allowlistRange = strings.TrimPrefix(allowlistRange, ",")
+	fmt.Println(allowlistRange)
+	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = allowlistRange
+
+	return annotations, allowListNoInternalRanges
+}
+
 func int32Ptr(i int) *int32 {
 	i32 := int32(i)
 	return &i32
@@ -1096,4 +1165,13 @@ func makeClusterInstallationName(clusterInstallation *model.ClusterInstallation)
 	// full namespace as part of the name. For now, truncate to keep within the existing limit
 	// of 60 characters.
 	return fmt.Sprintf("mm-%s", clusterInstallation.Namespace[0:4])
+}
+
+func contains(slice []string, value string) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }

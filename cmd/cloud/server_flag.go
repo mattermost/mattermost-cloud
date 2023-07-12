@@ -134,6 +134,7 @@ type installationOptions struct {
 	forceCRUpgrade                bool
 	utilitiesGitURL               string
 	enableS3Versioning            bool
+	internalRanges                string
 }
 
 func (flags *installationOptions) addFlags(command *cobra.Command) {
@@ -144,6 +145,7 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.forceCRUpgrade, "force-cr-upgrade", false, "If specified installation CRVersions will be updated to the latest version when supervised.")
 	command.Flags().StringVar(&flags.utilitiesGitURL, "utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
 	command.Flags().BoolVar(&flags.enableS3Versioning, "enable-s3-versioning", false, "Whether to enable S3 versioning for the installation bucket or not")
+	command.Flags().StringVar(&flags.internalRanges, "internal-ranges", "", "Some ranges that needed to be allowed for operational reasons")
 }
 
 type dbUtilizationSettings struct {

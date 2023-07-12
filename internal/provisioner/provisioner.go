@@ -37,6 +37,7 @@ type ProvisioningParams struct {
 	DeployMysqlOperator     bool
 	DeployMinioOperator     bool
 	NdotsValue              string
+	InternalRanges          string
 	PGBouncerConfig         *model.PGBouncerConfig
 	SLOInstallationGroups   []string
 	SLOEnterpriseGroups     []string
