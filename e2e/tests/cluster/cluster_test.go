@@ -8,63 +8,31 @@
 package cluster
 
 import (
-	"context"
-	"fmt"
+	"github.com/pkg/errors"
 	"math/rand"
-	"os"
-	"os/signal"
-	"syscall"
 	"testing"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/e2e/pkg"
-	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
+	"github.com/mattermost/mattermost-cloud/e2e/tests/shared"
 	"github.com/mattermost/mattermost-cloud/e2e/workflow"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
-
-const (
-	webhookSuccessfulMessage      = "Provisioner E2E tests passed successfully"
-	webhookFailedMessage          = `Provisioner E2E tests failed`
-	webhookSuccessEmoji           = "large_green_circle"
-	webhookFailedEmoji            = "red_circle"
-	webhookAttachmentColorSuccess = "#009E60"
-	webhookAttachmentColorError   = "#FF0000"
 )
 
 func TestMain(m *testing.M) {
 	// This is mainly used to send a notification when tests are finished to a mattermost webhook
 	// provided with the WEBHOOOK_URL environment variable.
-	state.StartTime = time.Now()
-	code := m.Run()
-	state.EndTime = time.Now()
+	shared.TestMain(m)
+}
 
-	// Notify if we receive any signal
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	go func() {
-		for sig := range c {
-			fmt.Printf("caught signal: %s", sig)
-		}
-	}()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	var err error
-	if code != 0 {
-		err = pkg.SendE2EResult(ctx, webhookFailedEmoji, webhookFailedMessage, webhookAttachmentColorError)
-	} else {
-		err = pkg.SendE2EResult(ctx, webhookSuccessEmoji, webhookSuccessfulMessage, webhookAttachmentColorSuccess)
-	}
-
+// SetupClusterLifecycleTest sets up cluster lifecycle test.
+func SetupClusterLifecycleTest() (*shared.Test, error) {
+	test, err := shared.SetupTestWithDefaults("cluster-lifecycle")
 	if err != nil {
-		fmt.Printf("error sending webhook: %s", err)
+		return nil, errors.Wrap(err, "failed to setup test environment")
 	}
 
-	os.Exit(code)
+	return test, nil
 }
 
 func Test_ClusterLifecycle(t *testing.T) {
@@ -73,26 +41,15 @@ func Test_ClusterLifecycle(t *testing.T) {
 
 	test, err := SetupClusterLifecycleTest()
 	require.NoError(t, err)
-	// Always cleanup webhook
-	defer func() {
-		err := test.WebhookCleanup()
-		assert.NoError(t, err)
-	}()
-	if test.Cleanup {
-		defer func() {
-			err = test.InstallationSuite.Cleanup(context.Background())
-			if err != nil {
-				test.Logger.WithError(err).Error("Error cleaning up installation")
-			}
-			err := test.ClusterSuite.Cleanup(context.Background())
-			if err != nil {
-				test.Logger.WithError(err).Error("Error cleaning up cluster")
-			}
-		}()
-	}
+	testWorkflowSteps := clusterLifecycleSteps(test.ClusterSuite, test.InstallationSuite)
+
+	test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
+	test.Steps = testWorkflowSteps
+
 	err = test.EventsRecorder.Start(test.ProvisionerClient, test.Logger)
 	require.NoError(t, err)
 	defer test.EventsRecorder.ShutDown(test.ProvisionerClient)
+	defer test.CleanupTest(t)
 
 	err = test.Run()
 	require.NoError(t, err)

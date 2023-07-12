@@ -12,6 +12,7 @@ import (
 )
 
 func clusterLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
+
 	return []*workflow.Step{
 		{
 			Name:              "CreateCluster",

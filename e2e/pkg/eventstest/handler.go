@@ -2,7 +2,8 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+//go:build e2e
+// +build e2e
 
 package eventstest
 
@@ -71,6 +72,13 @@ func (ev *EventsRecorder) Start(client *model.Client, logger log.FieldLogger) er
 	ev.logger.WithField("subscriptionID", sub.ID).Info("Created subscription")
 
 	return nil
+}
+
+func (ev *EventsRecorder) FlushEvents() {
+	ev.Lock()
+	defer ev.Unlock()
+
+	ev.RecordedEvents = []model.StateChangeEventPayload{}
 }
 
 func (ev *EventsRecorder) runServer() error {
@@ -195,8 +203,8 @@ func (ev *EventsRecorder) VerifyInOrder(expectedEvents []EventOccurrence) error 
 
 func RegisterStateChangeSubscription(client *model.Client, owner, subURL string, logger log.FieldLogger) (*model.Subscription, error) {
 	subs, err := client.ListSubscriptions(&model.ListSubscriptionsRequest{
-		Paging:    model.AllPagesNotDeleted(),
-		Owner:     owner,
+		Paging: model.AllPagesNotDeleted(),
+		Owner:  owner,
 	})
 	if err != nil {
 		logger.WithError(err).Error("Failed to list e2e subscriptions")
