@@ -25,6 +25,8 @@ func initSecurity(apiRouter *mux.Router, context *Context) {
 	securityInstallationRouter := securityRouter.PathPrefix("/installation/{installation:[A-Za-z0-9]{26}}").Subrouter()
 	securityInstallationRouter.Handle("/api/lock", addContext(handleInstallationLockAPI)).Methods("POST")
 	securityInstallationRouter.Handle("/api/unlock", addContext(handleInstallationUnlockAPI)).Methods("POST")
+	securityInstallationRouter.Handle("/deletion/lock", addContext(handleInstallationDeletionLockAPI)).Methods("POST")
+	securityInstallationRouter.Handle("/deletion/unlock", addContext(handleInstallationDeletionUnlockAPI)).Methods("POST")
 
 	securityClusterInstallationRouter := securityRouter.PathPrefix("/cluster_installation/{cluster_installation:[A-Za-z0-9]{26}}").Subrouter()
 	securityClusterInstallationRouter.Handle("/api/lock", addContext(handleClusterInstallationLockAPI)).Methods("POST")
@@ -151,6 +153,68 @@ func handleInstallationUnlockAPI(c *Context, w http.ResponseWriter, r *http.Requ
 		err = c.Store.UnlockInstallationAPI(installation.ID)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to unlock installation API")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleInstallationDeletionLockAPI responds to POST /api/security/installation/{installation}/api/deletion_lock,
+// setting a deletion lock for this installation, preventing it from being deleted until unlocked
+func handleInstallationDeletionLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	installation, err := c.Store.GetInstallation(installationID, false, false)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if installation == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// TODO: Should this respect the APISecurityLock?
+	if !installation.APISecurityLock {
+		err = c.Store.DeletionLockInstallation(installation.ID)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to lock deletion lock installation")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleInstallationDeletionUnlockAPI responds to POST /api/security/installation/{installation}/api/deletion_unlock,
+// unlocking an installation that has been deletion locked, allowing it to be deleted
+func handleInstallationDeletionUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	installation, err := c.Store.GetInstallation(installationID, false, false)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if installation == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// TODO: Should this respect the APISecurityLock?
+	if !installation.APISecurityLock {
+		err = c.Store.DeletionUnlockInstallation(installation.ID)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to deletion unlock installation")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

@@ -1750,6 +1750,17 @@ func TestDeleteInstallation(t *testing.T) {
 		require.EqualError(t, errTest, "failed with status code 409")
 	})
 
+	t.Run("while deletion-locked", func(t *testing.T) {
+		errTest := sqlStore.DeletionLockInstallation(installation.ID)
+		require.NoError(t, errTest)
+
+		errTest = client.DeleteInstallation(installation.ID)
+		require.EqualError(t, errTest, "failed with status code 403")
+
+		errTest = sqlStore.DeletionUnlockInstallation(installation.ID)
+		require.NoError(t, errTest)
+	})
+
 	t.Run("while api-security-locked", func(t *testing.T) {
 		errTest := sqlStore.LockInstallationAPI(installation.ID)
 		require.NoError(t, errTest)

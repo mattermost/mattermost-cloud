@@ -51,6 +51,7 @@ type CreateInstallationRequest struct {
 	Database                  string
 	Filestore                 string
 	APISecurityLock           bool
+	DeletionLocked            bool
 	MattermostEnv             EnvVarMap
 	PriorityEnv               EnvVarMap
 	Annotations               []string

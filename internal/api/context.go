@@ -48,6 +48,8 @@ type Store interface {
 	LockInstallationAPI(installationID string) error
 	UnlockInstallationAPI(installationID string) error
 	DeleteInstallation(installationID string) error
+	DeletionLockInstallation(installationID string) error
+	DeletionUnlockInstallation(installationID string) error
 
 	GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error)
 	GetClusterInstallations(filter *model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error)
