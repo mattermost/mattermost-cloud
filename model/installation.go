@@ -38,6 +38,7 @@ type Installation struct {
 	ExternalDatabaseConfig     *ExternalDatabaseConfig     `json:"ExternalDatabaseConfig,omitempty"`
 	Filestore                  string
 	License                    string
+	AllowedRanges              string
 	MattermostEnv              EnvVarMap
 	PriorityEnv                EnvVarMap
 	Size                       string
@@ -49,6 +50,7 @@ type Installation struct {
 	DeletionPendingExpiry      int64 `json:"DeletionPendingExpiry,omitempty"`
 	APISecurityLock            bool
 	DeletionLocked             bool
+	OverrideRanges             bool
 	LockAcquiredBy             *string
 	LockAcquiredAt             int64
 	GroupOverrides             map[string]string `json:"GroupOverrides,omitempty"`
