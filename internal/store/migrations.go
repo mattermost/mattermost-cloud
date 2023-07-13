@@ -2164,7 +2164,7 @@ var migrations = []migration{
 
 		return nil
 	}},
-	{semver.MustParse("0.44.0"), semver.MustParse("0.44.0"), func(e execer) error {
+	{semver.MustParse("0.44.0"), semver.MustParse("0.45.0"), func(e execer) error {
 		// Add AllowedRanges column for installations.
 
 		_, err := e.Exec(`
@@ -2172,6 +2172,13 @@ var migrations = []migration{
 				`)
 		if err != nil {
 			return errors.Wrap(err, "failed to add AllowedRanges column")
+		}
+
+		_, err = e.Exec(`
+				ALTER TABLE Installation ADD COLUMN OverrideRanges BOOLEAN DEFAULT FALSE;
+				`)
+		if err != nil {
+			return errors.Wrap(err, "failed to add OverrideRanges column")
 		}
 
 		return nil

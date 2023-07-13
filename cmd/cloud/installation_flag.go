@@ -78,12 +78,13 @@ func (flags *installationCreateFlags) addFlags(command *cobra.Command) {
 }
 
 type installationPatchRequestChanges struct {
-	ownerIDChanged       bool
-	versionCHanged       bool
-	imageChanged         bool
-	sizeChanged          bool
-	licenseChanged       bool
-	allowedRangesChanged bool
+	ownerIDChanged        bool
+	versionCHanged        bool
+	imageChanged          bool
+	sizeChanged           bool
+	licenseChanged        bool
+	allowedRangesChanged  bool
+	overrideRangesChanged bool
 }
 
 func (flags *installationPatchRequestChanges) addFlags(command *cobra.Command) {
@@ -93,6 +94,7 @@ func (flags *installationPatchRequestChanges) addFlags(command *cobra.Command) {
 	flags.sizeChanged = command.Flags().Changed("size")
 	flags.licenseChanged = command.Flags().Changed("license")
 	flags.allowedRangesChanged = command.Flags().Changed("allowed-ranges")
+	flags.overrideRangesChanged = command.Flags().Changed("override-ranges")
 }
 
 type installationPatchRequestOptions struct {
@@ -117,7 +119,7 @@ func (flags *installationPatchRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.allowedRanges, "allowed-ranges", "", "The IP Ranges that is allowed the workspace to be accessed from.")
 	command.Flags().StringArrayVar(&flags.mattermostEnv, "mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	command.Flags().BoolVar(&flags.mattermostEnvClear, "mattermost-env-clear", false, "Clears all env var data.")
-	command.Flags().BoolVar(&flags.overrideRanges, "override-ranges", false, "Overrides Allowed IP ranges and force ignoring any previous value.")
+	command.Flags().BoolVar(&flags.overrideRanges, "override-ranges", true, "Overrides Allowed IP ranges and force ignoring any previous value.")
 }
 
 func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *model.PatchInstallationRequest {
@@ -145,6 +147,10 @@ func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *mod
 
 	if flags.allowedRangesChanged {
 		request.AllowedRanges = &flags.allowedRanges
+	}
+
+	if flags.overrideRangesChanged {
+		request.OverrideRanges = &flags.overrideRanges
 	}
 
 	return &request
