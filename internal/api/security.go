@@ -180,13 +180,11 @@ func handleInstallationDeletionLockAPI(c *Context, w http.ResponseWriter, r *htt
 	}
 
 	// TODO: Should this respect the APISecurityLock?
-	if !installation.APISecurityLock {
-		err = c.Store.DeletionLockInstallation(installation.ID)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to lock deletion lock installation")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	err = c.Store.DeletionLockInstallation(installation.ID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to lock deletion lock installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -211,13 +209,11 @@ func handleInstallationDeletionUnlockAPI(c *Context, w http.ResponseWriter, r *h
 	}
 
 	// TODO: Should this respect the APISecurityLock?
-	if !installation.APISecurityLock {
-		err = c.Store.DeletionUnlockInstallation(installation.ID)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to deletion unlock installation")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	err = c.Store.DeletionUnlockInstallation(installation.ID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to deletion unlock installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
