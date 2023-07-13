@@ -474,16 +474,9 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
 	annotations := mattermost.Spec.Ingress.Annotations
-	var allowedRanges string
+	fmt.Println(installation.OverrideRanges)
 	if installation.AllowedRanges != "" {
-		if installation.OverrideRanges == true {
-			annotations, allowedRanges = overrideIngressSourceRanges(installation.AllowedRanges, provisioner.params.InternalRanges)
-		} else {
-			annotations, allowedRanges = addMissingIngressSourceRanges(annotations, installation.AllowedRanges, provisioner.params.InternalRanges)
-		}
-		installation.AllowedRanges = allowedRanges
-		logger.Debug(installation)
-		provisioner.store.UpdateInstallation(installation)
+		annotations = addInternalSourceRanges(annotations, installation.AllowedRanges, provisioner.params.InternalRanges, installation.OverrideRanges)
 	}
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
@@ -1082,9 +1075,14 @@ func getHibernatingIngressAnnotations() map[string]string {
 	return annotations
 }
 
-func addMissingIngressSourceRanges(annotations map[string]string, allowedRanges string, internalRanges string) (map[string]string, string) {
+func addInternalSourceRanges(annotations map[string]string, allowedRanges string, internalRanges string, overrideRanges bool) map[string]string {
 
-	existingRanges := strings.Split(annotations["nginx.ingress.kubernetes.io/whitelist-source-range"], ",")
+	var existingRanges []string
+	if !overrideRanges {
+		existingRanges = strings.Split(annotations["nginx.ingress.kubernetes.io/whitelist-source-range"], ",")
+	} else {
+		existingRanges = make([]string, 0)
+	}
 	fmt.Println(existingRanges)
 
 	if allowedRanges != "" {
@@ -1095,10 +1093,6 @@ func addMissingIngressSourceRanges(annotations map[string]string, allowedRanges 
 			}
 		}
 	}
-
-	allowListNoInternalRanges := strings.Join(existingRanges, ",")
-	allowListNoInternalRanges = strings.TrimPrefix(allowListNoInternalRanges, ",")
-	fmt.Println(allowListNoInternalRanges)
 
 	if internalRanges != "" {
 		ips := strings.Split(internalRanges, ",")
@@ -1113,31 +1107,7 @@ func addMissingIngressSourceRanges(annotations map[string]string, allowedRanges 
 	fmt.Println(allowlistRange)
 	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = allowlistRange
 
-	return annotations, allowListNoInternalRanges
-}
-
-func overrideIngressSourceRanges(allowedRanges string, internalRanges string) (map[string]string, string) {
-	annotations := getIngressAnnotations()
-
-	existingRanges := make([]string, 0)
-
-	if allowedRanges != "" {
-		existingRanges = append(existingRanges, strings.Split(allowedRanges, ",")...)
-	}
-
-	allowListNoInternalRanges := strings.Join(existingRanges, ",")
-	allowListNoInternalRanges = strings.TrimPrefix(allowListNoInternalRanges, ",")
-	fmt.Println(allowListNoInternalRanges)
-
-	if internalRanges != "" {
-		existingRanges = append(existingRanges, strings.Split(internalRanges, ",")...)
-	}
-	allowlistRange := strings.Join(existingRanges, ",")
-	allowlistRange = strings.TrimPrefix(allowlistRange, ",")
-	fmt.Println(allowlistRange)
-	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = allowlistRange
-
-	return annotations, allowListNoInternalRanges
+	return annotations
 }
 
 func int32Ptr(i int) *int32 {

@@ -612,6 +612,21 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			},
 		},
 		{
+			"ranges only, with override",
+			true,
+			&model.PatchInstallationRequest{
+				AllowedRanges:  sToP("127.0.0.1,192.168.0.1/24"),
+				OverrideRanges: bToP(true),
+			},
+			&model.Installation{
+				AllowedRanges: "192.168.1.1/24",
+			},
+			&model.Installation{
+				AllowedRanges:  "127.0.0.1,192.168.0.1/24",
+				OverrideRanges: true,
+			},
+		},
+		{
 			"complex",
 			true,
 			&model.PatchInstallationRequest{
@@ -641,7 +656,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 				Image:         "image1",
 				License:       "license1",
 				Size:          "miniSingleton",
-				AllowedRanges: "127.0.0.1,192.168.0.1/24,192.168.1.1/24",
+				AllowedRanges: "192.168.1.1/24,127.0.0.1,192.168.0.1/24",
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
 					"key2": {Value: "value2"},
@@ -844,4 +859,8 @@ func sToP(s string) *string {
 
 func iToP(i int64) *int64 {
 	return &i
+}
+
+func bToP(b bool) *bool {
+	return &b
 }
