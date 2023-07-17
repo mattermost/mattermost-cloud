@@ -99,6 +99,8 @@ func newCmdSecurityInstallation() *cobra.Command {
 
 	cmd.AddCommand(newCmdSecurityInstallationLock())
 	cmd.AddCommand(newCmdSecurityInstallationUnlock())
+	cmd.AddCommand(newCmdSecurityInstallationDeletionLock())
+	cmd.AddCommand(newCmdSecurityInstallationDeletionUnlock())
 
 	return cmd
 }
@@ -139,6 +141,53 @@ func newCmdSecurityInstallationUnlock() *cobra.Command {
 			client := model.NewClient(flags.serverAddress)
 			if err := client.UnlockAPIForInstallation(flags.installationID); err != nil {
 				return errors.Wrap(err, "failed to unlock installation API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
+			flags.addFlags(cmd)
+		},
+	}
+
+	return cmd
+}
+
+func newCmdSecurityInstallationDeletionUnlock() *cobra.Command {
+
+	var flags securityInstallationFlags
+
+	cmd := &cobra.Command{
+		Use:   "deletion-unlock",
+		Short: "Unlock deletion lock on installation, allowing it to be deleted",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.UnlockDeletionLockForInstallation(flags.installationID); err != nil {
+				return errors.Wrap(err, "failed to unlock installation deletion lock")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
+			flags.addFlags(cmd)
+		},
+	}
+
+	return cmd
+}
+
+func newCmdSecurityInstallationDeletionLock() *cobra.Command {
+	var flags securityInstallationFlags
+
+	cmd := &cobra.Command{
+		Use:   "deletion-lock",
+		Short: "Lock deletion lock on installation, preventing it from being deleted until unlocked",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.LockDeletionLockForInstallation(flags.installationID); err != nil {
+				return errors.Wrap(err, "failed to lock installation deletion lock")
 			}
 			return nil
 		},
