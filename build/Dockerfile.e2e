@@ -12,10 +12,8 @@ COPY go.sum .
 RUN go mod download
 COPY . .
 
-## TODO: We should also build other tests with either this or other dockerfiles,
-## when they are ready to be run without infra dependencies
-
-RUN CGO_ENABLED=0 go test -tags=e2e -c -ldflags="-s -w" -o mattermost-cloud-e2e-tests ./e2e/tests/cluster
+RUN CGO_ENABLED=0 go test -tags=e2e -c -ldflags="-s -w" -o mattermost-cloud-e2e-cluster-tests ./e2e/tests/cluster
+RUN CGO_ENABLED=0 go test -tags=e2e -c -ldflags="-s -w" -o mattermost-cloud-e2e-installation-tests ./e2e/tests/installation
 
 # Final Image
 FROM ${DOCKER_BASE_IMAGE}
@@ -23,7 +21,7 @@ FROM ${DOCKER_BASE_IMAGE}
 RUN addgroup -S app-group && adduser -S app-user -G app-group
 USER app-user
 
-LABEL name="Mattermost Cloud E2e" \
+LABEL name="Mattermost Cloud E2E" \
   maintainer="cloud-team@mattermost.com" \
   vendor="Mattermost" \
   distribution-scope="public" \
@@ -31,6 +29,8 @@ LABEL name="Mattermost Cloud E2e" \
   url="https://mattermost.com"
 
 WORKDIR /mattermost-cloud-e2e/
-COPY --from=build /mattermost-cloud-e2e/mattermost-cloud-e2e-tests /mattermost-cloud-e2e
+COPY --from=build /mattermost-cloud-e2e/mattermost-cloud-e2e-cluster-tests /mattermost-cloud-e2e
+COPY --from=build /mattermost-cloud-e2e/mattermost-cloud-e2e-installation-tests /mattermost-cloud-e2e
+COPY --from=build /mattermost-cloud-e2e/build/bin-e2e /mattermost-cloud-e2e
 
-ENTRYPOINT ["/mattermost-cloud-e2e/mattermost-cloud-e2e-tests"]
+ENTRYPOINT ["/mattermost-cloud-e2e/entrypoint"]

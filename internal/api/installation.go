@@ -604,6 +604,12 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if installationDTO.DeletionLocked {
+		c.Logger.WithField("deletion-lock-conflict", "installation").Warn("Attempt to delete a deletion-locked installation")
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	if !installationDTO.ValidTransitionState(newState) {
 		// Fall back to the deletion pending state.
 		newState = model.InstallationStateDeletionPendingRequested

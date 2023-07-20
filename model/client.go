@@ -1510,6 +1510,14 @@ func (c *Client) UnlockAPIForInstallation(installationID string) error {
 	return c.makeSecurityCall("installation", installationID, "api", "unlock")
 }
 
+func (c *Client) LockDeletionLockForInstallation(installationID string) error {
+	return c.makeSecurityCall("installation", installationID, "deletion", "lock")
+}
+
+func (c *Client) UnlockDeletionLockForInstallation(installationID string) error {
+	return c.makeSecurityCall("installation", installationID, "deletion", "unlock")
+}
+
 // LockAPIForClusterInstallation locks API changes for a given cluster installation.
 func (c *Client) LockAPIForClusterInstallation(clusterID string) error {
 	return c.makeSecurityCall("cluster_installation", clusterID, "api", "lock")

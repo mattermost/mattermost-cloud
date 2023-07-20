@@ -48,6 +48,7 @@ type Installation struct {
 	DeleteAt                   int64
 	DeletionPendingExpiry      int64 `json:"DeletionPendingExpiry,omitempty"`
 	APISecurityLock            bool
+	DeletionLocked             bool
 	LockAcquiredBy             *string
 	LockAcquiredAt             int64
 	GroupOverrides             map[string]string `json:"GroupOverrides,omitempty"`

@@ -27,7 +27,7 @@ func init() {
 			"Affinity", "GroupID", "GroupSequence", "Installation.State", "License",
 			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
 			"Installation.CreateAt", "Installation.DeleteAt", "Installation.DeletionPendingExpiry",
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked",
 		).
 		From(installationTable)
 }
@@ -448,6 +448,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"LockAcquiredBy":        nil,
 		"LockAcquiredAt":        0,
 		"CRVersion":             installation.CRVersion,
+		"DeletionLocked":        installation.DeletionLocked,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -662,6 +663,14 @@ func (sqlStore *SQLStore) UnlockInstallationAPI(installationID string) error {
 	return sqlStore.setInstallationAPILock(installationID, false)
 }
 
+func (sqlStore *SQLStore) DeletionLockInstallation(installationID string) error {
+	return sqlStore.setInstallationDeletionLocked(installationID, true)
+}
+
+func (sqlStore *SQLStore) DeletionUnlockInstallation(installationID string) error {
+	return sqlStore.setInstallationDeletionLocked(installationID, false)
+}
+
 func (sqlStore *SQLStore) setInstallationAPILock(installationID string, lock bool) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Installation").
@@ -670,6 +679,19 @@ func (sqlStore *SQLStore) setInstallationAPILock(installationID string, lock boo
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to store installation API lock")
+	}
+
+	return nil
+}
+
+func (sqlStore *SQLStore) setInstallationDeletionLocked(installationID string, locked bool) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		Set("DeletionLocked", locked).
+		Where("ID = ?", installationID),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to store installation deletion lock")
 	}
 
 	return nil
