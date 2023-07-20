@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Don't exit on test failures, but capture them for final return.
+failures=0
+
+echo "Running Cluster E2E Tests"
+/mattermost-cloud-e2e/mattermost-cloud-e2e-cluster-tests || failures=$(($failures+1))
+
+echo "Running Installation E2E Tests"
+/mattermost-cloud-e2e/mattermost-cloud-e2e-installation-tests || failures=$(($failures+1))
+
+echo "\n$failures tests failed"
+if [ $failures -ne 0 ]; then
+  exit 1
+fi
+exit 0
