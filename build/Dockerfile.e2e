@@ -21,7 +21,7 @@ FROM ${DOCKER_BASE_IMAGE}
 RUN addgroup -S app-group && adduser -S app-user -G app-group
 USER app-user
 
-LABEL name="Mattermost Cloud E2e" \
+LABEL name="Mattermost Cloud E2E" \
   maintainer="cloud-team@mattermost.com" \
   vendor="Mattermost" \
   distribution-scope="public" \
@@ -31,5 +31,6 @@ LABEL name="Mattermost Cloud E2e" \
 WORKDIR /mattermost-cloud-e2e/
 COPY --from=build /mattermost-cloud-e2e/mattermost-cloud-e2e-cluster-tests /mattermost-cloud-e2e
 COPY --from=build /mattermost-cloud-e2e/mattermost-cloud-e2e-installation-tests /mattermost-cloud-e2e
+COPY --from=build /mattermost-cloud-e2e/build/bin-e2e /mattermost-cloud-e2e
 
-ENTRYPOINT ["/mattermost-cloud-e2e/mattermost-cloud-e2e-cluster-tests", "&&", "/mattermost-cloud-e2e/mattermost-cloud-e2e-installation-tests"]
+ENTRYPOINT ["/mattermost-cloud-e2e/entrypoint"]
