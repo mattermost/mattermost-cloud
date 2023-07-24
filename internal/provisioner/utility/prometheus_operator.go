@@ -75,9 +75,13 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 
 	secretData := map[string]interface{}{
 		"type": "s3",
-		"config": map[string]string{
-			"bucket":   fmt.Sprintf("cloud-%s-prometheus-metrics", p.awsClient.GetCloudEnvironmentName()),
-			"endpoint": p.awsClient.GetS3RegionURL(),
+		"config": map[string]interface{}{
+			"bucket":       fmt.Sprintf("cloud-%s-prometheus-metrics", p.awsClient.GetCloudEnvironmentName()),
+			"endpoint":     p.awsClient.GetS3RegionURL(),
+			"aws_sdk_auth": "true",
+			"sse_config": map[string]string{
+				"type": "SSE-S3",
+			},
 		},
 	}
 

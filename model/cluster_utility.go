@@ -64,7 +64,7 @@ func GetGitlabToken() string {
 // DefaultUtilityVersions holds the default values for all the HelmUtilityVersions
 var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtilityVersion{
 	// PrometheusOperatorCanonicalName defines the default version and values path for the Helm chart
-	PrometheusOperatorCanonicalName: {Chart: "40.5.0", ValuesPath: ""},
+	PrometheusOperatorCanonicalName: {Chart: "48.1.2", ValuesPath: ""},
 	// ThanosCanonicalName defines the default version and values path for the Helm chart
 	ThanosCanonicalName: {Chart: "11.5.4", ValuesPath: ""},
 	// NginxCanonicalName defines the default version and values path for the Helm chart
@@ -72,7 +72,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// NginxInternalCanonicalName defines the default version and values path for the Helm chart
 	NginxInternalCanonicalName: {Chart: "4.5.2", ValuesPath: ""},
 	// FluentbitCanonicalName defines the default version and values path for the Helm chart
-	FluentbitCanonicalName: {Chart: "0.20.1", ValuesPath: ""},
+	FluentbitCanonicalName: {Chart: "0.31.0", ValuesPath: ""},
 	// TeleportCanonicalName defines the default version and values path for the Helm chart
 	TeleportCanonicalName: {Chart: "7.3.26", ValuesPath: ""},
 	// PgbouncerCanonicalName defines the default version and values path for the Helm chart
