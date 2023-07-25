@@ -269,13 +269,11 @@ When upgrading the Postgres image in the docker-compose.yaml file for local deve
 
 1. Run `docker exec cloud-postgres pg_dumpall -U provisioner > backup.sql` to perform a backup of your existing database
 2. Run `docker-compose down`
-3. Change the postgres version via the `image` key
-4. Run `docker-compose up -d`
-5. Open `backup.sql` created in step 1 with a text editor, and remove the line `ALTER ROLE provisioner WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION BYPASSRLS PASSWORD '<some hash>'; ` so the provisioner user's credentials aren't overwritten
-6. Run `cat backup.sql | docker exec -i cloud-postgres psql -U provisioner`
+3. Run `docker-compose up -d`
+4. Open `backup.sql` created in step 1 with a text editor, and remove the line `ALTER ROLE provisioner WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION BYPASSRLS PASSWORD '<some hash>'; ` so the provisioner user's credentials aren't overwritten
+5. Run `cat backup.sql | docker exec -i cloud-postgres psql -U provisioner`
 
-After completing the above steps, you should be up and running with your existing data in place, persisted to a volume at `~/.cloud`
-
+After completing the above steps, you should be up and running with your existing data in place on pg 14.8, persisted to a volume at `~/.cloud`
 
 #### Cluster reprovisioning steps for new NGINX deployment
 
