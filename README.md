@@ -262,6 +262,21 @@ The simplest migration method to PostgreSQL is to remove all running resources a
 3. Run `make dev-start` to build a new PG docker container
 
 Your existing `cloud.db` SQLite database will remain and can by kept for historical purposes if you want to lookup old resource IDs or events.
+
+#### Cloud Server Postgres Version 12.5 -> 14.8 Migration
+
+When upgrading the Postgres image in the docker-compose.yaml file for local development, the following steps can be followed:
+
+1. Run `docker exec cloud-postgres pg_dumpall -U provisioner > backup.sql` to perform a backup of your existing database
+2. Run `docker-compose down`
+3. Change the postgres version via the `image` key
+4. Run `docker-compose up -d`
+5. Open `backup.sql` created in step 1 with a text editor, and remove the line `ALTER ROLE provisioner WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION BYPASSRLS PASSWORD '<some hash>'; ` so the provisioner user's credentials aren't overwritten
+6. Run `cat backup.sql | docker exec -i cloud-postgres psql -U provisioner`
+
+After completing the above steps, you should be up and running with your existing data in place, persisted to a volume at `~/.cloud`
+
+
 #### Cluster reprovisioning steps for new NGINX deployment
 
 This is related to the changes introduced in [PR-263](https://github.com/mattermost/mattermost-cloud/pull/263)
