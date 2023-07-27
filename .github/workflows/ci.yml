@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-22.04
     services:
       postgres:
-        image: cimg/postgres:12.11
+        image: cimg/postgres:14.8
         env:
           POSTGRES_USER: cloud_test
           POSTGRES_DB: cloud_test
