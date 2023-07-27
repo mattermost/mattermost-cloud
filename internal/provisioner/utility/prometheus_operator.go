@@ -78,7 +78,7 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 		"config": map[string]interface{}{
 			"bucket":       fmt.Sprintf("cloud-%s-prometheus-metrics", p.awsClient.GetCloudEnvironmentName()),
 			"endpoint":     p.awsClient.GetS3RegionURL(),
-			"aws_sdk_auth": "true",
+			"aws_sdk_auth": true,
 			"sse_config": map[string]string{
 				"type": "SSE-S3",
 			},
