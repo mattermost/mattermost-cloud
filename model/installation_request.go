@@ -6,7 +6,6 @@ package model
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/url"
 	"regexp"
@@ -292,8 +291,8 @@ type GetInstallationsRequest struct {
 	State                       string
 	DNS                         string
 	Name                        string
-	AllowedRanges               string
-	OverrideRanges              bool
+	AllowedIPRanges             string
+	OverrideIPRanges            bool
 	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
 }
@@ -306,9 +305,9 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q.Add("state", request.State)
 	q.Add("dns_name", request.DNS)
 	q.Add("name", request.Name)
-	q.Add("allowed-ranges", request.AllowedRanges)
-	if !request.OverrideRanges {
-		q.Add("override-ranges", "false")
+	q.Add("allowed-ip-ranges", request.AllowedIPRanges)
+	if !request.OverrideIPRanges {
+		q.Add("override-ip-ranges", "false")
 	}
 	if !request.IncludeGroupConfig {
 		q.Add("include_group_config", "false")
@@ -323,15 +322,15 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 
 // PatchInstallationRequest specifies the parameters for an updated installation.
 type PatchInstallationRequest struct {
-	OwnerID        *string
-	Image          *string
-	Version        *string
-	Size           *string
-	License        *string
-	AllowedRanges  *string
-	OverrideRanges *bool
-	PriorityEnv    EnvVarMap
-	MattermostEnv  EnvVarMap
+	OwnerID          *string
+	Image            *string
+	Version          *string
+	Size             *string
+	License          *string
+	AllowedIPRanges  *string
+	OverrideIPRanges *bool
+	PriorityEnv      EnvVarMap
+	MattermostEnv    EnvVarMap
 }
 
 // Validate validates the values of a installation patch request.
@@ -342,7 +341,7 @@ func (p *PatchInstallationRequest) Validate() error {
 	if p.Image != nil && len(*p.Image) == 0 {
 		return errors.New("provided image update value was blank")
 	}
-	if p.AllowedRanges != nil && len(*p.AllowedRanges) == 0 {
+	if p.AllowedIPRanges != nil && len(*p.AllowedIPRanges) == 0 {
 		return errors.New("provided ip ranges update value was blank")
 	}
 	if p.Size != nil {
@@ -382,17 +381,17 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 		installation.License = *p.License
 	}
 
-	if p.OverrideRanges != nil && *p.OverrideRanges != installation.OverrideRanges {
+	if p.OverrideIPRanges != nil && *p.OverrideIPRanges != installation.OverrideIPRanges {
 		applied = true
-		installation.OverrideRanges = *p.OverrideRanges
+		installation.OverrideIPRanges = *p.OverrideIPRanges
 	}
 
-	if p.AllowedRanges != nil && *p.AllowedRanges != installation.AllowedRanges {
+	if p.AllowedIPRanges != nil && *p.AllowedIPRanges != installation.AllowedIPRanges {
 		applied = true
-		if (!installation.OverrideRanges && p.OverrideRanges == nil) || (p.OverrideRanges != nil && !*p.OverrideRanges) {
-			installation.AllowedRanges = p.addMissingIngressSourceRanges(installation)
+		if (!installation.OverrideIPRanges && p.OverrideIPRanges == nil) || (p.OverrideIPRanges != nil && !*p.OverrideIPRanges) {
+			installation.AllowedIPRanges = p.addMissingIngressSourceRanges(installation)
 		} else {
-			installation.AllowedRanges = *p.AllowedRanges
+			installation.AllowedIPRanges = *p.AllowedIPRanges
 		}
 	}
 	if p.MattermostEnv != nil {
@@ -460,19 +459,22 @@ func (p *PatchInstallationDeletionRequest) Apply(installation *Installation) boo
 }
 
 func (p *PatchInstallationRequest) addMissingIngressSourceRanges(installation *Installation) string {
-	ips := strings.Split(*p.AllowedRanges, ",")
-	allowedRanges := strings.Split(installation.AllowedRanges, ",")
+	var ips []string
+	if p.AllowedIPRanges != nil {
+		ips = strings.Split(*p.AllowedIPRanges, ",")
+	}
+
+	allowedIPRanges := strings.Split(installation.AllowedIPRanges, ",")
 	for _, ip := range ips {
-		if !contains(allowedRanges, ip) {
-			allowedRanges = append(allowedRanges, ip)
+		if !contains(allowedIPRanges, ip) {
+			allowedIPRanges = append(allowedIPRanges, ip)
 		}
 	}
 
-	allowlistRange := strings.Join(allowedRanges, ",")
-	allowlistRange = strings.TrimPrefix(allowlistRange, ",")
-	fmt.Println(allowlistRange)
+	allowiplistRange := strings.Join(allowedIPRanges, ",")
+	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
 
-	return allowlistRange
+	return allowiplistRange
 }
 
 // NewPatchInstallationDeletionRequestFromReader will create a PatchInstallationDeletionRequest from an io.Reader with JSON data.

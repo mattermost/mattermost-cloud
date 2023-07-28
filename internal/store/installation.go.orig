@@ -28,9 +28,9 @@ func init() {
 			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
 			"Installation.CreateAt", "Installation.DeleteAt", "Installation.DeletionPendingExpiry",
 <<<<<<< HEAD
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked", "AllowedRanges",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked", "AllowedIPRanges",
 =======
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "AllowedRanges", "OverrideRanges",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "AllowedIPRanges", "OverrideIPRanges",
 >>>>>>> 8544f78 (refactor and fixes)
 		).
 		From(installationTable)
@@ -453,8 +453,8 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"LockAcquiredAt":        0,
 		"CRVersion":             installation.CRVersion,
 		"DeletionLocked":        installation.DeletionLocked,
-		"AllowedRanges":         installation.AllowedRanges,
-		"OverrideRanges":        installation.OverrideRanges,
+		"AllowedIPRanges":         installation.AllowedIPRanges,
+		"OverrideIPRanges":        installation.OverrideIPRanges,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -525,8 +525,8 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"State":                 installation.State,
 			"CRVersion":             installation.CRVersion,
 			"DeletionPendingExpiry": installation.DeletionPendingExpiry,
-			"AllowedRanges":         installation.AllowedRanges,
-			"OverrideRanges":        installation.OverrideRanges,
+			"AllowedIPRanges":         installation.AllowedIPRanges,
+			"OverrideIPRanges":        installation.OverrideIPRanges,
 		}).
 		Where("ID = ?", installation.ID),
 	)

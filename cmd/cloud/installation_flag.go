@@ -78,13 +78,13 @@ func (flags *installationCreateFlags) addFlags(command *cobra.Command) {
 }
 
 type installationPatchRequestChanges struct {
-	ownerIDChanged        bool
-	versionCHanged        bool
-	imageChanged          bool
-	sizeChanged           bool
-	licenseChanged        bool
-	allowedRangesChanged  bool
-	overrideRangesChanged bool
+	ownerIDChanged          bool
+	versionCHanged          bool
+	imageChanged            bool
+	sizeChanged             bool
+	licenseChanged          bool
+	allowedIPRangesChanged  bool
+	overrideIPRangesChanged bool
 }
 
 func (flags *installationPatchRequestChanges) addFlags(command *cobra.Command) {
@@ -93,8 +93,8 @@ func (flags *installationPatchRequestChanges) addFlags(command *cobra.Command) {
 	flags.imageChanged = command.Flags().Changed("image")
 	flags.sizeChanged = command.Flags().Changed("size")
 	flags.licenseChanged = command.Flags().Changed("license")
-	flags.allowedRangesChanged = command.Flags().Changed("allowed-ranges")
-	flags.overrideRangesChanged = command.Flags().Changed("override-ranges")
+	flags.allowedIPRangesChanged = command.Flags().Changed("allowed-ip-ranges")
+	flags.overrideIPRangesChanged = command.Flags().Changed("override-ip-ranges")
 }
 
 type installationPatchRequestOptions struct {
@@ -104,10 +104,10 @@ type installationPatchRequestOptions struct {
 	image              string
 	size               string
 	license            string
-	allowedRanges      string
+	allowedIPRanges    string
 	mattermostEnv      []string
 	mattermostEnvClear bool
-	overrideRanges     bool
+	overrideIPRanges   bool
 }
 
 func (flags *installationPatchRequestOptions) addFlags(command *cobra.Command) {
@@ -116,10 +116,10 @@ func (flags *installationPatchRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.image, "image", "mattermost/mattermost-enterprise-edition", "The Mattermost container image to use.")
 	command.Flags().StringVar(&flags.size, "size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	command.Flags().StringVar(&flags.license, "license", "", "The Mattermost License to use in the server.")
-	command.Flags().StringVar(&flags.allowedRanges, "allowed-ranges", "", "The IP Ranges that is allowed the workspace to be accessed from.")
+	command.Flags().StringVar(&flags.allowedIPRanges, "allowed-ip-ranges", "", "The IP Ranges that is allowed the workspace to be accessed from.")
 	command.Flags().StringArrayVar(&flags.mattermostEnv, "mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	command.Flags().BoolVar(&flags.mattermostEnvClear, "mattermost-env-clear", false, "Clears all env var data.")
-	command.Flags().BoolVar(&flags.overrideRanges, "override-ranges", true, "Overrides Allowed IP ranges and force ignoring any previous value.")
+	command.Flags().BoolVar(&flags.overrideIPRanges, "override-ip-ranges", true, "Overrides Allowed IP ranges and force ignoring any previous value.")
 }
 
 func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *model.PatchInstallationRequest {
@@ -145,12 +145,12 @@ func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *mod
 		request.License = &flags.license
 	}
 
-	if flags.allowedRangesChanged {
-		request.AllowedRanges = &flags.allowedRanges
+	if flags.allowedIPRangesChanged {
+		request.AllowedIPRanges = &flags.allowedIPRanges
 	}
 
-	if flags.overrideRangesChanged {
-		request.OverrideRanges = &flags.overrideRanges
+	if flags.overrideIPRangesChanged {
+		request.OverrideIPRanges = &flags.overrideIPRanges
 	}
 
 	return &request

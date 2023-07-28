@@ -226,7 +226,7 @@ func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstall
 	}
 
 	err = s.provisioner.CreateClusterInstallation(cluster, installation, dnsRecords, clusterInstallation)
-	logger.Debug(installation.AllowedRanges)
+	logger.Debug(installation.AllowedIPRanges)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster installation")
 		return model.ClusterInstallationStateCreationRequested
