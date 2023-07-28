@@ -2165,13 +2165,13 @@ var migrations = []migration{
 		return nil
 	}},
 	{semver.MustParse("0.44.0"), semver.MustParse("0.45.0"), func(e execer) error {
-		// Add AllowedRanges column for installations.
+		// Add AllowedIPRanges column for installations.
 
 		_, err := e.Exec(`
-				ALTER TABLE Installation ADD COLUMN AllowedRanges TEXT DEFAULT '';
+				ALTER TABLE Installation ADD COLUMN AllowedIPRanges TEXT DEFAULT '';
 				`)
 		if err != nil {
-			return errors.Wrap(err, "failed to add AllowedRanges column")
+			return errors.Wrap(err, "failed to add AllowedIPRanges column")
 		}
 
 		_, err = e.Exec(`

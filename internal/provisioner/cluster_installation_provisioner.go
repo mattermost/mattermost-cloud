@@ -474,9 +474,8 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
 	annotations := mattermost.Spec.Ingress.Annotations
-	fmt.Println(installation.OverrideRanges)
-	if installation.AllowedRanges != "" {
-		annotations = addInternalSourceRanges(annotations, installation.AllowedRanges, provisioner.params.InternalRanges, installation.OverrideRanges)
+	if installation.AllowedIPRanges != "" {
+		annotations = addInternalSourceRanges(annotations, installation.AllowedIPRanges, provisioner.params.InternalRanges, installation.OverrideRanges)
 	}
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
@@ -1075,7 +1074,7 @@ func getHibernatingIngressAnnotations() map[string]string {
 	return annotations
 }
 
-func addInternalSourceRanges(annotations map[string]string, allowedRanges string, internalRanges string, overrideRanges bool) map[string]string {
+func addInternalSourceRanges(annotations map[string]string, allowedIPRanges string, internalIPRanges string, overrideRanges bool) map[string]string {
 
 	var existingRanges []string
 	if !overrideRanges {
@@ -1083,10 +1082,9 @@ func addInternalSourceRanges(annotations map[string]string, allowedRanges string
 	} else {
 		existingRanges = make([]string, 0)
 	}
-	fmt.Println(existingRanges)
 
-	if allowedRanges != "" {
-		ips := strings.Split(allowedRanges, ",")
+	if allowedIPRanges != "" {
+		ips := strings.Split(allowedIPRanges, ",")
 		for _, ip := range ips {
 			if !contains(existingRanges, ip) {
 				existingRanges = append(existingRanges, ip)
@@ -1094,18 +1092,17 @@ func addInternalSourceRanges(annotations map[string]string, allowedRanges string
 		}
 	}
 
-	if internalRanges != "" {
-		ips := strings.Split(internalRanges, ",")
+	if internalIPRanges != "" {
+		ips := strings.Split(internalIPRanges, ",")
 		for _, ip := range ips {
 			if !contains(existingRanges, ip) {
 				existingRanges = append(existingRanges, ip)
 			}
 		}
 	}
-	allowlistRange := strings.Join(existingRanges, ",")
-	allowlistRange = strings.TrimPrefix(allowlistRange, ",")
-	fmt.Println(allowlistRange)
-	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = allowlistRange
+	allowiplistRange := strings.Join(existingRanges, ",")
+	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
+	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = allowiplistRange
 
 	return annotations
 }

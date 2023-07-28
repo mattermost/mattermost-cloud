@@ -38,7 +38,7 @@ type Installation struct {
 	ExternalDatabaseConfig     *ExternalDatabaseConfig     `json:"ExternalDatabaseConfig,omitempty"`
 	Filestore                  string
 	License                    string
-	AllowedRanges              string
+	AllowedIPRanges            string
 	MattermostEnv              EnvVarMap
 	PriorityEnv                EnvVarMap
 	Size                       string

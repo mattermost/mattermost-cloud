@@ -615,48 +615,48 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			"ranges only, with override",
 			true,
 			&model.PatchInstallationRequest{
-				AllowedRanges:  sToP("127.0.0.1,192.168.0.1/24"),
-				OverrideRanges: bToP(true),
+				AllowedIPRanges: sToP("127.0.0.1,192.168.0.1/24"),
+				OverrideRanges:  bToP(true),
 			},
 			&model.Installation{
-				AllowedRanges: "192.168.1.1/24",
+				AllowedIPRanges: "192.168.1.1/24",
 			},
 			&model.Installation{
-				AllowedRanges:  "127.0.0.1,192.168.0.1/24",
-				OverrideRanges: true,
+				AllowedIPRanges: "127.0.0.1,192.168.0.1/24",
+				OverrideRanges:  true,
 			},
 		},
 		{
 			"complex",
 			true,
 			&model.PatchInstallationRequest{
-				OwnerID:       sToP("new-owner"),
-				Version:       sToP("patch-version"),
-				Size:          sToP("miniSingleton"),
-				AllowedRanges: sToP("127.0.0.1,192.168.0.1/24"),
+				OwnerID:         sToP("new-owner"),
+				Version:         sToP("patch-version"),
+				Size:            sToP("miniSingleton"),
+				AllowedIPRanges: sToP("127.0.0.1,192.168.0.1/24"),
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
 					"key3": {Value: "patch-value-3"},
 				},
 			},
 			&model.Installation{
-				OwnerID:       "owner",
-				Version:       "version1",
-				Image:         "image1",
-				License:       "license1",
-				AllowedRanges: "192.168.1.1/24",
+				OwnerID:         "owner",
+				Version:         "version1",
+				Image:           "image1",
+				License:         "license1",
+				AllowedIPRanges: "192.168.1.1/24",
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "value1"},
 					"key2": {Value: "value2"},
 				},
 			},
 			&model.Installation{
-				OwnerID:       "new-owner",
-				Version:       "patch-version",
-				Image:         "image1",
-				License:       "license1",
-				Size:          "miniSingleton",
-				AllowedRanges: "192.168.1.1/24,127.0.0.1,192.168.0.1/24",
+				OwnerID:         "new-owner",
+				Version:         "patch-version",
+				Image:           "image1",
+				License:         "license1",
+				Size:            "miniSingleton",
+				AllowedIPRanges: "192.168.1.1/24,127.0.0.1,192.168.0.1/24",
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
 					"key2": {Value: "value2"},
@@ -713,14 +713,14 @@ func TestNewPatchInstallationRequestFromReader(t *testing.T) {
 		request, err := model.NewPatchInstallationRequestFromReader(bytes.NewReader([]byte(`{
 			"Version":"version",
 			"License": "this_is_my_license",
-			"AllowedRanges": "127.0.0.1,192.168.1.0/24"
+			"AllowedIPRanges": "127.0.0.1,192.168.1.0/24"
 		}`)))
 		require.NoError(t, err)
 
 		expected := &model.PatchInstallationRequest{
-			Version:       sToP("version"),
-			License:       sToP("this_is_my_license"),
-			AllowedRanges: sToP("127.0.0.1,192.168.1.0/24"),
+			Version:         sToP("version"),
+			License:         sToP("this_is_my_license"),
+			AllowedIPRanges: sToP("127.0.0.1,192.168.1.0/24"),
 		}
 		require.Equal(t, expected, request)
 		require.NoError(t, request.Validate())

@@ -27,7 +27,7 @@ func init() {
 			"Affinity", "GroupID", "GroupSequence", "Installation.State", "License",
 			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
 			"Installation.CreateAt", "Installation.DeleteAt", "Installation.DeletionPendingExpiry",
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked", "AllowedRanges", "OverrideRanges",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked", "AllowedIPRanges", "OverrideRanges",
 		).
 		From(installationTable)
 }
@@ -449,7 +449,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"LockAcquiredAt":        0,
 		"CRVersion":             installation.CRVersion,
 		"DeletionLocked":        installation.DeletionLocked,
-		"AllowedRanges":         installation.AllowedRanges,
+		"AllowedIPRanges":       installation.AllowedIPRanges,
 		"OverrideRanges":        installation.OverrideRanges,
 	}
 
@@ -521,7 +521,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"State":                 installation.State,
 			"CRVersion":             installation.CRVersion,
 			"DeletionPendingExpiry": installation.DeletionPendingExpiry,
-			"AllowedRanges":         installation.AllowedRanges,
+			"AllowedIPRanges":       installation.AllowedIPRanges,
 			"OverrideRanges":        installation.OverrideRanges,
 		}).
 		Where("ID = ?", installation.ID),
