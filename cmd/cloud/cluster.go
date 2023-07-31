@@ -22,8 +22,8 @@ const (
 	maxScalingDefault              = 5
 	maxDrainRetriesDefault         = 10
 	evictGracePeriodDefault        = 3600 // seconds
-	waitBetweenRotationsDefault    = 180  // seconds
-	waitBetweenDrainsDefault       = 1800 // seconds
+	waitBetweenRotationsDefault    = 120  // seconds
+	waitBetweenDrainsDefault       = 900  // seconds
 	waitBetweenPodEvictionsDefault = 5    // seconds
 )
 
