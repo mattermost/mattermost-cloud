@@ -11,7 +11,9 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
+	"github.com/mattermost/mattermost-cloud/internal/tools/grafana"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -136,6 +138,9 @@ func (p *mockClusterProvisioner) RefreshKopsMetadata(cluster *model.Cluster) err
 }
 
 func TestClusterSupervisorDo(t *testing.T) {
+	grafanaClient, err := grafana.NewGrafanaClient("", "", []string{})
+	assert.Error(t, err)
+
 	t.Run("no clusters pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockClusterStore{}
@@ -145,8 +150,9 @@ func TestClusterSupervisorDo(t *testing.T) {
 			&mockClusterProvisionerOption{},
 			&mockEventProducer{},
 			"instanceID",
-			logger,
+			grafanaClient,
 			cloudMetrics,
+			logger,
 		)
 		err := supervisor.Do()
 		require.NoError(t, err)
@@ -170,8 +176,9 @@ func TestClusterSupervisorDo(t *testing.T) {
 			&mockClusterProvisionerOption{},
 			&mockEventProducer{},
 			"instanceID",
-			logger,
+			grafanaClient,
 			cloudMetrics,
+			logger,
 		)
 
 		err := supervisor.Do()
@@ -222,8 +229,9 @@ func TestClusterSupervisorDo(t *testing.T) {
 			&mockClusterProvisionerOption{},
 			mockEventProducer,
 			"instanceID",
-			logger,
+			grafanaClient,
 			cloudMetrics,
+			logger,
 		)
 		err := supervisor.Do()
 		require.NoError(t, err)
@@ -249,6 +257,9 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		{"refresh metadata", model.ClusterStateRefreshMetadata, model.ClusterStateStable},
 	}
 
+	grafanaClient, err := grafana.NewGrafanaClient("", "", []string{})
+	assert.Error(t, err)
+
 	for _, tc := range testCases {
 		t.Run(tc.Description, func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
@@ -259,8 +270,9 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 				&mockClusterProvisionerOption{},
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				"instanceID",
-				logger,
+				grafanaClient,
 				cloudMetrics,
+				logger,
 			)
 
 			cluster := &model.Cluster{
@@ -288,8 +300,9 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 			&mockClusterProvisionerOption{},
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",
-			logger,
+			grafanaClient,
 			cloudMetrics,
+			logger,
 		)
 
 		cluster := &model.Cluster{

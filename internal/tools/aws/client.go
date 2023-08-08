@@ -249,7 +249,7 @@ func (c *Client) GetCloudEnvironmentName() string {
 }
 
 // buildCloudEnvironmentNameCache looks for a standard cloud account environment
-// name and chacnes it in the AWS client.
+// name and caches it in the AWS client.
 func (c *Client) buildCloudEnvironmentNameCache() error {
 	accountAliases, err := c.GetAccountAliases()
 	if err != nil {
