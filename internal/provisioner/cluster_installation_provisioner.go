@@ -476,7 +476,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.Spec.IngressAnnotations = nil
 	annotations := mattermost.Spec.Ingress.Annotations
 	if installation.AllowedIPRanges != "" {
-		annotations = addInternalSourceRanges(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges, installation.OverrideIPRanges)
+		annotations = addInternalSourceRanges(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
 	}
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
@@ -1075,14 +1075,9 @@ func getHibernatingIngressAnnotations() map[string]string {
 	return annotations
 }
 
-func addInternalSourceRanges(annotations map[string]string, allowedIPRanges string, internalIPRanges string, overrideIPRanges bool) map[string]string {
+func addInternalSourceRanges(annotations map[string]string, allowedIPRanges string, internalIPRanges string) map[string]string {
 
-	var existingRanges []string
-	if !overrideIPRanges {
-		existingRanges = strings.Split(annotations["nginx.ingress.kubernetes.io/whitelist-source-range"], ",")
-	} else {
-		existingRanges = make([]string, 0)
-	}
+	existingRanges := make([]string, 0)
 
 	if allowedIPRanges != "" {
 		ips := strings.Split(allowedIPRanges, ",")

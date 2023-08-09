@@ -622,8 +622,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 				AllowedIPRanges: "192.168.1.1/24",
 			},
 			&model.Installation{
-				AllowedIPRanges:  "127.0.0.1,192.168.0.1/24",
-				OverrideIPRanges: true,
+				AllowedIPRanges: "127.0.0.1,192.168.0.1/24",
 			},
 		},
 		{

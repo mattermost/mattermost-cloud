@@ -2174,13 +2174,6 @@ var migrations = []migration{
 			return errors.Wrap(err, "failed to add AllowedIPRanges column")
 		}
 
-		_, err = e.Exec(`
-				ALTER TABLE Installation ADD COLUMN OverrideIPRanges BOOLEAN DEFAULT FALSE;
-				`)
-		if err != nil {
-			return errors.Wrap(err, "failed to add OverrideIPRanges column")
-		}
-
 		return nil
 	}},
 }

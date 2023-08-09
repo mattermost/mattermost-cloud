@@ -381,17 +381,12 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 		installation.License = *p.License
 	}
 
-	if p.OverrideIPRanges != nil && *p.OverrideIPRanges != installation.OverrideIPRanges {
-		applied = true
-		installation.OverrideIPRanges = *p.OverrideIPRanges
-	}
-
 	if p.AllowedIPRanges != nil && *p.AllowedIPRanges != installation.AllowedIPRanges {
 		applied = true
-		if (!installation.OverrideIPRanges && p.OverrideIPRanges == nil) || (p.OverrideIPRanges != nil && !*p.OverrideIPRanges) {
-			installation.AllowedIPRanges = p.addMissingIngressSourceRanges(installation)
-		} else {
+		if p.OverrideIPRanges != nil && *p.OverrideIPRanges {
 			installation.AllowedIPRanges = *p.AllowedIPRanges
+		} else {
+			installation.AllowedIPRanges = p.addMissingIngressSourceRanges(installation)
 		}
 	}
 	if p.MattermostEnv != nil {
