@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   postgres:
-    image: "postgres:12.5"
+    image: "postgres:14.8"
     container_name: "cloud-postgres"
     restart: on-failure
     networks:
@@ -13,6 +13,7 @@ services:
       POSTGRES_PASSWORD: provisionerdev
     volumes:
     - "./build/localdev/create-database.sql:/docker-entrypoint-initdb.d/create-database.sql"
+    - "~/.cloud:/var/lib/postgresql/data"
 networks:
   cloud:
     driver: bridge

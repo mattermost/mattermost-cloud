@@ -69,14 +69,16 @@ func getClusterForClusterInstallation(store getClusterForClusterInstallationStor
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cluster installations")
 	}
+	if clusterInstallation == nil {
+		return nil, errors.Errorf("could not find cluster installation %s", clusterInstallationID)
+	}
 
 	cluster, err := store.GetCluster(clusterInstallation.ClusterID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cluster")
 	}
-
 	if cluster == nil {
-		return nil, errors.New("cluster not found for cluster installation")
+		return nil, errors.Errorf("cluster not found for cluster installation %s", clusterInstallationID)
 	}
 
 	return cluster, nil

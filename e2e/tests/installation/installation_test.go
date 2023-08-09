@@ -8,6 +8,7 @@
 package installation
 
 import (
+	"context"
 	"github.com/pkg/errors"
 	"math/rand"
 	"testing"
@@ -35,6 +36,7 @@ func SetupInstallationLifecycleTest() (*shared.Test, error) {
 }
 
 func Test_InstallationLifecycle(t *testing.T) {
+	ctx := context.Background()
 	rand.Seed(time.Now().UnixNano())
 
 	test, err := SetupInstallationLifecycleTest()
@@ -64,6 +66,7 @@ func Test_InstallationLifecycle(t *testing.T) {
 			testWorkflowSteps := c.WorkflowStepsFunc(test.ClusterSuite, test.InstallationSuite)
 			test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
 			test.Steps = testWorkflowSteps
+			defer test.InstallationSuite.Cleanup(ctx)
 			err = test.Run()
 			require.NoError(t, err)
 			time.Sleep(time.Second * 1)

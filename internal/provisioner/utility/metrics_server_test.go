@@ -19,7 +19,7 @@ func TestNewHelmDeploymentWithDefaultConfigurationMetricsServer(t *testing.T) {
 	defer ctrl.Finish()
 
 	logger := log.New()
-	metricsServer := newMetricsServerHandle(&model.HelmUtilityVersion{Chart: "3.8.3"}, &model.Cluster{
+	metricsServer := newMetricsServerHandle(&model.HelmUtilityVersion{Chart: "3.10.0"}, &model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},

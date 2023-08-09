@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
+	"github.com/mattermost/mattermost-cloud/internal/tools/grafana"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -57,17 +58,19 @@ type ClusterSupervisor struct {
 	eventsProducer eventProducer
 	instanceID     string
 	metrics        *metrics.CloudMetrics
+	grafana        grafana.Client
 	logger         log.FieldLogger
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, provisioner ClusterProvisionerOption, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, provisioner ClusterProvisionerOption, eventProducer eventProducer, instanceID string, grafanaClient grafana.Client, metrics *metrics.CloudMetrics, logger log.FieldLogger) *ClusterSupervisor {
 	return &ClusterSupervisor{
 		store:          store,
 		provisioner:    provisioner,
 		eventsProducer: eventProducer,
 		instanceID:     instanceID,
 		metrics:        metrics,
+		grafana:        grafanaClient,
 		logger:         logger,
 	}
 }
@@ -212,6 +215,7 @@ func (s *ClusterSupervisor) createCluster(cluster *model.Cluster, logger log.Fie
 }
 
 func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.FieldLogger) string {
+	s.grafana.AddGrafanaClusterProvisionAnnotation(cluster.ID, logger)
 	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).ProvisionCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster")
@@ -223,6 +227,7 @@ func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.
 }
 
 func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.FieldLogger) string {
+	s.grafana.AddGrafanaClusterUpgradeAnnotation(cluster.ID, logger)
 	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).UpgradeCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to upgrade cluster")
@@ -240,6 +245,7 @@ func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.Fi
 }
 
 func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.FieldLogger) string {
+	s.grafana.AddGrafanaClusterResizeAnnotation(cluster.ID, logger)
 	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).ResizeCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to resize cluster")
@@ -279,7 +285,6 @@ func (s *ClusterSupervisor) deleteNodegroups(cluster *model.Cluster, logger log.
 }
 
 func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logger log.FieldLogger) string {
-
 	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).RefreshClusterMetadata(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to refresh cluster")
@@ -337,7 +342,6 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 }
 
 func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log.FieldLogger) string {
-
 	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodegroupsCreated(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to check if node creation finished")
@@ -352,7 +356,6 @@ func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log
 }
 
 func (s *ClusterSupervisor) processClusterMetrics(cluster *model.Cluster, logger log.FieldLogger) error {
-
 	if cluster.State != model.ClusterStateStable && cluster.State != model.ClusterStateDeleted {
 		return nil
 	}
@@ -380,12 +383,15 @@ func (s *ClusterSupervisor) processClusterMetrics(cluster *model.Cluster, logger
 		logger.Debugf("Cluster was created in %d seconds", int(elapsedSeconds))
 	case model.ClusterStateUpgradeRequested:
 		s.metrics.ClusterUpgradeDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		s.grafana.UpdateGrafanaClusterUpgradeAnnotation(cluster.ID, logger)
 		logger.Debugf("Cluster was upgraded in %d seconds", int(elapsedSeconds))
 	case model.ClusterStateProvisioningRequested:
 		s.metrics.ClusterProvisioningDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		s.grafana.UpdateGrafanaClusterProvisionAnnotation(cluster.ID, logger)
 		logger.Debugf("Cluster was provisioned in %d seconds", int(elapsedSeconds))
 	case model.ClusterStateResizeRequested:
 		s.metrics.ClusterResizeDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		s.grafana.UpdateGrafanaClusterResizeAnnotation(cluster.ID, logger)
 		logger.Debugf("Cluster was resized in %d seconds", int(elapsedSeconds))
 	case model.ClusterStateDeletionRequested:
 		s.metrics.ClusterDeletionDurationHist.WithLabelValues().Observe(elapsedSeconds)

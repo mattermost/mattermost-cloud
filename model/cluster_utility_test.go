@@ -151,9 +151,9 @@ func TestGetActualVersion(t *testing.T) {
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
-				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.1.0"},
-				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.2"},
-				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.8.3"},
+				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},
+				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.5"},
+				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.10.0"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-3.1.2"},
 				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.1"},
 			},
@@ -182,13 +182,13 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "promtail-6.2.2"}, version)
 
 	version = c.ActualUtilityVersion(RtcdCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "rtcd-1.1.0"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "rtcd-1.3.0"}, version)
 
 	version = c.ActualUtilityVersion(NodeProblemDetectorCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "node-problem-detector-2.3.2"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "node-problem-detector-2.3.5"}, version)
 
 	version = c.ActualUtilityVersion(MetricsServerCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "metrics-server-3.8.3"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "metrics-server-3.10.0"}, version)
 
 	version = c.ActualUtilityVersion(VeleroCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "velero-3.1.2"}, version)
@@ -225,9 +225,9 @@ func TestGetDesiredVersion(t *testing.T) {
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
-				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.1.0"},
-				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.2"},
-				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.8.3"},
+				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},
+				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.5"},
+				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.10.0"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-3.1.2"},
 				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.1"},
 			},
