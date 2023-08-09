@@ -68,9 +68,9 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// ThanosCanonicalName defines the default version and values path for the Helm chart
 	ThanosCanonicalName: {Chart: "12.10.1", ValuesPath: ""},
 	// NginxCanonicalName defines the default version and values path for the Helm chart
-	NginxCanonicalName: {Chart: "4.5.2", ValuesPath: ""},
+	NginxCanonicalName: {Chart: "4.7.1", ValuesPath: ""},
 	// NginxInternalCanonicalName defines the default version and values path for the Helm chart
-	NginxInternalCanonicalName: {Chart: "4.5.2", ValuesPath: ""},
+	NginxInternalCanonicalName: {Chart: "4.7.1", ValuesPath: ""},
 	// FluentbitCanonicalName defines the default version and values path for the Helm chart
 	FluentbitCanonicalName: {Chart: "0.31.0", ValuesPath: ""},
 	// TeleportCanonicalName defines the default version and values path for the Helm chart
@@ -80,7 +80,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// PromtailCanonicalName defines the default version and values path for the Helm chart
 	PromtailCanonicalName: {Chart: "6.2.2", ValuesPath: ""},
 	// RtcdCanonicalName defines the default version and values path for the Helm chart
-	RtcdCanonicalName: {Chart: "1.1.0", ValuesPath: ""},
+	RtcdCanonicalName: {Chart: "1.3.0", ValuesPath: ""},
 	// NodeProblemDetectorCanonicalName defines the default version and values path for the Helm chart
 	NodeProblemDetectorCanonicalName: {Chart: "2.3.5", ValuesPath: ""},
 	// MetricsServerCanonicalName defines the default version and values path for the Helm chart
