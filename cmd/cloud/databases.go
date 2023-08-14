@@ -23,6 +23,7 @@ func newCmdDatabase() *cobra.Command {
 	cmd.AddCommand(newCmdDatabaseMultitenant())
 	cmd.AddCommand(newCmdDatabaseLogical())
 	cmd.AddCommand(newCmdDatabaseSchema())
+	cmd.AddCommand(newCmdDatabaseValidationReport())
 
 	return cmd
 }
@@ -419,6 +420,94 @@ func newCmdDatabaseSchemaGet() *cobra.Command {
 	return cmd
 }
 
+func newCmdDatabaseValidationReport() *cobra.Command {
+	var flags clusterFlags
+
+	cmd := &cobra.Command{
+		Use:   "validation-report",
+		Short: "Run a report that compares installation and database records to ensure there is a complete match.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
+			return executeDatabaseValidationReportCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeDatabaseValidationReportCmd(flags clusterFlags) error {
+	client := model.NewClient(flags.serverAddress)
+
+	installations, err := client.GetInstallations(&model.GetInstallationsRequest{
+		Paging: model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to query installations")
+	}
+	installationDatabaseMap := make(map[string][]string)
+	for _, installation := range installations {
+		installationDatabaseMap[installation.Database] = append(installationDatabaseMap[installation.Database], installation.ID)
+	}
+
+	multitenantDatabases, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
+		Paging: model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to query multitenant databases")
+	}
+
+	databaseMap := make(map[string][]string)
+	for _, database := range multitenantDatabases {
+		// Correlate database.DatabaseType with installation.Database values.
+		switch database.DatabaseType {
+		case model.DatabaseEngineTypePostgresProxyPerseus:
+			databaseMap[model.InstallationDatabasePerseus] = append(databaseMap[model.InstallationDatabasePerseus], database.Installations...)
+		case model.DatabaseEngineTypePostgresProxy:
+			databaseMap[model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer] = append(databaseMap[model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer], database.Installations...)
+		case model.DatabaseEngineTypePostgres:
+			databaseMap[model.InstallationDatabaseMultiTenantRDSPostgres] = append(databaseMap[model.InstallationDatabaseMultiTenantRDSPostgres], database.Installations...)
+		case model.DatabaseEngineTypeMySQL:
+			databaseMap[model.InstallationDatabaseMultiTenantRDSMySQL] = append(databaseMap[model.InstallationDatabaseMultiTenantRDSMySQL], database.Installations...)
+		}
+	}
+
+	// Now run a two way comparision to make sure that the IDs are a complete match.
+	for dbType, installationIDs := range installationDatabaseMap {
+		fmt.Printf("Database type: %s [Database=%d,Installation=%d]\n", dbType, len(databaseMap[dbType]), len(installationIDs))
+		for _, id := range installationIDs {
+			if !contains(id, databaseMap[dbType]) {
+				fmt.Printf(" - Missing: %s\n", id)
+			}
+		}
+	}
+	fmt.Println()
+	for dbType, databaseIDs := range databaseMap {
+		fmt.Printf("Database type: %s [Database=%d,Installation=%d]\n", dbType, len(databaseIDs), len(installationDatabaseMap[dbType]))
+		for _, id := range databaseIDs {
+			if !contains(id, installationDatabaseMap[dbType]) {
+				fmt.Printf(" - Missing: %s\n", id)
+			}
+		}
+	}
+
+	return nil
+}
+
+func contains(val string, checkAgainst []string) bool {
+	for _, check := range checkAgainst {
+		if val == check {
+			return true
+		}
+	}
+
+	return false
+}
+
 func newCmdDatabaseMultitenantReport() *cobra.Command {
 	var flags databaseMultiTenantReportFlag
 
@@ -470,6 +559,21 @@ func executeMultiTenantDatabaseReportCmd(flags databaseMultiTenantReportFlag) er
 
 		output += fmt.Sprintf(" └ Logical Databases: %d\n", len(logicalDatabases))
 		output += fmt.Sprintf("   └ Average Installations Per Logical Database: %.2f\n", float64(multitenantDatabase.Installations.Count())/float64(len(logicalDatabases)))
+
+		if flags.includeSchemaCounts {
+			output += "\nSchema Counts:\n"
+			for _, logicalDatase := range logicalDatabases {
+				schemas, err := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
+					LogicalDatabaseID: logicalDatase.ID,
+					Paging:            model.AllPagesNotDeleted(),
+				})
+				if err != nil {
+					return errors.Wrap(err, "failed to query database schemas")
+				}
+
+				output += fmt.Sprintf("%s - %d\n", logicalDatase.ID, len(schemas))
+			}
+		}
 	}
 
 	fmt.Println(output)

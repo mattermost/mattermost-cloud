@@ -1393,8 +1393,8 @@ func (c *Client) GetDatabaseSchemas(request *GetDatabaseSchemaRequest) ([]*Datab
 }
 
 // GetDatabaseSchema fetches the database schema from the configured provisioning server.
-func (c *Client) GetDatabaseSchema(multitenantDatabaseID string) (*DatabaseSchema, error) {
-	resp, err := c.doGet(c.buildURL("/api/databases/database_schema/%s", multitenantDatabaseID))
+func (c *Client) GetDatabaseSchema(databaseSchemaID string) (*DatabaseSchema, error) {
+	resp, err := c.doGet(c.buildURL("/api/databases/database_schema/%s", databaseSchemaID))
 	if err != nil {
 		return nil, err
 	}
