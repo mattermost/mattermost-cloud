@@ -8,7 +8,7 @@
 ## Tool Versions
 GOLANG_VERSION := $(shell cat go.mod | grep "^go " | cut -d " " -f 2)
 ALPINE_VERSION = 3.18.2
-TERRAFORM_VERSION=1.0.7
+TERRAFORM_VERSION=1.5.5
 KOPS_VERSION=v1.24.5
 HELM_VERSION=v3.11.2
 KUBECTL_VERSION=v1.24.4
