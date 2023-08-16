@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/mattermost/mattermost-cloud/internal/common"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -480,7 +481,7 @@ func executeDatabaseValidationReportCmd(flags clusterFlags) error {
 	for dbType, installationIDs := range installationDatabaseMap {
 		fmt.Printf("Database type: %s [Database=%d,Installation=%d]\n", dbType, len(databaseMap[dbType]), len(installationIDs))
 		for _, id := range installationIDs {
-			if !contains(id, databaseMap[dbType]) {
+			if !common.Contains(databaseMap[dbType], id) {
 				fmt.Printf(" - Missing: %s\n", id)
 			}
 		}
@@ -489,23 +490,13 @@ func executeDatabaseValidationReportCmd(flags clusterFlags) error {
 	for dbType, databaseIDs := range databaseMap {
 		fmt.Printf("Database type: %s [Database=%d,Installation=%d]\n", dbType, len(databaseIDs), len(installationDatabaseMap[dbType]))
 		for _, id := range databaseIDs {
-			if !contains(id, installationDatabaseMap[dbType]) {
+			if !common.Contains(installationDatabaseMap[dbType], id) {
 				fmt.Printf(" - Missing: %s\n", id)
 			}
 		}
 	}
 
 	return nil
-}
-
-func contains(val string, checkAgainst []string) bool {
-	for _, check := range checkAgainst {
-		if val == check {
-			return true
-		}
-	}
-
-	return false
 }
 
 func newCmdDatabaseMultitenantReport() *cobra.Command {
