@@ -291,6 +291,8 @@ type GetInstallationsRequest struct {
 	State                       string
 	DNS                         string
 	Name                        string
+	AllowedIPRanges             string
+	OverrideIPRanges            bool
 	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
 }
@@ -303,6 +305,10 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q.Add("state", request.State)
 	q.Add("dns_name", request.DNS)
 	q.Add("name", request.Name)
+	q.Add("allowed-ip-ranges", request.AllowedIPRanges)
+	if !request.OverrideIPRanges {
+		q.Add("override-ip-ranges", "false")
+	}
 	if !request.IncludeGroupConfig {
 		q.Add("include_group_config", "false")
 	}
@@ -316,13 +322,15 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 
 // PatchInstallationRequest specifies the parameters for an updated installation.
 type PatchInstallationRequest struct {
-	OwnerID       *string
-	Image         *string
-	Version       *string
-	Size          *string
-	License       *string
-	PriorityEnv   EnvVarMap
-	MattermostEnv EnvVarMap
+	OwnerID          *string
+	Image            *string
+	Version          *string
+	Size             *string
+	License          *string
+	AllowedIPRanges  *string
+	OverrideIPRanges *bool
+	PriorityEnv      EnvVarMap
+	MattermostEnv    EnvVarMap
 }
 
 // Validate validates the values of a installation patch request.
@@ -332,6 +340,9 @@ func (p *PatchInstallationRequest) Validate() error {
 	}
 	if p.Image != nil && len(*p.Image) == 0 {
 		return errors.New("provided image update value was blank")
+	}
+	if p.AllowedIPRanges != nil && len(*p.AllowedIPRanges) == 0 {
+		return errors.New("provided ip ranges update value was blank")
 	}
 	if p.Size != nil {
 		_, err := GetInstallationSize(*p.Size)
@@ -368,6 +379,15 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 	if p.License != nil && *p.License != installation.License {
 		applied = true
 		installation.License = *p.License
+	}
+
+	if p.AllowedIPRanges != nil && *p.AllowedIPRanges != installation.AllowedIPRanges {
+		applied = true
+		if p.OverrideIPRanges != nil && *p.OverrideIPRanges {
+			installation.AllowedIPRanges = *p.AllowedIPRanges
+		} else {
+			installation.AllowedIPRanges = p.addMissingIngressSourceRanges(installation)
+		}
 	}
 	if p.MattermostEnv != nil {
 		if installation.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
@@ -410,7 +430,7 @@ func (p *PatchInstallationDeletionRequest) Validate() error {
 	if p.DeletionPendingExpiry != nil {
 		// DeletionPendingExpiry is the new time when an installation pending
 		// deletion can be deleted. This can be any time from "now" into the
-		// future. The cuttoff for "now" will be the current time with a 5 second
+		// future. The cutoff for "now" will be the current time with a 5 seconds
 		// buffer. Any time value lower than that will be considered an error.
 		cutoffTimeMillis := GetMillisAtTime(time.Now().Add(-5 * time.Second))
 		if cutoffTimeMillis > *p.DeletionPendingExpiry {
@@ -431,6 +451,25 @@ func (p *PatchInstallationDeletionRequest) Apply(installation *Installation) boo
 	}
 
 	return applied
+}
+
+func (p *PatchInstallationRequest) addMissingIngressSourceRanges(installation *Installation) string {
+	var ips []string
+	if p.AllowedIPRanges != nil {
+		ips = strings.Split(*p.AllowedIPRanges, ",")
+	}
+
+	allowedIPRanges := strings.Split(installation.AllowedIPRanges, ",")
+	for _, ip := range ips {
+		if !contains(allowedIPRanges, ip) {
+			allowedIPRanges = append(allowedIPRanges, ip)
+		}
+	}
+
+	allowiplistRange := strings.Join(allowedIPRanges, ",")
+	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
+
+	return allowiplistRange
 }
 
 // NewPatchInstallationDeletionRequestFromReader will create a PatchInstallationDeletionRequest from an io.Reader with JSON data.

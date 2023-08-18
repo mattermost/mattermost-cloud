@@ -29,7 +29,6 @@ func newCmdWorkbench() *cobra.Command {
 }
 
 func newCmdWorkbenchCluster() *cobra.Command {
-
 	var flags workbenchClusterFlag
 
 	cmd := &cobra.Command{
