@@ -1290,8 +1290,8 @@ func (c *Client) GetMultitenantDatabase(multitenantDatabaseID string) (*Multiten
 }
 
 // UpdateMultitenantDatabase updates a multitenant database.
-func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchMultitenantDatabaseRequest) (*MultitenantDatabase, error) {
-	resp, err := c.doPut(c.buildURL("/api/databases/multitenant_database/%s", databaseID), request)
+func (c *Client) UpdateMultitenantDatabase(multitenantDatabaseID string, request *PatchMultitenantDatabaseRequest) (*MultitenantDatabase, error) {
+	resp, err := c.doPut(c.buildURL("/api/databases/multitenant_database/%s", multitenantDatabaseID), request)
 	if err != nil {
 		return nil, err
 	}
@@ -1307,8 +1307,8 @@ func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchMult
 }
 
 // DeleteMultitenantDatabase marks multitenant database as deleted.
-func (c *Client) DeleteMultitenantDatabase(databaseID string, force bool) error {
-	u := c.buildURL("/api/databases/multitenant_database/%s?force=%t", databaseID, force)
+func (c *Client) DeleteMultitenantDatabase(multitenantDatabaseID string, force bool) error {
+	u := c.buildURL("/api/databases/multitenant_database/%s?force=%t", multitenantDatabaseID, force)
 	resp, err := c.doDelete(u)
 	if err != nil {
 		return err
@@ -1365,6 +1365,24 @@ func (c *Client) GetLogicalDatabase(logicalDatabaseID string) (*LogicalDatabase,
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteLogicalDatabase deletes an empty logical database.
+func (c *Client) DeleteLogicalDatabase(logicalDatabaseID string) error {
+	u := c.buildURL("/api/databases/logical_database/%s", logicalDatabaseID)
+	resp, err := c.doDelete(u)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 

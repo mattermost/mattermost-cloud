@@ -118,6 +118,12 @@ func (sqlStore *SQLStore) createDatabaseSchema(db execer, databaseSchema *model.
 	return nil
 }
 
+// DeleteDatabaseSchema marks the given database schema as deleted, but does not
+// remove the record from the database.
+func (sqlStore *SQLStore) DeleteDatabaseSchema(id string) error {
+	return sqlStore.deleteDatabaseSchema(sqlStore.db, id)
+}
+
 // deleteDatabaseSchema marks the given database schema as deleted, but does not
 // remove the record from the database.
 func (sqlStore *SQLStore) deleteDatabaseSchema(db execer, id string) error {
