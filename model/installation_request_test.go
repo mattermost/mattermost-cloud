@@ -629,7 +629,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			"invalid ranges , without override",
 			true,
 			&model.PatchInstallationRequest{
-				AllowedIPRanges: sToP("127.0.0.1,192.168.0.1/24,skata,1002.980.12.1"),
+				AllowedIPRanges: sToP("127.0.0.1,192.168.0.1/24,blahblah,1002.980.12.1"),
 			},
 			&model.Installation{
 				AllowedIPRanges: "192.168.1.1/24",
