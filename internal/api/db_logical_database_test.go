@@ -203,3 +203,63 @@ func TestGetLogicalDatabase(t *testing.T) {
 		assert.Nil(t, fetchedLogicalDatabase)
 	})
 }
+
+func TestDeleteLogicalDatabase(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
+		AwsClient:  mockAWSClient{},
+		Logger:     logger,
+	})
+
+	ts := httptest.NewServer(router)
+	client := model.NewClient(ts.URL)
+
+	multitenantDatase := &model.MultitenantDatabase{}
+	err := sqlStore.CreateMultitenantDatabase(multitenantDatase)
+	require.NoError(t, err)
+	assert.NotEmpty(t, multitenantDatase.ID)
+
+	logicalDatabase := &model.LogicalDatabase{
+		MultitenantDatabaseID: multitenantDatase.ID,
+	}
+
+	err = sqlStore.CreateLogicalDatabase(logicalDatabase)
+	require.NoError(t, err)
+	assert.NotEmpty(t, logicalDatabase.ID)
+
+	schema := &model.DatabaseSchema{
+		LogicalDatabaseID: logicalDatabase.ID,
+	}
+
+	err = sqlStore.CreateDatabaseSchema(schema)
+	require.NoError(t, err)
+	assert.NotEmpty(t, schema.ID)
+
+	t.Run("not found", func(t *testing.T) {
+		err = client.DeleteLogicalDatabase(model.NewID())
+		require.Error(t, err)
+	})
+
+	t.Run("contains active schema", func(t *testing.T) {
+		err = client.DeleteLogicalDatabase(logicalDatabase.ID)
+		require.Error(t, err)
+	})
+
+	err = sqlStore.DeleteDatabaseSchema(schema.ID)
+	require.NoError(t, err)
+
+	t.Run("success", func(t *testing.T) {
+		err = client.DeleteLogicalDatabase(logicalDatabase.ID)
+		require.NoError(t, err)
+	})
+
+	logicalDatabase, err = sqlStore.GetLogicalDatabase(logicalDatabase.ID)
+	require.NotZero(t, logicalDatabase.DeleteAt)
+}
