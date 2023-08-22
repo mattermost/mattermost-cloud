@@ -106,7 +106,8 @@ type databaseLogicalDeleteFlag struct {
 }
 
 func (flags *databaseLogicalDeleteFlag) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.logicalDatabaseID, "logical-database", "", "The id of the logical database to delete.").Required()
+	command.Flags().StringVar(&flags.logicalDatabaseID, "logical-database", "", "The id of the logical database to delete.")
+	_ = command.MarkFlagRequired("logical-database")
 }
 
 type databaseSchemaListFlag struct {
