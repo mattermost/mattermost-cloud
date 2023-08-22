@@ -6,9 +6,10 @@ package model
 
 import (
 	"encoding/json"
-	"github.com/pkg/errors"
 	"io"
 	"net/url"
+
+	"github.com/pkg/errors"
 )
 
 const (

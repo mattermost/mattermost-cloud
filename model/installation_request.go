@@ -6,7 +6,6 @@ package model
 
 import (
 	"encoding/json"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"net/url"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // requireAnnotatedInstallations if set, installations need to be annotated with at least one annotation.
