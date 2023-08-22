@@ -6,7 +6,9 @@ package model
 
 import (
 	"encoding/json"
+	"github.com/sirupsen/logrus"
 	"io"
+	"net"
 	"net/url"
 	"regexp"
 	"strings"
@@ -341,7 +343,7 @@ func (p *PatchInstallationRequest) Validate() error {
 	if p.Image != nil && len(*p.Image) == 0 {
 		return errors.New("provided image update value was blank")
 	}
-	if p.AllowedIPRanges != nil && len(*p.AllowedIPRanges) == 0 {
+	if p.AllowedIPRanges != nil && len(*p.AllowedIPRanges) == 0 && !*p.OverrideIPRanges {
 		return errors.New("provided ip ranges update value was blank")
 	}
 	if p.Size != nil {
@@ -384,7 +386,7 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 	if p.AllowedIPRanges != nil && *p.AllowedIPRanges != installation.AllowedIPRanges {
 		applied = true
 		if p.OverrideIPRanges != nil && *p.OverrideIPRanges {
-			installation.AllowedIPRanges = *p.AllowedIPRanges
+			installation.AllowedIPRanges = p.filterInvalidIngressSourceRanges(*p.AllowedIPRanges)
 		} else {
 			installation.AllowedIPRanges = p.addMissingIngressSourceRanges(installation)
 		}
@@ -460,13 +462,35 @@ func (p *PatchInstallationRequest) addMissingIngressSourceRanges(installation *I
 	}
 
 	allowedIPRanges := strings.Split(installation.AllowedIPRanges, ",")
+
 	for _, ip := range ips {
-		if !contains(allowedIPRanges, ip) {
+		if IsIPRangeValid(ip) && !contains(allowedIPRanges, ip) {
 			allowedIPRanges = append(allowedIPRanges, ip)
+		} else if !IsIPRangeValid(ip) {
+			logrus.Info("Invalid IP range will not be appended: ", ip)
 		}
 	}
 
 	allowiplistRange := strings.Join(allowedIPRanges, ",")
+	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
+
+	return allowiplistRange
+}
+
+func (p *PatchInstallationRequest) filterInvalidIngressSourceRanges(ips string) string {
+	var validIPs []string
+
+	allowedIPRanges := strings.Split(ips, ",")
+
+	for _, ip := range allowedIPRanges {
+		if IsIPRangeValid(ip) {
+			validIPs = append(validIPs, ip)
+		} else if !IsIPRangeValid(ip) {
+			logrus.Info("Invalid IP range will not be appended: ", ip)
+		}
+	}
+
+	allowiplistRange := strings.Join(validIPs, ",")
 	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
 
 	return allowiplistRange
@@ -502,4 +526,31 @@ func NewAssignInstallationGroupRequestFromReader(reader io.Reader) (*AssignInsta
 	}
 
 	return &assignGroupRequest, nil
+}
+
+// IsIPRangeValid validates if an IP range is considered valid.
+func IsIPRangeValid(ipRange string) bool {
+	// Split IP range into parts
+	parts := strings.Split(ipRange, "/")
+	ipString := parts[0]
+
+	// Validate IP address
+	ip := net.ParseIP(ipString)
+	if ip == nil {
+		return false
+	}
+
+	// If no subnet mask provided, treat it as /32 (single IP)
+	if len(parts) == 1 {
+		return true
+	}
+
+	// Validate subnet mask
+	_, ipNet, err := net.ParseCIDR(ipRange)
+	if err != nil {
+		return false
+	}
+
+	// Check if the IP is within the specified subnet
+	return ipNet.Contains(ip)
 }
