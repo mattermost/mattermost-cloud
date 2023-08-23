@@ -15,6 +15,7 @@ import (
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -265,6 +266,33 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 	}
 
 	logger.WithField("db-cluster-name", awsID).Debug("DBCluster deleted")
+
+	return nil
+}
+
+func (a *Client) DeletePGBouncerLogicalDatabase(multitenantDatabase *model.MultitenantDatabase, logicalDataseName string, logger log.FieldLogger) error {
+	masterSecretValue, err := a.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: &multitenantDatabase.RdsClusterID,
+		})
+	if err != nil {
+		return errors.Wrapf(err, "failed to find the master secret for the multitenant proxy cluster %s", multitenantDatabase.RdsClusterID)
+	}
+
+	db, disconnect, err := connectToPostgresRDSCluster(rdsPostgresDefaultSchema, multitenantDatabase.WriterEndpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	if err != nil {
+		return errors.Wrapf(err, "failed to connect to the multitenant proxy cluster %s", multitenantDatabase.RdsClusterID)
+	}
+	defer disconnect(logger)
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
+	defer cancel()
+
+	err = dropDatabaseIfExists(ctx, db, logicalDataseName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to drop logical database %s", logicalDataseName)
+	}
 
 	return nil
 }

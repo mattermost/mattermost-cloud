@@ -190,7 +190,7 @@ func newCmdDatabaseMultitenantDelete() *cobra.Command {
 			client := model.NewClient(flags.serverAddress)
 
 			if err := client.DeleteMultitenantDatabase(flags.multitenantDatabaseID, flags.force); err != nil {
-				return errors.Wrap(err, "failed to update multitenant database")
+				return errors.Wrap(err, "failed to delete multitenant database")
 			}
 			return nil
 		},
@@ -212,6 +212,7 @@ func newCmdDatabaseLogical() *cobra.Command {
 
 	cmd.AddCommand(newCmdDatabaseLogicalList())
 	cmd.AddCommand(newCmdDatabaseLogicalGet())
+	cmd.AddCommand(newCmdDatabaseLogicalDelete())
 
 	return cmd
 }
@@ -301,6 +302,31 @@ func newCmdDatabaseLogicalGet() *cobra.Command {
 			}
 
 			return printJSON(logicalDatabase)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdDatabaseLogicalDelete() *cobra.Command {
+	var flags databaseLogicalDeleteFlag
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete an empty PGBouncer logical database",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+
+			if err := client.DeleteLogicalDatabase(flags.logicalDatabaseID); err != nil {
+				return errors.Wrap(err, "failed to delete logical database")
+			}
+			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)

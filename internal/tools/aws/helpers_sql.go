@@ -144,6 +144,16 @@ func ensureDatabaseIsCreated(ctx context.Context, db SQLDatabaseManager, databas
 	return nil
 }
 
+func dropDatabaseIfExists(ctx context.Context, db SQLDatabaseManager, databaseName string) error {
+	query := fmt.Sprintf("DROP DATABASE IF EXISTS %s", databaseName)
+	_, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return errors.Wrap(err, "failed to run drop database SQL command")
+	}
+
+	return nil
+}
+
 func createSchemaIfNotExists(ctx context.Context, db SQLDatabaseManager, schemaName, username string) error {
 	query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s AUTHORIZATION %s", schemaName, username)
 	_, err := db.QueryContext(ctx, query)
