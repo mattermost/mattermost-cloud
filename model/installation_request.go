@@ -467,7 +467,7 @@ func (p *PatchInstallationRequest) addMissingIngressSourceRanges(installation *I
 		if IsIPRangeValid(ip) && !contains(allowedIPRanges, ip) {
 			allowedIPRanges = append(allowedIPRanges, ip)
 		} else if !IsIPRangeValid(ip) {
-			logrus.Info("Invalid IP range will not be appended: ", ip)
+			logrus.Errorf("Invalid IP range will not be appended: %s", ip)
 		}
 	}
 
@@ -486,7 +486,7 @@ func (p *PatchInstallationRequest) filterInvalidIngressSourceRanges(ips string) 
 		if IsIPRangeValid(ip) {
 			validIPs = append(validIPs, ip)
 		} else if !IsIPRangeValid(ip) {
-			logrus.Info("Invalid IP range will not be appended: ", ip)
+			logrus.Errorf("Invalid IP range will not be appended: %s", ip)
 		}
 	}
 
