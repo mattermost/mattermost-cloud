@@ -1016,6 +1016,10 @@ github.com/mattermost/mmetl v0.0.2-0.20210316151859-38824e5f5efd/go.mod h1:w6GNq
 github.com/mattermost/rotator v0.1.2/go.mod h1:1oxWiEhVdZRckZ0uHGd5Zqf04yynm4U/YGHUPsf4sQ8=
 github.com/mattermost/rotator v0.2.1-0.20230602082239-661a3981f623 h1:jcNvNlZhhUxQTls8Nc/pK5TXW9VV6cLdHT+hh+h+Ixw=
 github.com/mattermost/rotator v0.2.1-0.20230602082239-661a3981f623/go.mod h1:M9TNWt2wnV5XrUkP8LX+k0vpJSY8E11yIfVmrrOBAD0=
+github.com/mattermost/rotator v0.2.1-0.20230829142519-f98bd39f1ead h1:fcM9isVBc+uWTWtcFZp33BA9YqiaGv05YHWoPIR/TAo=
+github.com/mattermost/rotator v0.2.1-0.20230829142519-f98bd39f1ead/go.mod h1:M9TNWt2wnV5XrUkP8LX+k0vpJSY8E11yIfVmrrOBAD0=
+github.com/mattermost/rotator v0.2.1-0.20230830064954-61490ed26761 h1:O6zPyEslOAnzmvJjH9/jkwcJ2GcoK3jOyx2wl7ULFdc=
+github.com/mattermost/rotator v0.2.1-0.20230830064954-61490ed26761/go.mod h1:M9TNWt2wnV5XrUkP8LX+k0vpJSY8E11yIfVmrrOBAD0=
 github.com/mattermost/rsc v0.0.0-20160330161541-bbaefb05eaa0/go.mod h1:nV5bfVpT//+B1RPD2JvRnxbkLmJEYXmRaaVl15fsXjs=
 github.com/mattermost/viper v1.0.4/go.mod h1:uc5hKG9lv4/KRwPOt2c1omOyirS/UnuA2TytiZQSFHM=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
