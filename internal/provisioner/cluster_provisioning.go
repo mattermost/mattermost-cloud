@@ -30,6 +30,11 @@ func provisionCluster(
 	store model.ClusterUtilityDatabaseStoreInterface,
 	logger logrus.FieldLogger) error {
 
+	err := attachPolicyRoles(cluster, awsClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to attach policy roles to cluster")
+	}
+
 	// Start by gathering resources that will be needed later. If any of this
 	// fails then no cluster changes have been made which reduces risk.
 	deployPerseus := true
@@ -39,7 +44,7 @@ func provisionCluster(
 		// the necessary resources created for Perseus. If the necessary resources are
 		// not available then warnings will be logged and Perseus won't be deployed.
 		// TODO: revisit this after perseus testing is complete.
-		logger.WithError(err).Warn("Failed to generate perseus secret; skipping perseus utility deployment")
+		logger.WithError(err).Debug("Failed to generate perseus secret; skipping perseus utility deployment")
 		deployPerseus = false
 	}
 
@@ -279,25 +284,6 @@ func provisionCluster(
 				return err
 			}
 			logger.Infof("Successfully deployed service pod %q", podRunning.GetName())
-		}
-	}
-
-	if cluster.Provisioner == model.ProvisionerKops {
-		iamRoleMaster := fmt.Sprintf("masters.%s", cluster.ProvisionerMetadataKops.Name)
-		err = awsClient.AttachPolicyToRole(iamRoleMaster, aws.CustomNodePolicyName, logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to attach custom node policy to master")
-		}
-
-		iamRole := fmt.Sprintf("nodes.%s", cluster.ProvisionerMetadataKops.Name)
-		err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to attach custom node policy")
-		}
-
-		err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to attach velero node policy")
 		}
 	}
 

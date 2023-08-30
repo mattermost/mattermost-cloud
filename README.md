@@ -27,9 +27,9 @@ The following is required to properly run the cloud server.
 ##### Note: when versions are specified, it is extremely important to follow the requirement. Newer versions will often not work as expected
 
 1. Install [Go](https://golang.org/doc/install)
-2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v1.0.7
+2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v1.5.5
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
-3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.24.X
+3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.25.X
 4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.11.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [golang/mock](https://github.com/golang/mock#installation) version 1.4.x

@@ -30,6 +30,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
+	"github.com/mattermost/mattermost-cloud/internal/tools/grafana"
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
@@ -245,9 +246,16 @@ func executeServerCmd(flags serverFlags) error {
 		return errors.Wrap(err, "failed to build AWS client")
 	}
 
-	if err := checkRequirements(logger); err != nil {
+	if err = checkRequirements(logger); err != nil {
 		return errors.Wrap(err, "failed health check")
 	}
+
+	// Build a new optional Grafana client and log config.
+	grafanaClient, err := grafana.NewGrafanaClient(awsClient.GetCloudEnvironmentName(), flags.grafanaURL, flags.grafanaTokens)
+	if err != nil {
+		logger.WithError(err).Debug("Optional Grafana client could not be configured")
+	}
+	grafanaClient.LogConfiguration(logger)
 
 	// best-effort attempt to tag the VPC with a human's identity for dev purposes
 	owner := getHumanReadableID()
@@ -266,6 +274,7 @@ func executeServerCmd(flags serverFlags) error {
 		DeployMysqlOperator:     flags.deployMySQLOperator,
 		DeployMinioOperator:     flags.deployMinioOperator,
 		NdotsValue:              flags.ndotsDefaultValue,
+		InternalIPRanges:        flags.internalIPRanges,
 		PGBouncerConfig:         pgbouncerConfig,
 		SLOInstallationGroups:   flags.sloInstallationGroups,
 		SLOEnterpriseGroups:     flags.sloEnterpriseGroups,
@@ -335,7 +344,7 @@ func executeServerCmd(flags serverFlags) error {
 
 	var multiDoer supervisor.MultiDoer
 	if supervisorsEnabled.clusterSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerObj.ClusterProvisionerOption, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerObj.ClusterProvisionerOption, eventsProducer, instanceID, grafanaClient, cloudMetrics, logger))
 	}
 	if supervisorsEnabled.groupSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))

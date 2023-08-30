@@ -134,6 +134,7 @@ type installationOptions struct {
 	forceCRUpgrade                bool
 	utilitiesGitURL               string
 	enableS3Versioning            bool
+	internalIPRanges              string
 }
 
 func (flags *installationOptions) addFlags(command *cobra.Command) {
@@ -144,6 +145,7 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.forceCRUpgrade, "force-cr-upgrade", false, "If specified installation CRVersions will be updated to the latest version when supervised.")
 	command.Flags().StringVar(&flags.utilitiesGitURL, "utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
 	command.Flags().BoolVar(&flags.enableS3Versioning, "enable-s3-versioning", false, "Whether to enable S3 versioning for the installation bucket or not")
+	command.Flags().StringVar(&flags.internalIPRanges, "internal-ip-ranges", "", "Some ranges that needed to be allowed for operational reasons")
 }
 
 type dbUtilizationSettings struct {
@@ -193,6 +195,8 @@ type serverFlags struct {
 	enableLogStacktrace      bool
 	enableLogFilesPerCluster bool
 	logFilesPerClusterPath   string
+	grafanaURL               string
+	grafanaTokens            []string
 
 	database      string
 	maxSchemas    int64
@@ -220,6 +224,8 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.enableLogStacktrace, "enable-log-stacktrace", false, "Add stacktrace in error logs.")
 	command.Flags().BoolVar(&flags.enableLogFilesPerCluster, "enable-log-files-per-cluster", false, "Store individual log files per cluster.")
 	command.Flags().StringVar(&flags.logFilesPerClusterPath, "log-files-per-cluster-path", "", "Where to store the cluster log files.")
+	command.Flags().StringVar(&flags.grafanaURL, "grafana-url", "", "The URL of a Grafana endpoint to send annotations to.")
+	command.Flags().StringSliceVar(&flags.grafanaTokens, "grafana-tokens", []string{""}, "Grafana tokens which will be used with the provided URL")
 	command.MarkFlagsRequiredTogether("enable-log-files-per-cluster", "log-files-per-cluster-path")
 
 	command.Flags().StringVar(&flags.database, "database", "", "The database backing the provisioning server.")

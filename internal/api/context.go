@@ -21,6 +21,7 @@ type Supervisor interface {
 type Store interface {
 	model.InstallationDatabaseStoreInterface
 	DeleteMultitenantDatabase(multitenantDatabaseID string) error
+	DeleteLogicalDatabase(logicalDatabaseID string) error
 
 	CreateCluster(cluster *model.Cluster, annotations []*model.Annotation) error
 	GetCluster(clusterID string) (*model.Cluster, error)
@@ -141,6 +142,7 @@ type AwsClient interface {
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 	SecretsManagerValidateExternalDatabaseSecret(name string) error
 	RDSDBCLusterExists(awsID string) (bool, error)
+	DeletePGBouncerLogicalDatabase(multitenantDatabase *model.MultitenantDatabase, logicalDatabaseName string, logger log.FieldLogger) error
 }
 
 // DBProvider describes the interface required to get database for specific installation and specified type.

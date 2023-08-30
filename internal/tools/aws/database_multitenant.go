@@ -928,7 +928,7 @@ func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoin
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
 
-	err = d.dropDatabaseIfExists(ctx, databaseName)
+	err = dropDatabaseIfExists(ctx, d.db, databaseName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to drop multitenant RDS database name %s", databaseName)
 	}
@@ -1148,18 +1148,5 @@ func (d *RDSMultitenantDatabase) ensureDatabaseUserHasFullPermissions(ctx contex
 			return errors.Wrap(err, "failed to run privilege grant SQL command")
 		}
 	}
-	return nil
-}
-
-func (d *RDSMultitenantDatabase) dropDatabaseIfExists(ctx context.Context, databaseName string) error {
-	// Query placeholders don't seem to work with argument database.
-	// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
-	query := fmt.Sprintf("DROP DATABASE IF EXISTS %s", databaseName)
-
-	_, err := d.db.QueryContext(ctx, query)
-	if err != nil {
-		return errors.Wrap(err, "failed to run drop database SQL command")
-	}
-
 	return nil
 }
