@@ -5,9 +5,13 @@
 package model
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
+
+	"github.com/pkg/errors"
 )
 
 //go:generate provisioner-code-gen generate --out-file=installation_gen.go --boilerplate-file=../hack/boilerplate/boilerplate.generatego.txt --type=github.com/mattermost/mattermost-cloud/model.Installation --generator=get_id,get_state,is_deleted,as_resources
@@ -38,7 +42,7 @@ type Installation struct {
 	ExternalDatabaseConfig     *ExternalDatabaseConfig     `json:"ExternalDatabaseConfig,omitempty"`
 	Filestore                  string
 	License                    string
-	AllowedIPRanges            string
+	AllowedIPRanges            *AllowedIPRanges
 	MattermostEnv              EnvVarMap
 	PriorityEnv                EnvVarMap
 	Size                       string
@@ -79,6 +83,102 @@ type InstallationFilter struct {
 	State           string
 	DNS             string
 	Name            string
+}
+
+type AllowedIPRanges []AllowedIPRange
+
+type AllowedIPRange struct {
+	CIDRBlock   string
+	Description string
+	Enabled     bool
+	// TODO - necessary?
+	OwnerID string
+}
+
+func (a AllowedIPRanges) Value() (driver.Value, error) {
+	return json.Marshal(a)
+}
+
+func (a *AllowedIPRanges) Scan(src interface{}) error {
+	source, ok := src.([]byte)
+	if !ok {
+		return errors.New("Could not assert type of AllowedIPRanges")
+	}
+
+	var i AllowedIPRanges
+	err := json.Unmarshal(source, &i)
+	if err != nil {
+		return err
+	}
+	*a = i
+	return nil
+}
+
+func (a *AllowedIPRanges) FromJSONString(allowedIPRangesStr string) (*AllowedIPRanges, error) {
+	// Unmarshal the JSON into an AllowedIPRanges slice
+	var allowedIPRanges AllowedIPRanges
+	err := json.Unmarshal([]byte(allowedIPRangesStr), &allowedIPRanges)
+	if err != nil {
+		fmt.Printf("Error parsing JSON: %v\n", err)
+		return nil, err
+	}
+	return &allowedIPRanges, nil
+}
+
+func (a *AllowedIPRanges) ToString() string {
+	if a == nil {
+		return ""
+	}
+
+	b, err := json.Marshal(a)
+	if err != nil {
+		return ""
+	}
+
+	return string(b)
+}
+
+func (a *AllowedIPRanges) Contains(IP string) bool {
+	if a == nil {
+		return false
+	}
+
+	for _, allowedIPRange := range *a {
+		if allowedIPRange.CIDRBlock == IP {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (a *AllowedIPRanges) ToAnnotationString() string {
+	if a == nil {
+		return ""
+	}
+
+	var IPs []string
+	for _, allowedIPRange := range *a {
+		IPs = append(IPs, allowedIPRange.CIDRBlock)
+	}
+
+	result := strings.Join(IPs, ",")
+	result = strings.TrimPrefix(result, ",")
+
+	return result
+}
+
+func (a *AllowedIPRanges) AreValid() bool {
+	if a == nil {
+		// Empty is valid
+		return true
+	}
+	for _, allowedIPRange := range *a {
+		if !IsIPRangeValid(allowedIPRange.CIDRBlock) {
+			return false
+		}
+	}
+	return true
 }
 
 // Clone returns a deep copy the installation.

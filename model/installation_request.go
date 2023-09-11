@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // requireAnnotatedInstallations if set, installations need to be annotated with at least one annotation.
@@ -293,7 +292,7 @@ type GetInstallationsRequest struct {
 	State                       string
 	DNS                         string
 	Name                        string
-	AllowedIPRanges             string
+	AllowedIPRanges             *AllowedIPRanges
 	OverrideIPRanges            bool
 	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
@@ -307,7 +306,7 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q.Add("state", request.State)
 	q.Add("dns_name", request.DNS)
 	q.Add("name", request.Name)
-	q.Add("allowed-ip-ranges", request.AllowedIPRanges)
+	q.Add("allowed-ip-ranges", request.AllowedIPRanges.ToString())
 	if !request.OverrideIPRanges {
 		q.Add("override-ip-ranges", "false")
 	}
@@ -329,7 +328,7 @@ type PatchInstallationRequest struct {
 	Version          *string
 	Size             *string
 	License          *string
-	AllowedIPRanges  *string
+	AllowedIPRanges  *AllowedIPRanges
 	OverrideIPRanges *bool
 	PriorityEnv      EnvVarMap
 	MattermostEnv    EnvVarMap
@@ -343,7 +342,7 @@ func (p *PatchInstallationRequest) Validate() error {
 	if p.Image != nil && len(*p.Image) == 0 {
 		return errors.New("provided image update value was blank")
 	}
-	if p.AllowedIPRanges != nil && len(*p.AllowedIPRanges) == 0 && !*p.OverrideIPRanges {
+	if !p.AllowedIPRanges.AreValid() {
 		return errors.New("provided ip ranges update value was blank")
 	}
 	if p.Size != nil {
@@ -383,14 +382,24 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 		installation.License = *p.License
 	}
 
-	if p.AllowedIPRanges != nil && *p.AllowedIPRanges != installation.AllowedIPRanges {
+	if p.AllowedIPRanges != nil && p.AllowedIPRanges != installation.AllowedIPRanges {
 		applied = true
 		if p.OverrideIPRanges != nil && *p.OverrideIPRanges {
-			installation.AllowedIPRanges = p.filterInvalidIngressSourceRanges(*p.AllowedIPRanges)
+			allowedIPRanges, err := p.replaceIngressSourceRanges()
+			if err != nil {
+				return false
+			}
+			installation.AllowedIPRanges = allowedIPRanges
 		} else {
-			installation.AllowedIPRanges = p.addMissingIngressSourceRanges(installation)
+			allowedIPRanges, err := p.mergeNewIngressSourceRangesWithExisting(installation)
+			if err != nil {
+				return false
+			}
+			installation.AllowedIPRanges = allowedIPRanges
 		}
+
 	}
+
 	if p.MattermostEnv != nil {
 		if installation.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
 			applied = true
@@ -455,45 +464,37 @@ func (p *PatchInstallationDeletionRequest) Apply(installation *Installation) boo
 	return applied
 }
 
-func (p *PatchInstallationRequest) addMissingIngressSourceRanges(installation *Installation) string {
-	var ips []string
-	if p.AllowedIPRanges != nil {
-		ips = strings.Split(*p.AllowedIPRanges, ",")
+func (p *PatchInstallationRequest) mergeNewIngressSourceRangesWithExisting(installation *Installation) (*AllowedIPRanges, error) {
+	if p.AllowedIPRanges == nil {
+		return nil, nil
 	}
 
-	allowedIPRanges := strings.Split(installation.AllowedIPRanges, ",")
+	allowedIPRanges := installation.AllowedIPRanges
 
-	for _, ip := range ips {
-		if IsIPRangeValid(ip) && !contains(allowedIPRanges, ip) {
-			allowedIPRanges = append(allowedIPRanges, ip)
-		} else if !IsIPRangeValid(ip) {
-			logrus.Errorf("Invalid IP range will not be appended: %s", ip)
+	for _, allowedIPRange := range *p.AllowedIPRanges {
+		if !IsIPRangeValid(allowedIPRange.CIDRBlock) {
+			return nil, errors.New("Invalid CIDR block provided")
+		}
+		if !installation.AllowedIPRanges.Contains(allowedIPRange.CIDRBlock) {
+			if allowedIPRanges == nil {
+				allowedIPRanges = &AllowedIPRanges{}
+			}
+			*allowedIPRanges = append(*allowedIPRanges, allowedIPRange)
 		}
 	}
 
-	allowiplistRange := strings.Join(allowedIPRanges, ",")
-	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
-
-	return allowiplistRange
+	return allowedIPRanges, nil
 }
 
-func (p *PatchInstallationRequest) filterInvalidIngressSourceRanges(ips string) string {
-	var validIPs []string
-
-	allowedIPRanges := strings.Split(ips, ",")
-
-	for _, ip := range allowedIPRanges {
-		if IsIPRangeValid(ip) {
-			validIPs = append(validIPs, ip)
-		} else if !IsIPRangeValid(ip) {
-			logrus.Errorf("Invalid IP range will not be appended: %s", ip)
+// This function parses the InstallationRequests's AllowedIPRanges and returns an error if any of the ranges are invalid.
+func (p *PatchInstallationRequest) replaceIngressSourceRanges() (*AllowedIPRanges, error) {
+	for _, allowedIPRange := range *p.AllowedIPRanges {
+		if !IsIPRangeValid(allowedIPRange.CIDRBlock) {
+			return nil, errors.New("Invalid CIDR block provided")
 		}
 	}
 
-	allowiplistRange := strings.Join(validIPs, ",")
-	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
-
-	return allowiplistRange
+	return p.AllowedIPRanges, nil
 }
 
 // NewPatchInstallationDeletionRequestFromReader will create a PatchInstallationDeletionRequest from an io.Reader with JSON data.

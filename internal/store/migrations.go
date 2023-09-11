@@ -2176,4 +2176,19 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.45.0"), semver.MustParse("0.46.0"), func(e execer) error {
+
+		_, err := e.Exec(`ALTER TABLE Installation DROP COLUMN AllowedIPRanges;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE Installation ADD COLUMN AllowedIPRanges JSON DEFAULT NULL;`)
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

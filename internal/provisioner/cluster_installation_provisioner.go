@@ -475,8 +475,8 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
 	annotations := mattermost.Spec.Ingress.Annotations
-	if installation.AllowedIPRanges != "" {
-		annotations = addInternalSourceRanges(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
+	if installation.AllowedIPRanges != nil && len(*installation.AllowedIPRanges) > 0 {
+		annotations = addInternalSourceRanges(annotations, installation.AllowedIPRanges.ToAnnotationString(), provisioner.params.InternalIPRanges)
 	}
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
