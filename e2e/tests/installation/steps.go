@@ -49,6 +49,44 @@ func versionedS3BucketInstallationLifecycleSteps(clusterSuite *workflow.ClusterS
 	}
 }
 
+func largeInstallationSizeLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
+	return []*workflow.Step{
+		{
+			Name:              "CreateCluster",
+			Func:              clusterSuite.CreateCluster,
+			DependsOn:         []string{},
+			GetExpectedEvents: clusterSuite.ClusterCreationEvents,
+		},
+		{
+			Name:              "CreateInstallationWithLargeSize",
+			Func:              installationSuite.CreateInstallationWithCustomProvisionerSize,
+			DependsOn:         []string{"CreateCluster"},
+			GetExpectedEvents: installationSuite.InstallationCreationEvents,
+		},
+		{
+			Name:      "GetLargeSizeInstallationCI",
+			Func:      installationSuite.GetCI,
+			DependsOn: []string{"CreateInstallationWithLargeSize"},
+		},
+		{
+			Name:      "CheckLargeSizeInstallationStatus",
+			Func:      installationSuite.CheckClusterInstallationStatus,
+			DependsOn: []string{"GetLargeSizeInstallationCI"},
+		},
+		{
+			Name:      "CheckLargeSizeInstallation",
+			Func:      installationSuite.CheckHealth,
+			DependsOn: []string{"CheckLargeSizeInstallationStatus"},
+		},
+		{
+			Name:              "DeleteLargeSizeInstallation",
+			Func:              installationSuite.Cleanup,
+			DependsOn:         []string{"CheckLargeSizeInstallation"},
+			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
+		},
+	}
+}
+
 func basicCreateDeleteInstallationSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
 	return []*workflow.Step{
 		{
