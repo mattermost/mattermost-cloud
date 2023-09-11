@@ -44,8 +44,8 @@ const (
 type TestConfig struct {
 	Provisioner               string `envconfig:"default=kops"`
 	CloudURL                  string `envconfig:"default=http://localhost:8075"`
-	InstallationDBType        string `envconfig:"default=mysql-operator"`
-	InstallationFileStoreType string `envconfig:"default=minio-operator"`
+	InstallationDBType        string `envconfig:"default=aws-rds-postgres"`
+	InstallationFilestoreType string `envconfig:"default=bifrost"`
 	DNSSubdomain              string `envconfig:"default=dev.cloud.mattermost.com"`
 	WebhookAddress            string `envconfig:"default=http://localhost:11111"`
 	EventListenerAddress      string `envconfig:"default=http://localhost:11112"`
@@ -126,7 +126,7 @@ func SetupTestWithDefaults(testName string) (*Test, error) {
 	}
 	installationParams := workflow.InstallationSuiteParams{
 		DBType:        config.InstallationDBType,
-		FileStoreType: config.InstallationFileStoreType,
+		FileStoreType: config.InstallationFilestoreType,
 		Annotations:   testAnnotations(testID),
 	}
 

@@ -70,17 +70,18 @@ func ParseProvisionerSize(size string) (v1alpha1.ClusterInstallationSize, error)
 }
 
 // SizeProvisionerXLResources specifies resources for Installation size.
+// Size value = 25000users with 4 Replicas
 var SizeProvisionerXLResources = v1alpha1.ClusterInstallationSize{
 	App: v1alpha1.ComponentSize{
 		Replicas: 4,
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("500m"),
-				corev1.ResourceMemory: resource.MustParse("500Mi"),
+				corev1.ResourceCPU:    resource.MustParse("1000m"),
+				corev1.ResourceMemory: resource.MustParse("4Gi"),
 			},
 			Limits: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("4000m"),
-				corev1.ResourceMemory: resource.MustParse("8Gi"),
+				corev1.ResourceMemory: resource.MustParse("16Gi"),
 			},
 		},
 	},
@@ -88,7 +89,7 @@ var SizeProvisionerXLResources = v1alpha1.ClusterInstallationSize{
 		Replicas: 4,
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("200m"),
+				corev1.ResourceCPU:    resource.MustParse("300m"),
 				corev1.ResourceMemory: resource.MustParse("500Mi"),
 			},
 		},
@@ -98,7 +99,7 @@ var SizeProvisionerXLResources = v1alpha1.ClusterInstallationSize{
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("500m"),
-				corev1.ResourceMemory: resource.MustParse("500Mi"),
+				corev1.ResourceMemory: resource.MustParse("1Gi"),
 			},
 		},
 	},

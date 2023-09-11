@@ -12,7 +12,6 @@ import (
 )
 
 func TestParseProvisionerSize(t *testing.T) {
-
 	provisionerXL6Replicas := SizeProvisionerXLResources
 	provisionerXL6Replicas.App.Replicas = 6
 
