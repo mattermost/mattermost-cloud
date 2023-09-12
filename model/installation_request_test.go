@@ -468,6 +468,47 @@ func TestPatchInstallationRequestValid(t *testing.T) {
 	}
 }
 
+func TestMergeNewIngressSourceRangesWithExisting(t *testing.T) {
+	// Define some test data
+	allowedRanges := model.AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+	}
+	patchAllowedRanges := model.AllowedIPRanges{
+		{CIDRBlock: "172.16.0.0/12", Description: "New IP range", Enabled: true},
+		{CIDRBlock: "192.168.0.0/24", Description: "Updated IP range", Enabled: false},
+	}
+	patchInstallationRequest := &model.PatchInstallationRequest{
+		AllowedIPRanges: &patchAllowedRanges,
+	}
+	installation := &model.Installation{
+		AllowedIPRanges: &allowedRanges,
+	}
+
+	// Test merging with valid data
+	mergedRanges, err := patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
+	assert.NoError(t, err)
+	expectedRanges := model.AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Updated IP range", Enabled: false},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+		{CIDRBlock: "172.16.0.0/12", Description: "New IP range", Enabled: true},
+	}
+	assert.Equal(t, expectedRanges, *mergedRanges)
+
+	// Test merging with nil patchAllowedRanges
+	patchInstallationRequest.AllowedIPRanges = nil
+	mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
+	assert.NoError(t, err)
+	assert.Equal(t, allowedRanges, *mergedRanges)
+
+	// Test merging with invalid CIDR block
+	patchAllowedRanges[0].CIDRBlock = "invalid"
+	patchInstallationRequest.AllowedIPRanges = &patchAllowedRanges
+	mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
+	assert.Error(t, err)
+	assert.Nil(t, mergedRanges)
+}
+
 func TestPatchInstallationRequestApply(t *testing.T) {
 	var testCases = []struct {
 		testName             string

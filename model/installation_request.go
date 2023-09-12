@@ -391,7 +391,7 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 			}
 			installation.AllowedIPRanges = allowedIPRanges
 		} else {
-			allowedIPRanges, err := p.mergeNewIngressSourceRangesWithExisting(installation)
+			allowedIPRanges, err := p.MergeNewIngressSourceRangesWithExisting(installation)
 			if err != nil {
 				return false
 			}
@@ -464,26 +464,35 @@ func (p *PatchInstallationDeletionRequest) Apply(installation *Installation) boo
 	return applied
 }
 
-func (p *PatchInstallationRequest) mergeNewIngressSourceRangesWithExisting(installation *Installation) (*AllowedIPRanges, error) {
+func (p *PatchInstallationRequest) MergeNewIngressSourceRangesWithExisting(installation *Installation) (*AllowedIPRanges, error) {
 	if p.AllowedIPRanges == nil {
-		return nil, nil
+		return installation.AllowedIPRanges, nil
 	}
 
-	allowedIPRanges := installation.AllowedIPRanges
+	allowedRanges := *installation.AllowedIPRanges
+	patchAllowedRanges := *p.AllowedIPRanges
 
-	for _, allowedIPRange := range *p.AllowedIPRanges {
-		if !IsIPRangeValid(allowedIPRange.CIDRBlock) {
+	// Create a map to store the allowedRanges by CIDRBlock
+	allowedMap := make(map[string]AllowedIPRange)
+	for _, allowedRange := range allowedRanges {
+		allowedMap[allowedRange.CIDRBlock] = allowedRange
+	}
+
+	// Merge the patchAllowedRanges into the allowedMap
+	for _, patchRange := range patchAllowedRanges {
+		if !IsIPRangeValid(patchRange.CIDRBlock) {
 			return nil, errors.New("Invalid CIDR block provided")
 		}
-		if !installation.AllowedIPRanges.Contains(allowedIPRange.CIDRBlock) {
-			if allowedIPRanges == nil {
-				allowedIPRanges = &AllowedIPRanges{}
-			}
-			*allowedIPRanges = append(*allowedIPRanges, allowedIPRange)
-		}
+		allowedMap[patchRange.CIDRBlock] = patchRange
 	}
 
-	return allowedIPRanges, nil
+	// Convert the map back into a slice
+	var mergedRanges AllowedIPRanges
+	for _, rangeValue := range allowedMap {
+		mergedRanges = append(mergedRanges, rangeValue)
+	}
+
+	return &mergedRanges, nil
 }
 
 // This function parses the InstallationRequests's AllowedIPRanges and returns an error if any of the ranges are invalid.
