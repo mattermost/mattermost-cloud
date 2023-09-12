@@ -7,6 +7,7 @@ package model_test
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
@@ -493,12 +494,16 @@ func TestMergeNewIngressSourceRangesWithExisting(t *testing.T) {
 		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
 		{CIDRBlock: "172.16.0.0/12", Description: "New IP range", Enabled: true},
 	}
+	sortAllowedIPRanges(&expectedRanges)
+	sortAllowedIPRanges(mergedRanges)
 	assert.Equal(t, expectedRanges, *mergedRanges)
 
 	// Test merging with nil patchAllowedRanges
 	patchInstallationRequest.AllowedIPRanges = nil
 	mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
 	assert.NoError(t, err)
+	sortAllowedIPRanges(&allowedRanges)
+	sortAllowedIPRanges(mergedRanges)
 	assert.Equal(t, allowedRanges, *mergedRanges)
 
 	// Test merging with invalid CIDR block
@@ -732,9 +737,9 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 				License: "license1",
 				Size:    "miniSingleton",
 				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
 					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
 					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
-					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
 				},
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
@@ -749,9 +754,21 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			apply := tc.request.Apply(tc.installation)
 			assert.Equal(t, tc.expectApply, apply)
+			sortAllowedIPRanges(tc.expectedInstallation.AllowedIPRanges)
+			sortAllowedIPRanges(tc.installation.AllowedIPRanges)
 			assert.Equal(t, tc.expectedInstallation, tc.installation)
 		})
 	}
+}
+
+// Sorts the list lexicographically by the CIDR block to allow for easier equality testing.
+func sortAllowedIPRanges(allowedIPRanges *model.AllowedIPRanges) {
+	if allowedIPRanges == nil {
+		return
+	}
+	sort.Slice(*allowedIPRanges, func(i, j int) bool {
+		return (*allowedIPRanges)[i].CIDRBlock < (*allowedIPRanges)[j].CIDRBlock
+	})
 }
 
 func TestNewPatchInstallationRequestFromReader(t *testing.T) {

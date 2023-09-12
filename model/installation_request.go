@@ -464,6 +464,8 @@ func (p *PatchInstallationDeletionRequest) Apply(installation *Installation) boo
 	return applied
 }
 
+// MergeNewIngressSourceRangesWithExisting merges the AllowedIPRanges from the PatchInstallationRequest with the existing AllowedIPRanges from the Installation.
+// This is done so that individual fields of an AllowedIPRange (like the enabled field) can be adjusted without overriding the whole AllowedIPRanges slice.
 func (p *PatchInstallationRequest) MergeNewIngressSourceRangesWithExisting(installation *Installation) (*AllowedIPRanges, error) {
 	if p.AllowedIPRanges == nil {
 		return installation.AllowedIPRanges, nil
