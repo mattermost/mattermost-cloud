@@ -693,8 +693,6 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			&model.Installation{
 				AllowedIPRanges: &model.AllowedIPRanges{
 					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
-					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
-					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
 				},
 			},
 		},
