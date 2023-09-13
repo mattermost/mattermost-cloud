@@ -143,7 +143,7 @@ func (w *InstallationSuite) CreateInstallationWithCustomProvisionerSize(ctx cont
 		DB(w.Params.DBType).
 		FileStore(w.Params.FileStoreType).
 		Annotations(w.Params.Annotations).
-		Size("provisionerXL-6")
+		Size("provisionerXL-3")
 
 	installation, err := w.client.CreateInstallation(installationBuilder.CreateRequest())
 	if err != nil {
