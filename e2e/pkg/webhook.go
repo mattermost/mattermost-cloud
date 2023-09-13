@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
 	"github.com/pkg/errors"
@@ -141,7 +142,7 @@ func SendE2EResult(ctx context.Context, icon, text, color string) error {
 				{
 					Short: true,
 					Title: "Runtime",
-					Value: (state.EndTime.Sub(state.StartTime)).String(),
+					Value: (state.EndTime.Sub(state.StartTime)).Round(time.Second).String(),
 				},
 			},
 		}},

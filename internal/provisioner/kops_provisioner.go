@@ -401,6 +401,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 
+	err = attachPolicyRoles(cluster, provisioner.awsClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to attach policy roles to cluster")
+	}
+
 	// TODO: Rework this as we make the API calls asynchronous.
 	wait := 1000
 	logger.Infof("Waiting up to %d seconds for k8s cluster to become ready...", wait)
@@ -413,23 +418,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	}
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
-
-	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
-	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach custom node policy")
-	}
-
-	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach velero node policy")
-	}
-
-	iamRole = fmt.Sprintf("masters.%s", kopsMetadata.Name)
-	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach custom node policy to master")
-	}
 
 	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kops.GetKubeConfigPath(), cluster, provisioner.awsClient, logger)
 	if err != nil {
@@ -607,6 +595,11 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 		return err
 	}
 
+	err = attachPolicyRoles(cluster, provisioner.awsClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to attach policy roles to cluster")
+	}
+
 	// TODO: Rework this as we make the API calls asynchronous.
 	wait := 1000
 	if wait > 0 {
@@ -618,23 +611,6 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 			kops.ValidateCluster(kopsMetadata.Name, false)
 			return err
 		}
-	}
-
-	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
-	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach custom node policy")
-	}
-
-	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach velero node policy")
-	}
-
-	iamRole = fmt.Sprintf("masters.%s", kopsMetadata.Name)
-	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach custom node policy to master")
 	}
 
 	logger.Info("Successfully upgraded cluster")
@@ -785,6 +761,11 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 		return err
 	}
 
+	err = attachPolicyRoles(cluster, provisioner.awsClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to attach policy roles to cluster")
+	}
+
 	// TODO: Rework this as we make the API calls asynchronous.
 	wait := 1000
 	if wait > 0 {
@@ -796,23 +777,6 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 			kops.ValidateCluster(kopsMetadata.Name, false)
 			return err
 		}
-	}
-
-	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
-	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach custom node policy")
-	}
-
-	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach velero node policy")
-	}
-
-	iamRole = fmt.Sprintf("masters.%s", kopsMetadata.Name)
-	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach custom node policy to master")
 	}
 
 	logger.Info("Successfully resized cluster")

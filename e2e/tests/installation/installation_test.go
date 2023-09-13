@@ -9,10 +9,11 @@ package installation
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/mattermost/mattermost-cloud/e2e/tests/shared"
 	"github.com/mattermost/mattermost-cloud/e2e/workflow"
@@ -25,7 +26,6 @@ func TestMain(m *testing.M) {
 }
 
 func SetupInstallationLifecycleTest() (*shared.Test, error) {
-
 	test, err := shared.SetupTestWithDefaults("installation-lifecycle")
 
 	if err != nil {
@@ -59,6 +59,10 @@ func Test_InstallationLifecycle(t *testing.T) {
 			Name:              "Create and delete installation with a versioned s3 bucket",
 			WorkflowStepsFunc: versionedS3BucketInstallationLifecycleSteps,
 		},
+		{
+			Name:              "Create and delete installation with a custom provisioner size",
+			WorkflowStepsFunc: largeInstallationSizeLifecycleSteps,
+		},
 	}
 
 	for _, c := range cases {
@@ -67,12 +71,22 @@ func Test_InstallationLifecycle(t *testing.T) {
 			test.Workflow = workflow.NewWorkflow(testWorkflowSteps)
 			test.Steps = testWorkflowSteps
 			defer test.InstallationSuite.Cleanup(ctx)
+
 			err = test.Run()
-			require.NoError(t, err)
+			checkTestError(t, test, err)
 			time.Sleep(time.Second * 1)
+
 			expectedEvents := workflow.GetExpectedEvents(test.Steps)
 			err = test.EventsRecorder.VerifyInOrder(expectedEvents)
-			require.NoError(t, err)
+			checkTestError(t, test, err)
 		})
 	}
+}
+
+func checkTestError(t *testing.T, test *shared.Test, err error) {
+	if err != nil {
+		// Log errors with test logger for easier troubleshooting.
+		test.Logger.WithError(err).Error("Test failure")
+	}
+	require.NoError(t, err)
 }

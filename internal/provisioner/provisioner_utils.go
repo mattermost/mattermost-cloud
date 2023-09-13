@@ -10,13 +10,43 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func attachPolicyRoles(cluster *model.Cluster, awsClient aws.AWS, logger log.FieldLogger) error {
+	if cluster.Provisioner != model.ProvisionerKops {
+		logger.Debugf("Cluster provisioner type is not %s (%s), skipping policy attachment", model.ProvisionerKops, cluster.Provisioner)
+		return nil
+	}
+
+	logger.Debug("Attaching cluster policies...")
+
+	iamRoleMaster := fmt.Sprintf("masters.%s", cluster.ProvisionerMetadataKops.Name)
+	err := awsClient.AttachPolicyToRole(iamRoleMaster, aws.CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach custom node policy to master")
+	}
+
+	iamRole := fmt.Sprintf("nodes.%s", cluster.ProvisionerMetadataKops.Name)
+	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach custom node policy")
+	}
+
+	err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach velero node policy")
+	}
+
+	return nil
+}
 
 func getPublicLoadBalancerEndpoint(kubeconfigPath string, namespace string, logger log.FieldLogger) (string, error) {
 	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
