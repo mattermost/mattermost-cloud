@@ -76,7 +76,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// TeleportCanonicalName defines the default version and values path for the Helm chart
 	TeleportCanonicalName: {Chart: "7.3.26", ValuesPath: ""},
 	// PgbouncerCanonicalName defines the default version and values path for the Helm chart
-	PgbouncerCanonicalName: {Chart: "1.2.0", ValuesPath: ""},
+	PgbouncerCanonicalName: {Chart: "1.2.1", ValuesPath: ""},
 	// PromtailCanonicalName defines the default version and values path for the Helm chart
 	PromtailCanonicalName: {Chart: "6.2.2", ValuesPath: ""},
 	// RtcdCanonicalName defines the default version and values path for the Helm chart
@@ -88,7 +88,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// VeleroCanonicalName defines the default version for the Helm chart
 	VeleroCanonicalName: {Chart: "3.1.2", ValuesPath: ""},
 	// CloudproberCanonicalName defines the default version for the Helm chart
-	CloudproberCanonicalName: {Chart: "0.1.1", ValuesPath: ""},
+	CloudproberCanonicalName: {Chart: "0.1.3", ValuesPath: ""},
 }
 
 var defaultUtilityValuesFileNames map[string]string = map[string]string{

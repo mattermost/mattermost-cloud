@@ -68,10 +68,12 @@ func (flags *databaseMultiTenantDeleteFlag) addFlags(command *cobra.Command) {
 type databaseMultiTenantReportFlag struct {
 	clusterFlags
 	multitenantDatabaseID string
+	includeSchemaCounts   bool
 }
 
 func (flags *databaseMultiTenantReportFlag) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.multitenantDatabaseID, "multitenant-database", "", "The id of the multitenant database to be fetched.")
+	command.Flags().BoolVar(&flags.includeSchemaCounts, "include-schema-counts", false, "Whether to include schema counts for each logical database or not.")
 	_ = command.MarkFlagRequired("multitenant-database")
 }
 
@@ -95,6 +97,16 @@ type databaseLogicalGetFlag struct {
 
 func (flags *databaseLogicalGetFlag) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.logicalDatabaseID, "logical-database", "", "The id of the logical database to be fetched.")
+	_ = command.MarkFlagRequired("logical-database")
+}
+
+type databaseLogicalDeleteFlag struct {
+	clusterFlags
+	logicalDatabaseID string
+}
+
+func (flags *databaseLogicalDeleteFlag) addFlags(command *cobra.Command) {
+	command.Flags().StringVar(&flags.logicalDatabaseID, "logical-database", "", "The id of the logical database to delete.")
 	_ = command.MarkFlagRequired("logical-database")
 }
 

@@ -149,13 +149,13 @@ func TestGetActualVersion(t *testing.T) {
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"},
-				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
+				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.1"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.5"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.10.0"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-3.1.2"},
-				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.1"},
+				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.3"},
 			},
 		},
 	}
@@ -176,7 +176,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"}, version)
 
 	version = c.ActualUtilityVersion(PgbouncerCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "pgbouncer-1.2.1"}, version)
 
 	version = c.ActualUtilityVersion(PromtailCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "promtail-6.2.2"}, version)
@@ -194,7 +194,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "velero-3.1.2"}, version)
 
 	version = c.ActualUtilityVersion(CloudproberCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "cloudprober-0.1.1"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "cloudprober-0.1.3"}, version)
 
 	version = c.ActualUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, version, nilHuv)
@@ -223,13 +223,13 @@ func TestGetDesiredVersion(t *testing.T) {
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"},
-				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
+				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.1"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.5"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.10.0"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-3.1.2"},
-				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.1"},
+				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.3"},
 			},
 		},
 	}

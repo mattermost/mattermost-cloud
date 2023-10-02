@@ -34,13 +34,13 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"prometheus-operator":   {Chart: "48.1.2", ValuesPath: ""},
 				"thanos":                {Chart: "12.10.1", ValuesPath: ""},
 				"teleport-kube-agent":   {Chart: "7.3.26", ValuesPath: ""},
-				"pgbouncer":             {Chart: "1.2.0", ValuesPath: ""},
+				"pgbouncer":             {Chart: "1.2.1", ValuesPath: ""},
 				"promtail":              {Chart: "6.2.2", ValuesPath: ""},
 				"rtcd":                  {Chart: "1.3.0", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.3.5", ValuesPath: ""},
 				"metrics-server":        {Chart: "3.10.0", ValuesPath: ""},
 				"velero":                {Chart: "3.1.2", ValuesPath: ""},
-				"cloudprober":           {Chart: "0.1.1", ValuesPath: ""},
+				"cloudprober":           {Chart: "0.1.3", ValuesPath: ""},
 			},
 		}
 	}
@@ -104,13 +104,13 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"prometheus-operator":   {Chart: "48.1.2", ValuesPath: ""},
 				"thanos":                {Chart: "12.10.1", ValuesPath: ""},
 				"teleport-kube-agent":   {Chart: "7.3.26", ValuesPath: ""},
-				"pgbouncer":             {Chart: "1.2.0", ValuesPath: ""},
+				"pgbouncer":             {Chart: "1.2.1", ValuesPath: ""},
 				"promtail":              {Chart: "6.2.2", ValuesPath: ""},
 				"rtcd":                  {Chart: "1.3.0", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.3.5", ValuesPath: ""},
 				"metrics-server":        {Chart: "3.10.0", ValuesPath: ""},
 				"velero":                {Chart: "3.1.2", ValuesPath: ""},
-				"cloudprober":           {Chart: "0.1.1", ValuesPath: ""},
+				"cloudprober":           {Chart: "0.1.3", ValuesPath: ""},
 			},
 		}, clusterRequest)
 	})

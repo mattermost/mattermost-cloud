@@ -274,6 +274,7 @@ func executeServerCmd(flags serverFlags) error {
 		DeployMysqlOperator:     flags.deployMySQLOperator,
 		DeployMinioOperator:     flags.deployMinioOperator,
 		NdotsValue:              flags.ndotsDefaultValue,
+		InternalIPRanges:        flags.internalIPRanges,
 		PGBouncerConfig:         pgbouncerConfig,
 		SLOInstallationGroups:   flags.sloInstallationGroups,
 		SLOEnterpriseGroups:     flags.sloEnterpriseGroups,

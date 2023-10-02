@@ -63,6 +63,12 @@ func (b *InstallationBuilder) Group(group string) *InstallationBuilder {
 	return b
 }
 
+// Size sets Installation's size.
+func (b *InstallationBuilder) Size(size string) *InstallationBuilder {
+	b.request.Size = size
+	return b
+}
+
 // Annotations sets Installation's annotations.
 func (b *InstallationBuilder) Annotations(annotations []string) *InstallationBuilder {
 	b.request.Annotations = annotations

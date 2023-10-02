@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/smithy-go/ptr"
+	"github.com/mattermost/mattermost-cloud/internal/common"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -187,7 +188,6 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 	}
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
-
 	mattermost := &mmv1beta1.Mattermost{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      installationName,
@@ -198,7 +198,7 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 			Version:       translateMattermostVersion(installation.Version),
 			Image:         installation.Image,
 			MattermostEnv: mattermostEnv.ToEnvList(),
-			Ingress:       makeIngressSpec(installationDNS),
+			Ingress:       makeIngressSpec(installationDNS, getIngressAnnotations()),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation),
 			Scheduling: mmv1beta1.Scheduling{
@@ -474,7 +474,11 @@ func (provisioner Provisioner) updateClusterInstallation(
 	// Just to be sure, for the update we reset deprecated fields.
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
-	mattermost.Spec.Ingress = makeIngressSpec(installationDNS)
+	annotations := mattermost.Spec.Ingress.Annotations
+	if installation.AllowedIPRanges != "" {
+		annotations = addInternalSourceRanges(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
+	}
+	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
@@ -835,7 +839,7 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, insta
 	mattermost.Spec.ResourceLabels = clusterInstallationHibernatedLabels(installation, clusterInstallation)
 }
 
-func makeIngressSpec(installationDNS []*model.InstallationDNS) *mmv1beta1.Ingress {
+func makeIngressSpec(installationDNS []*model.InstallationDNS, annotations map[string]string) *mmv1beta1.Ingress {
 	primaryRecord := installationDNS[0]
 	for _, rec := range installationDNS {
 		if rec.IsPrimary {
@@ -849,7 +853,7 @@ func makeIngressSpec(installationDNS []*model.InstallationDNS) *mmv1beta1.Ingres
 		Enabled:      true,
 		Host:         primaryRecord.DomainName,
 		Hosts:        mapDomains(installationDNS),
-		Annotations:  getIngressAnnotations(),
+		Annotations:  annotations,
 		IngressClass: &ingressClass,
 	}
 }
@@ -1067,6 +1071,34 @@ func getIngressAnnotations() map[string]string {
 func getHibernatingIngressAnnotations() map[string]string {
 	annotations := getIngressAnnotations()
 	annotations["nginx.ingress.kubernetes.io/configuration-snippet"] = "return 410;"
+
+	return annotations
+}
+
+func addInternalSourceRanges(annotations map[string]string, allowedIPRanges string, internalIPRanges string) map[string]string {
+
+	existingRanges := make([]string, 0)
+
+	if allowedIPRanges != "" {
+		ips := strings.Split(allowedIPRanges, ",")
+		for _, ip := range ips {
+			if !common.Contains(existingRanges, ip) {
+				existingRanges = append(existingRanges, ip)
+			}
+		}
+	}
+
+	if internalIPRanges != "" {
+		ips := strings.Split(internalIPRanges, ",")
+		for _, ip := range ips {
+			if !common.Contains(existingRanges, ip) {
+				existingRanges = append(existingRanges, ip)
+			}
+		}
+	}
+	allowiplistRange := strings.Join(existingRanges, ",")
+	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
+	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = allowiplistRange
 
 	return annotations
 }

@@ -288,6 +288,10 @@ func (m mockAWSClient) RDSDBCLusterExists(awsID string) (bool, error) {
 	return m.clusterExists, nil
 }
 
+func (m mockAWSClient) DeletePGBouncerLogicalDatabase(multitenantDatabase *model.MultitenantDatabase, logicalDatabaseName string, logger log.FieldLogger) error {
+	return nil
+}
+
 func TestDeleteMultitenantDatabase(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
