@@ -6,6 +6,7 @@ package model
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -416,4 +417,157 @@ func TestInstallationGetDatabaseWeight(t *testing.T) {
 			assert.Equal(t, testCase.expectedWeight, testCase.installation.GetDatabaseWeight())
 		})
 	}
+}
+
+func TestAllowedIPRangesValue(t *testing.T) {
+	// Define some test data
+	ipRanges := AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+	}
+
+	// Call the Value() function
+	value, err := ipRanges.Value()
+	require.NoError(t, err)
+
+	// Unmarshal the resulting value into an AllowedIPRanges slice
+	var result AllowedIPRanges
+	err = json.Unmarshal(value.([]byte), &result)
+	require.NoError(t, err)
+
+	// Check that the resulting slice is equal to the original slice
+	require.Equal(t, len(ipRanges), len(result))
+	for i, ipRange := range ipRanges {
+		assert.Equal(t, ipRange.CIDRBlock, result[i].CIDRBlock)
+		assert.Equal(t, ipRange.Description, result[i].Description)
+		assert.Equal(t, ipRange.Enabled, result[i].Enabled)
+	}
+}
+
+func TestAllowedIPRangesScan(t *testing.T) {
+	// Define some test data
+	ipRanges := AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+	}
+	jsonData, err := json.Marshal(ipRanges)
+	require.NoError(t, err)
+
+	// Call the Scan() function
+	var result AllowedIPRanges
+	err = result.Scan(jsonData)
+	require.NoError(t, err)
+
+	// Check that the resulting slice is equal to the original slice
+	require.Equal(t, len(ipRanges), len(result))
+	for i, ipRange := range ipRanges {
+		assert.Equal(t, ipRange.CIDRBlock, result[i].CIDRBlock)
+		assert.Equal(t, ipRange.Description, result[i].Description)
+		assert.Equal(t, ipRange.Enabled, result[i].Enabled)
+	}
+}
+
+func TestAllowedIPRangesFromJSONString(t *testing.T) {
+	// Define some test data
+	ipRanges := AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+	}
+	jsonData, err := json.Marshal(ipRanges)
+	require.NoError(t, err)
+
+	// Call the FromJSONString() function
+	result, err := new(AllowedIPRanges).FromJSONString(string(jsonData))
+	require.NoError(t, err)
+
+	// Check that the resulting slice is equal to the original slice
+	require.Equal(t, len(ipRanges), len(*result))
+	for i, ipRange := range ipRanges {
+		assert.Equal(t, ipRange.CIDRBlock, (*result)[i].CIDRBlock)
+		assert.Equal(t, ipRange.Description, (*result)[i].Description)
+		assert.Equal(t, ipRange.Enabled, (*result)[i].Enabled)
+	}
+}
+
+func TestAllowedIPRangesToString(t *testing.T) {
+	// Define some test data
+	ipRanges := AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+	}
+
+	// Call the ToString() function
+	result := ipRanges.ToString()
+
+	// Unmarshal the resulting string into an AllowedIPRanges slice
+	var parsedResult AllowedIPRanges
+	err := json.Unmarshal([]byte(result), &parsedResult)
+	require.NoError(t, err)
+
+	// Check that the resulting slice is equal to the original slice
+	require.Equal(t, len(ipRanges), len(parsedResult))
+	for i, ipRange := range ipRanges {
+		assert.Equal(t, ipRange.CIDRBlock, parsedResult[i].CIDRBlock)
+		assert.Equal(t, ipRange.Description, parsedResult[i].Description)
+		assert.Equal(t, ipRange.Enabled, parsedResult[i].Enabled)
+	}
+}
+
+func TestAllowedIPRangesContains(t *testing.T) {
+	// Define some test data
+	ipRanges := AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+	}
+
+	// Test that the Contains() function returns true for an IP range that is present
+	assert.True(t, ipRanges.Contains("192.168.0.0/24"))
+
+	// Test that the Contains() function returns false for an IP range that is not present
+	assert.False(t, ipRanges.Contains("172.16.0.0/12"))
+
+	// Test that the Contains() function returns false for a nil AllowedIPRanges slice
+	var nilIPRanges *AllowedIPRanges
+	assert.False(t, nilIPRanges.Contains("192.168.0.0/24"))
+}
+
+func TestAllowedIPRangesToAnnotationString(t *testing.T) {
+	// Define some test data
+	ipRanges := AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+	}
+
+	// Call the ToAnnotationString() function
+	result := ipRanges.ToAnnotationString()
+
+	// Check that the resulting string is formatted correctly
+	expectedResult := "192.168.0.0/24,10.0.0.0/8"
+	assert.Equal(t, expectedResult, result)
+
+	// Test that the ToAnnotationString() function returns an empty string for a nil AllowedIPRanges slice
+	var nilIPRanges *AllowedIPRanges
+	assert.Equal(t, "", nilIPRanges.ToAnnotationString())
+}
+
+func TestAllowedIPRangesAreValid(t *testing.T) {
+	// Define some test data
+	validIPRanges := AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+	}
+	invalidIPRanges := AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/33", Description: "Invalid IP range", Enabled: false},
+	}
+
+	// Test that the AreValid() function returns true for a valid AllowedIPRanges slice
+	assert.True(t, validIPRanges.AreValid())
+
+	// Test that the AreValid() function returns false for an invalid AllowedIPRanges slice
+	assert.False(t, invalidIPRanges.AreValid())
+
+	// Test that the AreValid() function returns true for a nil AllowedIPRanges slice
+	var nilIPRanges *AllowedIPRanges
+	assert.True(t, nilIPRanges.AreValid())
 }
