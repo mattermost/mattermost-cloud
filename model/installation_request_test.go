@@ -7,6 +7,7 @@ package model_test
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
@@ -468,6 +469,51 @@ func TestPatchInstallationRequestValid(t *testing.T) {
 	}
 }
 
+func TestMergeNewIngressSourceRangesWithExisting(t *testing.T) {
+	// Define some test data
+	allowedRanges := model.AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Test IP range", Enabled: true},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+	}
+	patchAllowedRanges := model.AllowedIPRanges{
+		{CIDRBlock: "172.16.0.0/12", Description: "New IP range", Enabled: true},
+		{CIDRBlock: "192.168.0.0/24", Description: "Updated IP range", Enabled: false},
+	}
+	patchInstallationRequest := &model.PatchInstallationRequest{
+		AllowedIPRanges: &patchAllowedRanges,
+	}
+	installation := &model.Installation{
+		AllowedIPRanges: &allowedRanges,
+	}
+
+	// Test merging with valid data
+	mergedRanges, err := patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
+	assert.NoError(t, err)
+	expectedRanges := model.AllowedIPRanges{
+		{CIDRBlock: "192.168.0.0/24", Description: "Updated IP range", Enabled: false},
+		{CIDRBlock: "10.0.0.0/8", Description: "Another test IP range", Enabled: false},
+		{CIDRBlock: "172.16.0.0/12", Description: "New IP range", Enabled: true},
+	}
+	sortAllowedIPRanges(&expectedRanges)
+	sortAllowedIPRanges(mergedRanges)
+	assert.Equal(t, expectedRanges, *mergedRanges)
+
+	// Test merging with nil patchAllowedRanges
+	patchInstallationRequest.AllowedIPRanges = nil
+	mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
+	assert.NoError(t, err)
+	sortAllowedIPRanges(&allowedRanges)
+	sortAllowedIPRanges(mergedRanges)
+	assert.Equal(t, allowedRanges, *mergedRanges)
+
+	// Test merging with invalid CIDR block
+	patchAllowedRanges[0].CIDRBlock = "invalid"
+	patchInstallationRequest.AllowedIPRanges = &patchAllowedRanges
+	mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
+	assert.Error(t, err)
+	assert.Nil(t, mergedRanges)
+}
+
 func TestPatchInstallationRequestApply(t *testing.T) {
 	var testCases = []struct {
 		testName             string
@@ -612,50 +658,89 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			},
 		},
 		{
-			"ranges only, with override",
+			"ranges only, with override should apply",
 			true,
 			&model.PatchInstallationRequest{
-				AllowedIPRanges:  sToP("127.0.0.1,192.168.0.1/24"),
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
+					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
+				},
 				OverrideIPRanges: bToP(true),
 			},
 			&model.Installation{
-				AllowedIPRanges: "192.168.1.1/24",
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+				},
 			},
 			&model.Installation{
-				AllowedIPRanges: "127.0.0.1,192.168.0.1/24",
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
+					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
+				},
 			},
 		},
 		{
-			"complex",
+			"invalid ranges , without override should fail to apply",
+			false,
+			&model.PatchInstallationRequest{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
+					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
+					model.AllowedIPRange{CIDRBlock: "blahblah"},
+					model.AllowedIPRange{CIDRBlock: "1002.980.12.1"},
+				},
+			},
+			&model.Installation{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+				},
+			},
+			&model.Installation{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+				},
+			},
+		},
+		{
+			"complex should apply",
 			true,
 			&model.PatchInstallationRequest{
-				OwnerID:         sToP("new-owner"),
-				Version:         sToP("patch-version"),
-				Size:            sToP("miniSingleton"),
-				AllowedIPRanges: sToP("127.0.0.1,192.168.0.1/24"),
+				OwnerID: sToP("new-owner"),
+				Version: sToP("patch-version"),
+				Size:    sToP("miniSingleton"),
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
+					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
+				},
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
 					"key3": {Value: "patch-value-3"},
 				},
 			},
 			&model.Installation{
-				OwnerID:         "owner",
-				Version:         "version1",
-				Image:           "image1",
-				License:         "license1",
-				AllowedIPRanges: "192.168.1.1/24",
+				OwnerID: "owner",
+				Version: "version1",
+				Image:   "image1",
+				License: "license1",
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+				},
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "value1"},
 					"key2": {Value: "value2"},
 				},
 			},
 			&model.Installation{
-				OwnerID:         "new-owner",
-				Version:         "patch-version",
-				Image:           "image1",
-				License:         "license1",
-				Size:            "miniSingleton",
-				AllowedIPRanges: "192.168.1.1/24,127.0.0.1,192.168.0.1/24",
+				OwnerID: "new-owner",
+				Version: "patch-version",
+				Image:   "image1",
+				License: "license1",
+				Size:    "miniSingleton",
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
+				},
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
 					"key2": {Value: "value2"},
@@ -669,9 +754,21 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			apply := tc.request.Apply(tc.installation)
 			assert.Equal(t, tc.expectApply, apply)
+			sortAllowedIPRanges(tc.expectedInstallation.AllowedIPRanges)
+			sortAllowedIPRanges(tc.installation.AllowedIPRanges)
 			assert.Equal(t, tc.expectedInstallation, tc.installation)
 		})
 	}
+}
+
+// Sorts the list lexicographically by the CIDR block to allow for easier equality testing.
+func sortAllowedIPRanges(allowedIPRanges *model.AllowedIPRanges) {
+	if allowedIPRanges == nil {
+		return
+	}
+	sort.Slice(*allowedIPRanges, func(i, j int) bool {
+		return (*allowedIPRanges)[i].CIDRBlock < (*allowedIPRanges)[j].CIDRBlock
+	})
 }
 
 func TestNewPatchInstallationRequestFromReader(t *testing.T) {
@@ -712,14 +809,24 @@ func TestNewPatchInstallationRequestFromReader(t *testing.T) {
 		request, err := model.NewPatchInstallationRequestFromReader(bytes.NewReader([]byte(`{
 			"Version":"version",
 			"License": "this_is_my_license",
-			"AllowedIPRanges": "127.0.0.1,192.168.1.0/24"
+			"AllowedIPRanges": [
+				{
+					"CIDRBlock": "127.0.0.1"
+				},
+				{
+					"CIDRBlock": "192.168.1.0/24"
+				}
+			]
 		}`)))
 		require.NoError(t, err)
 
 		expected := &model.PatchInstallationRequest{
-			Version:         sToP("version"),
-			License:         sToP("this_is_my_license"),
-			AllowedIPRanges: sToP("127.0.0.1,192.168.1.0/24"),
+			Version: sToP("version"),
+			License: sToP("this_is_my_license"),
+			AllowedIPRanges: &model.AllowedIPRanges{
+				model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
+				model.AllowedIPRange{CIDRBlock: "192.168.1.0/24"},
+			},
 		}
 		require.Equal(t, expected, request)
 		require.NoError(t, request.Validate())

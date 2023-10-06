@@ -116,7 +116,7 @@ func (flags *installationPatchRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.image, "image", "mattermost/mattermost-enterprise-edition", "The Mattermost container image to use.")
 	command.Flags().StringVar(&flags.size, "size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	command.Flags().StringVar(&flags.license, "license", "", "The Mattermost License to use in the server.")
-	command.Flags().StringVar(&flags.allowedIPRanges, "allowed-ip-ranges", "", "The IP Ranges that is allowed the workspace to be accessed from.")
+	command.Flags().StringVar(&flags.allowedIPRanges, "allowed-ip-ranges", "", "JSON Encoded list of IP Ranges that are allowed to access the workspace.")
 	command.Flags().StringArrayVar(&flags.mattermostEnv, "mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	command.Flags().BoolVar(&flags.mattermostEnvClear, "mattermost-env-clear", false, "Clears all env var data.")
 	command.Flags().BoolVar(&flags.overrideIPRanges, "override-ip-ranges", true, "Overrides Allowed IP ranges and force ignoring any previous value.")
@@ -143,10 +143,6 @@ func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *mod
 
 	if flags.licenseChanged {
 		request.License = &flags.license
-	}
-
-	if flags.allowedIPRangesChanged {
-		request.AllowedIPRanges = &flags.allowedIPRanges
 	}
 
 	if flags.overrideIPRangesChanged {
@@ -185,6 +181,16 @@ func (flags *installationUpdateFlags) GetPatchInstallationRequest() (*model.Patc
 	priorityEnv, err := parseEnvVarInput(flags.priorityEnv, flags.priorityEnvClear)
 	if err != nil {
 		return nil, err
+	}
+
+	if flags.allowedIPRangesChanged {
+		allowedIPRanges := &model.AllowedIPRanges{}
+		allowedIPRanges.FromJSONString(flags.allowedIPRanges)
+		allowedIPRanges, err := allowedIPRanges.FromJSONString(flags.allowedIPRanges)
+		if err != nil {
+			return nil, err
+		}
+		request.AllowedIPRanges = allowedIPRanges
 	}
 
 	request.MattermostEnv = mattermostEnv
