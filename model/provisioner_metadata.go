@@ -14,4 +14,5 @@ type ProvisionerMetadata struct {
 	MaxPodsPerNode   int64
 	VPC              string
 	Networking       string
+	KmsKeyId         string
 }

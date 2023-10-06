@@ -48,6 +48,7 @@ type InstanceGroupSpec struct {
 	MachineType string `json:"machineType"`
 	MinSize     int64  `json:"minSize"`
 	MaxSize     int64  `json:"maxSize"`
+	KmsKeyId    string `json:"kmsKeyId"`
 }
 
 // UpdateMetadata updates KopsMetadata with the current values from kops state
@@ -73,7 +74,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.CustomInstanceGroups = make(model.KopsInstanceGroupsMetadata)
 
 	var masterIGCount, nodeIGCount, nodeMinCount int64
-	var masterMachineType, nodeMachineType, AMI string
+	var masterMachineType, nodeMachineType, AMI, kmsKeyId string
 	for _, ig := range instanceGroups {
 		switch ig.Spec.Role {
 		case "Master":
@@ -112,6 +113,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 				nodeIGCount++
 				nodeMachineType = ig.Spec.MachineType
 				nodeMinCount += ig.Spec.MinSize
+				kmsKeyId = ig.Spec.KmsKeyId
 				metadata.NodeInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
 					NodeInstanceType: ig.Spec.MachineType,
 					NodeMinCount:     ig.Spec.MinSize,
@@ -160,6 +162,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.MaxPodsPerNode = cluster.Spec.Kubelet.MaxPods
 	metadata.VPC = cluster.Spec.NetworkID
 	metadata.Networking = GetCurrentCni(networking)
+	metadata.KmsKeyId = kmsKeyId
 
 	return nil
 }

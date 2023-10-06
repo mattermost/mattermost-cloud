@@ -324,7 +324,8 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 	defer unlockOnce()
 
 	oldState := clusterDTO.State
-
+	c.Logger.Info("I am inside kubernetes handler")
+	c.Logger.Info(*upgradeClusterRequest)
 	var isUpgradeApplied bool
 	if clusterDTO.Provisioner == model.ProvisionerKops {
 		isUpgradeApplied = clusterDTO.ProvisionerMetadataKops.ApplyUpgradePatch(upgradeClusterRequest)

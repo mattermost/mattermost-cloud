@@ -49,6 +49,9 @@ func TestUpgradeClusterRequestValid(t *testing.T) {
 		{"empty payload", &model.PatchUpgradeClusterRequest{}, false},
 		{"valid version", &model.PatchUpgradeClusterRequest{Version: sToP("1.15.2")}, false},
 		{"invalid version", &model.PatchUpgradeClusterRequest{Version: sToP("invalid")}, true},
+		{"invalid KMS", &model.PatchUpgradeClusterRequest{KmsKeyId: sToP("invalid")}, true},
+		{"valid KMS", &model.PatchUpgradeClusterRequest{KmsKeyId: sToP("arn:aws:kms:us-east-1:8682519362148:key/01f0d25f-24b9-41b1-be98-927d486adf7d")}, false},
+		{"blank KMS", &model.PatchUpgradeClusterRequest{KmsKeyId: sToP("")}, true},
 		{"blank version", &model.PatchUpgradeClusterRequest{Version: sToP("")}, true},
 		{"max pods too low", &model.PatchUpgradeClusterRequest{MaxPodsPerNode: i64oP(1)}, true},
 	}
@@ -148,6 +151,24 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 				ChangeRequest: &model.KopsMetadataRequestedState{
 					Version: "version1",
 					AMI:     "image1",
+				},
+				RotatorRequest: &model.RotatorMetadata{},
+			},
+		},
+		{
+			"kms and ami",
+			true,
+			&model.PatchUpgradeClusterRequest{
+				KmsKeyId: sToP("arn:aws:kms:us-east-1:8682519362148:key/01f0d25f-24b9-41b1-be98-927d486adf7d"),
+				AMI:      sToP("image1"),
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					KmsKeyId: "arn:aws:kms:us-east-1:8682519362148:key/01f0d25f-24b9-41b1-be98-927d486adf7d",
+					AMI:      "image1",
 				},
 				RotatorRequest: &model.RotatorMetadata{},
 			},

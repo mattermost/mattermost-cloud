@@ -667,7 +667,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 }
 
 // installationCanBeScheduledOnCluster checks if the given installation can be
-// scheduled on the given cluster in regards to configuration and state. This
+// scheduled on the given cluster in regard to configuration and state. This
 // does not include resource checks.
 func (s *InstallationSupervisor) installationCanBeScheduledOnCluster(cluster *model.Cluster, installation *model.Installation, logger log.FieldLogger) bool {
 	if cluster.State != model.ClusterStateStable {
