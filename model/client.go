@@ -1800,3 +1800,21 @@ func (c *Client) GetClusterInstallationStatus(clusterInstallationID string) (*Cl
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// RegisterCluster does a registration of a given cluster to Argocd
+func (c *Client) RegisterCluster(clusterID string, request *RegisterClusterRequest) error {
+	resp, err := c.doPost(c.buildURL("/api/cluster/%s/register", clusterID), request)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	// switch resp.StatusCode {
+	// case http.StatusOK:
+	// 	return DTOsFromReader[ClusterDTO](resp.Body)
+
+	// default:
+	// 	return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	// }
+	return nil
+}
