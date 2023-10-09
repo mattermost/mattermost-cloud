@@ -5,6 +5,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -36,6 +37,7 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("/nodegroups", addContext(handleCreateNodegroups)).Methods("POST")
 	clusterRouter.Handle("/nodegroup/{nodegroup}", addContext(handleDeleteNodegroup)).Methods("DELETE")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
+	clusterRouter.Handle("/register", addContext(handleRegisterCluster)).Methods("POST")
 }
 
 // handleGetCluster responds to GET /api/cluster/{cluster}, returning the cluster in question.
@@ -736,6 +738,20 @@ func handleDeleteClusterAnnotation(c *Context, w http.ResponseWriter, r *http.Re
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func handleRegisterCluster(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	c.Logger = c.Logger.WithField("cluster", clusterID)
+
+	//registerClusterRequest, err := model.ArgoClusterRegistration
+	fmt.Println(vars)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, "OK")
+
 }
 
 func annotationsFromRequest(req *http.Request) ([]*model.Annotation, error) {

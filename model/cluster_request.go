@@ -467,3 +467,22 @@ func NewCreateNodegroupsRequestFromReader(reader io.Reader) (*CreateNodegroupsRe
 
 	return &createNodegroupsRequest, nil
 }
+
+type RegisterClusterRequest struct {
+	APIServer   string `json:"api_server"`
+	CertData    string `json:"certData"`
+	CaData      string `json:"caData"`
+	KeyData     string `json:"keyData"`
+	ClusterType string `json:"cluster_type"`
+}
+
+// RegisterClusterRequest specifies the parameters for a new cluster.
+func NewRegisterClusterRequestFromReader(reader io.Reader) (*RegisterClusterRequest, error) {
+	var registerClusterRequest RegisterClusterRequest
+	err := json.NewDecoder(reader).Decode(&registerClusterRequest)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode register cluster request")
+	}
+
+	return &registerClusterRequest, nil
+}
