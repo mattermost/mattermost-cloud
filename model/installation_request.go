@@ -7,6 +7,7 @@ package model
 import (
 	"encoding/json"
 	"io"
+	"net"
 	"net/url"
 	"regexp"
 	"strings"
@@ -291,7 +292,7 @@ type GetInstallationsRequest struct {
 	State                       string
 	DNS                         string
 	Name                        string
-	AllowedIPRanges             string
+	AllowedIPRanges             *AllowedIPRanges
 	OverrideIPRanges            bool
 	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
@@ -305,7 +306,7 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q.Add("state", request.State)
 	q.Add("dns_name", request.DNS)
 	q.Add("name", request.Name)
-	q.Add("allowed-ip-ranges", request.AllowedIPRanges)
+	q.Add("allowed-ip-ranges", request.AllowedIPRanges.ToString())
 	if !request.OverrideIPRanges {
 		q.Add("override-ip-ranges", "false")
 	}
@@ -327,7 +328,7 @@ type PatchInstallationRequest struct {
 	Version          *string
 	Size             *string
 	License          *string
-	AllowedIPRanges  *string
+	AllowedIPRanges  *AllowedIPRanges
 	OverrideIPRanges *bool
 	PriorityEnv      EnvVarMap
 	MattermostEnv    EnvVarMap
@@ -341,7 +342,7 @@ func (p *PatchInstallationRequest) Validate() error {
 	if p.Image != nil && len(*p.Image) == 0 {
 		return errors.New("provided image update value was blank")
 	}
-	if p.AllowedIPRanges != nil && len(*p.AllowedIPRanges) == 0 {
+	if !p.AllowedIPRanges.AreValid() {
 		return errors.New("provided ip ranges update value was blank")
 	}
 	if p.Size != nil {
@@ -381,14 +382,24 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 		installation.License = *p.License
 	}
 
-	if p.AllowedIPRanges != nil && *p.AllowedIPRanges != installation.AllowedIPRanges {
+	if p.AllowedIPRanges != nil && p.AllowedIPRanges != installation.AllowedIPRanges {
 		applied = true
 		if p.OverrideIPRanges != nil && *p.OverrideIPRanges {
-			installation.AllowedIPRanges = *p.AllowedIPRanges
+			allowedIPRanges, err := p.replaceIngressSourceRanges()
+			if err != nil {
+				return false
+			}
+			installation.AllowedIPRanges = allowedIPRanges
 		} else {
-			installation.AllowedIPRanges = p.addMissingIngressSourceRanges(installation)
+			allowedIPRanges, err := p.MergeNewIngressSourceRangesWithExisting(installation)
+			if err != nil {
+				return false
+			}
+			installation.AllowedIPRanges = allowedIPRanges
 		}
+
 	}
+
 	if p.MattermostEnv != nil {
 		if installation.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
 			applied = true
@@ -453,23 +464,48 @@ func (p *PatchInstallationDeletionRequest) Apply(installation *Installation) boo
 	return applied
 }
 
-func (p *PatchInstallationRequest) addMissingIngressSourceRanges(installation *Installation) string {
-	var ips []string
-	if p.AllowedIPRanges != nil {
-		ips = strings.Split(*p.AllowedIPRanges, ",")
+// MergeNewIngressSourceRangesWithExisting merges the AllowedIPRanges from the PatchInstallationRequest with the existing AllowedIPRanges from the Installation.
+// This is done so that individual fields of an AllowedIPRange (like the enabled field) can be adjusted without overriding the whole AllowedIPRanges slice.
+func (p *PatchInstallationRequest) MergeNewIngressSourceRangesWithExisting(installation *Installation) (*AllowedIPRanges, error) {
+	if p.AllowedIPRanges == nil {
+		return installation.AllowedIPRanges, nil
 	}
 
-	allowedIPRanges := strings.Split(installation.AllowedIPRanges, ",")
-	for _, ip := range ips {
-		if !contains(allowedIPRanges, ip) {
-			allowedIPRanges = append(allowedIPRanges, ip)
+	allowedRanges := *installation.AllowedIPRanges
+	patchAllowedRanges := *p.AllowedIPRanges
+
+	// Create a map to store the allowedRanges by CIDRBlock
+	allowedMap := make(map[string]AllowedIPRange)
+	for _, allowedRange := range allowedRanges {
+		allowedMap[allowedRange.CIDRBlock] = allowedRange
+	}
+
+	// Merge the patchAllowedRanges into the allowedMap
+	for _, patchRange := range patchAllowedRanges {
+		if !IsIPRangeValid(patchRange.CIDRBlock) {
+			return nil, errors.New("Invalid CIDR block provided")
+		}
+		allowedMap[patchRange.CIDRBlock] = patchRange
+	}
+
+	// Convert the map back into a slice
+	var mergedRanges AllowedIPRanges
+	for _, rangeValue := range allowedMap {
+		mergedRanges = append(mergedRanges, rangeValue)
+	}
+
+	return &mergedRanges, nil
+}
+
+// This function parses the InstallationRequests's AllowedIPRanges and returns an error if any of the ranges are invalid.
+func (p *PatchInstallationRequest) replaceIngressSourceRanges() (*AllowedIPRanges, error) {
+	for _, allowedIPRange := range *p.AllowedIPRanges {
+		if !IsIPRangeValid(allowedIPRange.CIDRBlock) {
+			return nil, errors.New("Invalid CIDR block provided")
 		}
 	}
 
-	allowiplistRange := strings.Join(allowedIPRanges, ",")
-	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
-
-	return allowiplistRange
+	return p.AllowedIPRanges, nil
 }
 
 // NewPatchInstallationDeletionRequestFromReader will create a PatchInstallationDeletionRequest from an io.Reader with JSON data.
@@ -502,4 +538,31 @@ func NewAssignInstallationGroupRequestFromReader(reader io.Reader) (*AssignInsta
 	}
 
 	return &assignGroupRequest, nil
+}
+
+// IsIPRangeValid validates if an IP range is considered valid.
+func IsIPRangeValid(ipRange string) bool {
+	// Split IP range into parts
+	parts := strings.Split(ipRange, "/")
+	ipString := parts[0]
+
+	// Validate IP address
+	ip := net.ParseIP(ipString)
+	if ip == nil {
+		return false
+	}
+
+	// If no subnet mask provided, treat it as /32 (single IP)
+	if len(parts) == 1 {
+		return true
+	}
+
+	// Validate subnet mask
+	_, ipNet, err := net.ParseCIDR(ipRange)
+	if err != nil {
+		return false
+	}
+
+	// Check if the IP is within the specified subnet
+	return ipNet.Contains(ip)
 }
