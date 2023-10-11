@@ -32,6 +32,8 @@ spec:
       port: 9093 # Playbooks
     - protocol: TCP
       port: 9092 # Boards
+    - protocol: TCP
+      port: 9094 # MSTeams
 ---
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
