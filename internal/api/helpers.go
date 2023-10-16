@@ -100,7 +100,7 @@ func parseDeletionLocked(u *url.URL) (*bool, error) {
 
 	locked, err := strconv.ParseBool(valueStr)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to deletion_locked boolean")
+		return nil, errors.Wrap(err, "failed to convert deletion_locked to boolean")
 	}
 
 	return &locked, nil
