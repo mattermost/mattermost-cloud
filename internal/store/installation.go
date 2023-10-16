@@ -194,6 +194,9 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 	if filter.Name != "" {
 		builder = builder.Where("Installation.Name = ?", filter.Name)
 	}
+	if filter.DeletionLocked != nil {
+		builder = builder.Where("Installation.DeletionLocked = ?", filter.DeletionLocked)
+	}
 
 	return builder
 }

@@ -91,3 +91,17 @@ func parseGroupConfig(u *url.URL) (bool, bool, error) {
 
 	return includeGroupConfig, includeGroupConfigOverrides, nil
 }
+
+func parseDeletionLocked(u *url.URL) (*bool, error) {
+	valueStr := u.Query().Get("deletion_locked")
+	if valueStr == "" {
+		return nil, nil
+	}
+
+	locked, err := strconv.ParseBool(valueStr)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to deletion_locked boolean")
+	}
+
+	return &locked, nil
+}

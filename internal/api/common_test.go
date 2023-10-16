@@ -72,3 +72,7 @@ func sToP(s string) *string {
 func iToP(i int64) *int64 {
 	return &i
 }
+
+func bToP(b bool) *bool {
+	return &b
+}

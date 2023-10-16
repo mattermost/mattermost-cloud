@@ -366,6 +366,7 @@ func newCmdInstallationList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+			flags.installationGetRequestChanges.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -385,6 +386,7 @@ func executeInstallationListCmd(flags installationListFlags) error {
 		DNS:                         flags.dns,
 		IncludeGroupConfig:          flags.includeGroupConfig,
 		IncludeGroupConfigOverrides: flags.includeGroupConfigOverrides,
+		DeletionLocked:              flags.deletionLockedFilterValue(),
 		Paging:                      paging,
 	})
 	if err != nil {
@@ -428,10 +430,19 @@ func executeInstallationListCmd(flags installationListFlags) error {
 }
 
 func defaultInstallationTableData(installations []*model.InstallationDTO) ([]string, [][]string) {
-	keys := []string{"ID", "STATE", "VERSION", "DATABASE", "FILESTORE", "DNS"}
+	keys := []string{"ID", "STATE", "VERSION", "DATABASE", "FILESTORE", "DNS", "API-LOCKED", "DELETION-LOCKED"}
 	vals := make([][]string, 0, len(installations))
 	for _, installation := range installations {
-		vals = append(vals, []string{installation.ID, installation.State, installation.Version, installation.Database, installation.Filestore, dnsNames(installation.DNSRecords)})
+		vals = append(vals, []string{
+			installation.ID,
+			installation.State,
+			installation.Version,
+			installation.Database,
+			installation.Filestore,
+			dnsNames(installation.DNSRecords),
+			fmt.Sprintf("%t", installation.APISecurityLock),
+			fmt.Sprintf("%t", installation.DeletionLocked),
+		})
 	}
 	return keys, vals
 }
