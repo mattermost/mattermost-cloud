@@ -83,6 +83,7 @@ type InstallationFilter struct {
 	State           string
 	DNS             string
 	Name            string
+	DeletionLocked  *bool
 }
 
 type AllowedIPRanges []AllowedIPRange
