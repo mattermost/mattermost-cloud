@@ -97,6 +97,22 @@ func (w *ClusterSuite) ProvisionCluster(ctx context.Context) error {
 	return nil
 }
 
+func (w *ClusterSuite) ResizeCluster(ctx context.Context) error {
+	masterInstanceTypeSize := "t2.micro"
+	cluster, err := w.client.ResizeCluster(w.Meta.ClusterID, &model.PatchClusterSizeRequest{
+		MasterInstanceType: &masterInstanceTypeSize,
+	})
+	if err != nil {
+		return errors.Wrap(err, "while resizing cluster")
+	}
+	w.logger.Infof("Cluster resize requested: %s", cluster.ID)
+	err = pkg.WaitForClusterToBeStable(ctx, w.Meta.ClusterID, w.whChan, w.logger)
+	if err != nil {
+		return errors.Wrap(err, "while waiting for cluster resize")
+	}
+	return nil
+}
+
 // DeleteCluster deletes the Cluster and waits for its deletion.
 func (w *ClusterSuite) DeleteCluster(ctx context.Context) error {
 	err := w.client.DeleteCluster(w.Meta.ClusterID)
@@ -155,7 +171,7 @@ func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
 			NewState:     model.ClusterStateCreationRequested,
 		},
 	}
-	
+
 	events = append(events, eventstest.EventOccurrence{
 		ResourceType: model.TypeCluster.String(),
 		ResourceID:   w.Meta.ClusterID,
@@ -169,6 +185,25 @@ func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
 		OldState:     model.ClusterStateProvisionInProgress,
 		NewState:     model.ClusterStateStable,
 	})
+
+	return events
+}
+
+func (w *ClusterSuite) ClusterResizeEvents() []eventstest.EventOccurrence {
+	events := []eventstest.EventOccurrence{
+		{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateStable,
+			NewState:     model.ClusterStateResizeRequested,
+		},
+		{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateResizeRequested,
+			NewState:     model.ClusterStateStable,
+		},
+	}
 
 	return events
 }

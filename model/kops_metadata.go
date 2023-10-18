@@ -373,6 +373,10 @@ func (km *KopsMetadata) ApplyClusterSizePatch(patchRequest *PatchClusterSizeRequ
 		applied = true
 		changes.NodeMaxCount = *patchRequest.NodeMaxCount
 	}
+	if patchRequest.MasterInstanceType != nil && *patchRequest.MasterInstanceType != km.MasterInstanceType {
+		applied = true
+		changes.MasterInstanceType = *patchRequest.MasterInstanceType
+	}
 
 	if km.RotatorRequest == nil {
 		km.RotatorRequest = &RotatorMetadata{}

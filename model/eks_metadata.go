@@ -208,6 +208,10 @@ func (em *EKSMetadata) ValidateClusterSizePatch(patchRequest *PatchClusterSizeRe
 		}
 	}
 
+	if patchRequest.MasterInstanceType != nil {
+		return errors.New("master instance type cannot be changed on an EKS cluster")
+	}
+
 	return nil
 }
 

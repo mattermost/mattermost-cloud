@@ -1047,6 +1047,20 @@ func TestResizeCluster(t *testing.T) {
 		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
+
+	t.Run("resize master instance type of eks cluster fails", func(t *testing.T) {
+		cluster1.Provisioner = model.ProvisionerEKS
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
+
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{
+			MasterInstanceType: sToP("test4"),
+		})
+
+		require.EqualError(t, errTest, "failed with status code 400")
+		assert.Nil(t, clusterResp)
+
+	})
 }
 
 func TestDeleteCluster(t *testing.T) {

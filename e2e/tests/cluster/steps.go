@@ -48,9 +48,15 @@ func clusterLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuit
 			GetExpectedEvents: clusterSuite.ClusterReprovisionEvents,
 		},
 		{
+			Name:              "ResizeCluster",
+			Func:              clusterSuite.ResizeCluster,
+			DependsOn:         []string{"ProvisionCluster"},
+			GetExpectedEvents: clusterSuite.ClusterResizeEvents,
+		},
+		{
 			Name:      "CheckInstallation",
 			Func:      installationSuite.CheckHealth,
-			DependsOn: []string{"ProvisionCluster"},
+			DependsOn: []string{"ResizeCluster"},
 		},
 		{
 			Name:              "DeleteInstallation",
