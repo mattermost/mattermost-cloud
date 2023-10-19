@@ -308,6 +308,7 @@ type installationGetRequestOptions struct {
 	group                       string
 	state                       string
 	dns                         string
+	deletionLocked              bool
 	includeGroupConfig          bool
 	includeGroupConfigOverrides bool
 }
@@ -317,14 +318,23 @@ func (flags *installationGetRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.group, "group", "", "The group ID to filter installations.")
 	command.Flags().StringVar(&flags.state, "state", "", "The state to filter installations by.")
 	command.Flags().StringVar(&flags.dns, "dns", "", "The dns name to filter installations by.")
+	command.Flags().BoolVar(&flags.deletionLocked, "deletion-locked", false, "Filter installations by deletion-locked configuration.")
 	command.Flags().BoolVar(&flags.includeGroupConfig, "include-group-config", true, "Whether to include group configuration in the installations or not.")
 	command.Flags().BoolVar(&flags.includeGroupConfigOverrides, "include-group-config-overrides", true, "Whether to include a group configuration override summary in the installations or not.")
+}
 
+type installationGetRequestChanges struct {
+	deletionLockedChanged bool
+}
+
+func (flags *installationGetRequestChanges) addFlags(command *cobra.Command) {
+	flags.deletionLockedChanged = command.Flags().Changed("deletion-locked")
 }
 
 type installationListFlags struct {
 	clusterFlags
 	installationGetRequestOptions
+	installationGetRequestChanges
 	pagingFlags
 	tableOptions
 	hideLicense bool
@@ -338,6 +348,14 @@ func (flags *installationListFlags) addFlags(command *cobra.Command) {
 
 	command.Flags().BoolVar(&flags.hideLicense, "hide-license", true, "Whether to hide the license value in the output or not.")
 	command.Flags().BoolVar(&flags.hideEnv, "hide-env", true, "Whether to hide env vars in the output or not.")
+}
+
+func (flags *installationListFlags) deletionLockedFilterValue() *bool {
+	if flags.deletionLockedChanged {
+		return &flags.deletionLocked
+	}
+
+	return nil
 }
 
 type installationGetStatusesFlags struct {
