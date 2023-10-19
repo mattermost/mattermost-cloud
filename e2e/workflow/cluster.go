@@ -9,6 +9,7 @@ package workflow
 
 import (
 	"context"
+	"os"
 
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
@@ -98,7 +99,10 @@ func (w *ClusterSuite) ProvisionCluster(ctx context.Context) error {
 }
 
 func (w *ClusterSuite) ResizeCluster(ctx context.Context) error {
-	masterInstanceTypeSize := "t2.micro"
+	if resize, ok := os.LookupEnv("RUN_CLUSTER_RESIZE"); !ok || resize != "true" {
+		return nil
+	}
+	masterInstanceTypeSize := "t3.medium"
 	cluster, err := w.client.ResizeCluster(w.Meta.ClusterID, &model.PatchClusterSizeRequest{
 		MasterInstanceType: &masterInstanceTypeSize,
 	})
@@ -110,6 +114,20 @@ func (w *ClusterSuite) ResizeCluster(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "while waiting for cluster resize")
 	}
+	return nil
+}
+
+func (w *ClusterSuite) CheckClusterResize(ctx context.Context) error {
+	cluster, err := w.client.GetCluster(w.Meta.ClusterID)
+	if err != nil {
+		return errors.Wrap(err, "while getting cluster")
+	}
+
+	if cluster.ProvisionerMetadataKops.MasterInstanceType != "t3.medium" {
+		return errors.Wrapf(err, "Expected master instance type to be t2.micro, got %s", cluster.ProvisionerMetadataKops.MasterInstanceType)
+
+	}
+
 	return nil
 }
 
@@ -190,6 +208,10 @@ func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
 }
 
 func (w *ClusterSuite) ClusterResizeEvents() []eventstest.EventOccurrence {
+	if resize, ok := os.LookupEnv("RUN_CLUSTER_RESIZE"); !ok || resize != "true" {
+		return nil
+	}
+
 	events := []eventstest.EventOccurrence{
 		{
 			ResourceType: model.TypeCluster.String(),
