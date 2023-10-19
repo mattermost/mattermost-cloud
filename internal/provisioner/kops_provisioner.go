@@ -222,16 +222,16 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return errors.Wrap(err, "Kops Metadata ChangeRequest failed validation")
 	}
 
-	// if kopsMetadata.ChangeRequest.AMI != "" && kopsMetadata.ChangeRequest.AMI != "latest" {
-	// 	var isAMIValid bool
-	// 	isAMIValid, err = provisioner.awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
-	// 	if err != nil {
-	// 		return errors.Wrapf(err, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
-	// 	}
-	// 	if !isAMIValid {
-	// 		return errors.Errorf("invalid AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
-	// 	}
-	// }
+	if kopsMetadata.ChangeRequest.AMI != "" && kopsMetadata.ChangeRequest.AMI != "latest" {
+		var isAMIValid bool
+		isAMIValid, err = provisioner.awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
+		if err != nil {
+			return errors.Wrapf(err, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
+		}
+		if !isAMIValid {
+			return errors.Errorf("invalid AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
+		}
+	}
 
 	cncVPCName := fmt.Sprintf("mattermost-cloud-%s-command-control", provisioner.awsClient.GetCloudEnvironmentName())
 	cncVPCCIDR, err := provisioner.awsClient.GetCIDRByVPCTag(cncVPCName, logger)
