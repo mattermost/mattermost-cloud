@@ -13,25 +13,25 @@ func (gc *noopClient) LogConfiguration(logger log.FieldLogger) {
 }
 
 func (gc *noopClient) AddGrafanaClusterProvisionAnnotation(clusterID string, logger log.FieldLogger) {
-	logger.Debug("Grafana client is not configured; skipping cluster provision annoation creation")
+	logger.Debug("Grafana client is not configured; skipping cluster provision annotation creation")
 }
 
 func (gc *noopClient) UpdateGrafanaClusterProvisionAnnotation(clusterID string, logger log.FieldLogger) {
-	logger.Debug("Grafana client is not configured; skipping cluster provision annoation update")
+	logger.Debug("Grafana client is not configured; skipping cluster provision annotation update")
 }
 
 func (gc *noopClient) AddGrafanaClusterUpgradeAnnotation(clusterID string, logger log.FieldLogger) {
-	logger.Debug("Grafana client is not configured; skipping cluster provision annoation creation")
+	logger.Debug("Grafana client is not configured; skipping cluster provision annotation creation")
 }
 
 func (gc *noopClient) UpdateGrafanaClusterUpgradeAnnotation(clusterID string, logger log.FieldLogger) {
-	logger.Debug("Grafana client is not configured; skipping cluster provision annoation update")
+	logger.Debug("Grafana client is not configured; skipping cluster provision annotation update")
 }
 
 func (gc *noopClient) AddGrafanaClusterResizeAnnotation(clusterID string, logger log.FieldLogger) {
-	logger.Debug("Grafana client is not configured; skipping cluster provision annoation creation")
+	logger.Debug("Grafana client is not configured; skipping cluster provision annotation creation")
 }
 
 func (gc *noopClient) UpdateGrafanaClusterResizeAnnotation(clusterID string, logger log.FieldLogger) {
-	logger.Debug("Grafana client is not configured; skipping cluster provision annoation update")
+	logger.Debug("Grafana client is not configured; skipping cluster provision annotation update")
 }

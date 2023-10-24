@@ -93,3 +93,16 @@ var clusterVersionMatcher = regexp.MustCompile(`^(([0-9]{1,3}.[0-9]{1,3}.[0-9]{1
 func ValidClusterVersion(name string) bool {
 	return clusterVersionMatcher.MatchString(name)
 }
+
+// IsValidKMSARN checks if a string is a valid KMS ARN.
+func IsValidKMSARN(s string) bool {
+	// Define a regular expression pattern for a KMS ARN
+	// Modify this pattern if needed to match your specific requirements.
+	pattern := `^arn:aws:kms:[a-zA-Z0-9_-]+:[0-9]+:key/[a-f0-9-]+$`
+
+	// Compile the regular expression
+	re := regexp.MustCompile(pattern)
+
+	// Use the regular expression to match the input string
+	return re.MatchString(s)
+}

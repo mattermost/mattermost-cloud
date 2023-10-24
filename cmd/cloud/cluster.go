@@ -325,6 +325,10 @@ func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
 	if flags.isMaxPodsPerNodeChanged {
 		request.MaxPodsPerNode = &flags.maxPodsPerNode
 	}
+
+	if flags.isKMSkeyChanged {
+		request.KmsKeyId = &flags.kmsKeyId
+	}
 	if flags.dryRun {
 		return runDryRun(request)
 	}

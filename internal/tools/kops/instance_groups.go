@@ -43,11 +43,12 @@ type InstanceGroup struct {
 
 // InstanceGroupSpec is the spec configuration of a kops instance group.
 type InstanceGroupSpec struct {
-	Role        string `json:"role"`
-	Image       string `json:"image"`
-	MachineType string `json:"machineType"`
-	MinSize     int64  `json:"minSize"`
-	MaxSize     int64  `json:"maxSize"`
+	Role                    string `json:"role"`
+	Image                   string `json:"image"`
+	MachineType             string `json:"machineType"`
+	MinSize                 int64  `json:"minSize"`
+	MaxSize                 int64  `json:"maxSize"`
+	RootVolumeEncryptionKey string `json:"rootVolumeEncryptionKey"`
 }
 
 // UpdateMetadata updates KopsMetadata with the current values from kops state
@@ -56,8 +57,8 @@ type InstanceGroupSpec struct {
 // assume and check the following:
 // - There is one worker node instance group.
 // - There is one or more master instance groups.
-// - All of the cluster hosts are running the same AMI.
-// - All of the master nodes are running the same instance type.
+// - All the cluster hosts are running the same AMI.
+// - All the master nodes are running the same instance type.
 // Note:
 // If any violations are found, we don't return an error as that is beyond the
 // scope of updating the metadata. Instead, warnings for each violation are
@@ -73,7 +74,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.CustomInstanceGroups = make(model.KopsInstanceGroupsMetadata)
 
 	var masterIGCount, nodeIGCount, nodeMinCount int64
-	var masterMachineType, nodeMachineType, AMI string
+	var masterMachineType, nodeMachineType, AMI, kmsKeyId string
 	for _, ig := range instanceGroups {
 		switch ig.Spec.Role {
 		case "Master":
@@ -112,6 +113,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 				nodeIGCount++
 				nodeMachineType = ig.Spec.MachineType
 				nodeMinCount += ig.Spec.MinSize
+				kmsKeyId = ig.Spec.RootVolumeEncryptionKey
 				metadata.NodeInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
 					NodeInstanceType: ig.Spec.MachineType,
 					NodeMinCount:     ig.Spec.MinSize,
@@ -160,6 +162,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.MaxPodsPerNode = cluster.Spec.Kubelet.MaxPods
 	metadata.VPC = cluster.Spec.NetworkID
 	metadata.Networking = GetCurrentCni(networking)
+	metadata.KmsKeyId = kmsKeyId
 
 	return nil
 }

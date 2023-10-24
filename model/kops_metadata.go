@@ -30,6 +30,7 @@ type KopsMetadata struct {
 	MaxPodsPerNode       int64
 	VPC                  string
 	Networking           string
+	KmsKeyId             string
 	MasterInstanceGroups KopsInstanceGroupsMetadata
 	NodeInstanceGroups   KopsInstanceGroupsMetadata
 	CustomInstanceGroups KopsInstanceGroupsMetadata  `json:"CustomInstanceGroups,omitempty"`
@@ -60,6 +61,7 @@ type KopsMetadataRequestedState struct {
 	MaxPodsPerNode     int64  `json:"MaxPodsPerNode,omitempty"`
 	Networking         string `json:"Networking,omitempty"`
 	VPC                string `json:"VPC,omitempty"`
+	KmsKeyId           string `json:"KmsKeyId,omitempty"`
 }
 
 // RotatorMetadata is the metadata for the Rotator tool
@@ -119,6 +121,7 @@ func (km *KopsMetadata) ValidateChangeRequest() error {
 		len(km.ChangeRequest.AMI) == 0 &&
 		len(km.ChangeRequest.MasterInstanceType) == 0 &&
 		len(km.ChangeRequest.NodeInstanceType) == 0 &&
+		len(km.ChangeRequest.KmsKeyId) == 0 &&
 		km.MasterCount == 0 &&
 		km.NodeMinCount == 0 &&
 		km.NodeMaxCount == 0 {
@@ -169,7 +172,7 @@ func (km *KopsMetadata) GetWorkerNodesResizeChanges() KopsInstanceGroupsMetadata
 		changes[k] = v
 	}
 
-	// Update the AMI if specified.
+	// Update the NodeInstanceType if specified.
 	if len(km.ChangeRequest.NodeInstanceType) != 0 {
 		for k, ig := range changes {
 			ig.NodeInstanceType = km.ChangeRequest.NodeInstanceType
@@ -320,6 +323,10 @@ func (km *KopsMetadata) ApplyUpgradePatch(patchRequest *PatchUpgradeClusterReque
 		applied = true
 		changes.MaxPodsPerNode = *patchRequest.MaxPodsPerNode
 	}
+	if patchRequest.KmsKeyId != nil && *patchRequest.KmsKeyId != km.KmsKeyId {
+		applied = true
+		changes.KmsKeyId = *patchRequest.KmsKeyId
+	}
 
 	if km.RotatorRequest == nil {
 		km.RotatorRequest = &RotatorMetadata{}
@@ -344,6 +351,7 @@ func (km *KopsMetadata) GetCommonMetadata() ProvisionerMetadata {
 		MaxPodsPerNode:   km.MaxPodsPerNode,
 		VPC:              km.VPC,
 		Networking:       km.Networking,
+		KmsKeyId:         km.KmsKeyId,
 	}
 }
 

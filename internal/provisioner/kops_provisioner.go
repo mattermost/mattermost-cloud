@@ -514,7 +514,6 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 			return err
 		}
 	}
-
 	err = updateKopsInstanceGroupAMIs(kops, kopsMetadata, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to update kops instance group AMIs")
@@ -543,6 +542,13 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 		}
 	}
 
+	if len(kopsMetadata.ChangeRequest.KmsKeyId) != 0 {
+		logger.Infof("Encrypt EBS volumes with custom kms key provided %s", kopsMetadata.ChangeRequest.KmsKeyId)
+		err = updateWorkersKopsInstanceGroupValue(kops, kopsMetadata, "spec.rootVolumeEncryptionKey="+kopsMetadata.ChangeRequest.KmsKeyId)
+		if err != nil {
+			return errors.Wrap(err, "failed to update kops instance group instance Metadata with custom encryption key")
+		}
+	}
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
 		return err

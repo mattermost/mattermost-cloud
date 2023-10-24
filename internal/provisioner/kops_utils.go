@@ -6,6 +6,7 @@ package provisioner
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
@@ -81,6 +82,25 @@ func updateKopsInstanceGroupValue(kops *kops.Cmd, kopsMetadata *model.KopsMetada
 		err = kops.SetInstanceGroup(kopsMetadata.Name, ig.Metadata.Name, value)
 		if err != nil {
 			return errors.Wrapf(err, "failed to update value %s", value)
+		}
+	}
+
+	return nil
+}
+
+func updateWorkersKopsInstanceGroupValue(kops *kops.Cmd, kopsMetadata *model.KopsMetadata, value string) error {
+
+	instanceGroups, err := kops.GetInstanceGroupsJSON(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to get instance groups")
+	}
+
+	for _, ig := range instanceGroups {
+		if strings.Contains(ig.Metadata.Name, "nodes-") {
+			err = kops.SetInstanceGroup(kopsMetadata.Name, ig.Metadata.Name, value)
+			if err != nil {
+				return errors.Wrapf(err, "failed to update value %s", value)
+			}
 		}
 	}
 
