@@ -45,6 +45,7 @@ type CreateClusterRequest struct {
 	AdditionalNodeGroups       map[string]NodeGroupMetadata   `json:"additional-node-groups,omitempty"`
 	NodeGroupWithPublicSubnet  []string                       `json:"nodegroup-with-public-subnet,omitempty"`
 	NodeGroupWithSecurityGroup []string                       `json:"nodegroup-with-sg,omitempty"`
+	KmsKeyId                   string                         `json:"kms-key-id,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -282,6 +283,7 @@ type PatchUpgradeClusterRequest struct {
 	AMI            *string        `json:"ami,omitempty"`
 	RotatorConfig  *RotatorConfig `json:"rotatorConfig,omitempty"`
 	MaxPodsPerNode *int64
+	KmsKeyId       *string `json:"kmsKeyId,omitempty"`
 }
 
 // Validate validates the values of a cluster upgrade request.
@@ -291,6 +293,9 @@ func (p *PatchUpgradeClusterRequest) Validate() error {
 	}
 	if p.MaxPodsPerNode != nil && *p.MaxPodsPerNode < 10 {
 		return errors.Errorf("max pods per node (%d) must be 10 or greater", *p.MaxPodsPerNode)
+	}
+	if p.KmsKeyId != nil && !IsValidKMSARN(*p.KmsKeyId) {
+		return errors.Errorf("invalid KMS arn format %s", *p.KmsKeyId)
 	}
 
 	if p.RotatorConfig != nil {
