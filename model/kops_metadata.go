@@ -163,6 +163,32 @@ func (km *KopsMetadata) GetKopsResizeSetActionsFromChanges(changes KopsInstanceG
 	return kopsSetActions
 }
 
+func (km *KopsMetadata) GetKopsMasterResizeSetActionsFromChanges(changes KopsInstanceGroupMetadata, igName string) []string {
+	kopsSetActions := []string{}
+
+	if changes.NodeInstanceType != km.MasterInstanceGroups[igName].NodeInstanceType {
+		kopsSetActions = append(kopsSetActions, fmt.Sprintf("spec.machineType=%s", changes.NodeInstanceType))
+	}
+
+	return kopsSetActions
+}
+
+func (km *KopsMetadata) GetMasterNodesResizeChanges() KopsInstanceGroupsMetadata {
+	changes := make(KopsInstanceGroupsMetadata, len(km.MasterInstanceGroups))
+	for k, v := range km.MasterInstanceGroups {
+		changes[k] = v
+	}
+
+	if len(km.ChangeRequest.MasterInstanceType) != 0 {
+		for k, ig := range changes {
+			ig.NodeInstanceType = km.ChangeRequest.MasterInstanceType
+			changes[k] = ig
+		}
+	}
+
+	return changes
+}
+
 // GetWorkerNodesResizeChanges calculates instance group resizing based on the
 // current ChangeRequest.
 func (km *KopsMetadata) GetWorkerNodesResizeChanges() KopsInstanceGroupsMetadata {
@@ -380,6 +406,10 @@ func (km *KopsMetadata) ApplyClusterSizePatch(patchRequest *PatchClusterSizeRequ
 	if patchRequest.NodeMaxCount != nil && *patchRequest.NodeMaxCount != km.NodeMaxCount {
 		applied = true
 		changes.NodeMaxCount = *patchRequest.NodeMaxCount
+	}
+	if patchRequest.MasterInstanceType != nil && *patchRequest.MasterInstanceType != km.MasterInstanceType {
+		applied = true
+		changes.MasterInstanceType = *patchRequest.MasterInstanceType
 	}
 
 	if km.RotatorRequest == nil {

@@ -241,6 +241,7 @@ type clusterResizeFlags struct {
 	nodeMinCount     int64
 	nodeMaxCount     int64
 	nodegroups       []string
+	sizeOptions
 }
 
 func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
@@ -252,6 +253,7 @@ func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
 	command.Flags().Int64Var(&flags.nodeMinCount, "size-node-min-count", 0, "The minimum number of k8s worker nodes. Overwrites value from 'size'.")
 	command.Flags().Int64Var(&flags.nodeMaxCount, "size-node-max-count", 0, "The maximum number of k8s worker nodes. Overwrites value from 'size'.")
 	command.Flags().StringSliceVar(&flags.nodegroups, "nodegroups", nil, "The list of nodegroups to resize. Must specify if the cluster has multiple nodegroups.")
+	command.Flags().StringVar(&flags.masterInstanceType, "size-master-instance-type", "", "The instance type describing the k8s master nodes. Overwrites value from 'size'.")
 
 	_ = command.MarkFlagRequired("cluster")
 }

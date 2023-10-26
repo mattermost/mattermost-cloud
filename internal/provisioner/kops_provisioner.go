@@ -725,6 +725,18 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 		}
 	}
 
+	// Handle any changes to master nodes instance groups separately
+	for igName, changeMetadata := range kopsMetadata.GetMasterNodesResizeChanges() {
+		kopsSetActions := kopsMetadata.GetKopsMasterResizeSetActionsFromChanges(changeMetadata, igName)
+		for _, action := range kopsSetActions {
+			logger.Debugf("Updating master instance group %s with kops set %s", igName, action)
+			err = kops.SetInstanceGroup(kopsMetadata.Name, igName, action)
+			if err != nil {
+				return errors.Wrapf(err, "failed to update master instance group %s with %s", igName, action)
+			}
+		}
+	}
+
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
 		return err

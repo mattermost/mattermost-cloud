@@ -393,6 +393,10 @@ func executeClusterResizeCmd(flags clusterResizeFlags) error {
 		request.NodeMaxCount = &flags.nodeMaxCount
 	}
 
+	if len(flags.masterInstanceType) != 0 {
+		request.MasterInstanceType = &flags.masterInstanceType
+	}
+
 	if flags.dryRun {
 		return runDryRun(request)
 	}

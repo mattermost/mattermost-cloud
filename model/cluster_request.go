@@ -325,11 +325,12 @@ func NewUpgradeClusterRequestFromReader(reader io.Reader) (*PatchUpgradeClusterR
 
 // PatchClusterSizeRequest specifies the parameters for resizing a cluster.
 type PatchClusterSizeRequest struct {
-	NodeInstanceType *string        `json:"node-instance-type,omitempty"`
-	NodeMinCount     *int64         `json:"node-min-count,omitempty"`
-	NodeMaxCount     *int64         `json:"node-max-count,omitempty"`
-	RotatorConfig    *RotatorConfig `json:"rotatorConfig,omitempty"`
-	NodeGroups       []string       `json:"nodeGroups,omitempty"`
+	NodeInstanceType   *string        `json:"node-instance-type,omitempty"`
+	NodeMinCount       *int64         `json:"node-min-count,omitempty"`
+	NodeMaxCount       *int64         `json:"node-max-count,omitempty"`
+	RotatorConfig      *RotatorConfig `json:"rotatorConfig,omitempty"`
+	NodeGroups         []string       `json:"nodeGroups,omitempty"`
+	MasterInstanceType *string        `json:"master-instance-type,omitempty"`
 }
 
 // Validate validates the values of a PatchClusterSizeRequest.
