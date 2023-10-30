@@ -474,10 +474,8 @@ func (provisioner Provisioner) updateClusterInstallation(
 	// Just to be sure, for the update we reset deprecated fields.
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
-	annotations := mattermost.Spec.Ingress.Annotations
-	if installation.AllowedIPRanges != nil && len(*installation.AllowedIPRanges) > 0 {
-		annotations = addInternalSourceRanges(annotations, installation.AllowedIPRanges.ToAnnotationString(), provisioner.params.InternalIPRanges)
-	}
+	annotations := getIngressAnnotations()
+	addInternalSourceRangesToAnnotations(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
@@ -1069,38 +1067,34 @@ func getIngressAnnotations() map[string]string {
 // getHibernatingIngressAnnotations returns ingress annotations used by
 // hibernating Mattermost installations.
 func getHibernatingIngressAnnotations() map[string]string {
-	annotations := getIngressAnnotations()
-	annotations["nginx.ingress.kubernetes.io/configuration-snippet"] = "return 410;"
-
-	return annotations
+	return map[string]string{
+		"nginx.ingress.kubernetes.io/configuration-snippet": "return 410;",
+	}
 }
 
-func addInternalSourceRanges(annotations map[string]string, allowedIPRanges string, internalIPRanges string) map[string]string {
+func addInternalSourceRangesToAnnotations(annotations map[string]string, allowedIPRanges *model.AllowedIPRanges, internalIPRanges string) {
+	if allowedIPRanges == nil || len(*allowedIPRanges) == 0 {
+		return
+	}
 
-	existingRanges := make([]string, 0)
+	allIPRanges := make([]string, 0)
 
-	if allowedIPRanges != "" {
-		ips := strings.Split(allowedIPRanges, ",")
-		for _, ip := range ips {
-			if !common.Contains(existingRanges, ip) {
-				existingRanges = append(existingRanges, ip)
-			}
+	// TODO: add Enabled check via helper method.
+	for _, entry := range *allowedIPRanges {
+		if !common.Contains(allIPRanges, entry.CIDRBlock) {
+			allIPRanges = append(allIPRanges, entry.CIDRBlock)
 		}
 	}
 
 	if internalIPRanges != "" {
-		ips := strings.Split(internalIPRanges, ",")
-		for _, ip := range ips {
-			if !common.Contains(existingRanges, ip) {
-				existingRanges = append(existingRanges, ip)
+		for _, ip := range strings.Split(internalIPRanges, ",") {
+			if !common.Contains(allIPRanges, ip) {
+				allIPRanges = append(allIPRanges, ip)
 			}
 		}
 	}
-	allowiplistRange := strings.Join(existingRanges, ",")
-	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
-	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = allowiplistRange
 
-	return annotations
+	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(allIPRanges, ",")
 }
 
 func int32Ptr(i int) *int32 {
