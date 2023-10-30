@@ -46,6 +46,7 @@ type CreateClusterRequest struct {
 	NodeGroupWithPublicSubnet  []string                       `json:"nodegroup-with-public-subnet,omitempty"`
 	NodeGroupWithSecurityGroup []string                       `json:"nodegroup-with-sg,omitempty"`
 	KmsKeyId                   string                         `json:"kms-key-id,omitempty"`
+	ArgocdClusterRegister      map[string]string              `json:"argocd-register,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -375,6 +376,7 @@ func NewResizeClusterRequestFromReader(reader io.Reader) (*PatchClusterSizeReque
 type ProvisionClusterRequest struct {
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 	Force                  bool                           `json:"force"`
+	ArgocdClusterRegister  map[string]string              `json:"argocd-register,omitempty"`
 }
 
 // NewProvisionClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.
@@ -458,23 +460,4 @@ func NewCreateNodegroupsRequestFromReader(reader io.Reader) (*CreateNodegroupsRe
 	}
 
 	return &createNodegroupsRequest, nil
-}
-
-type RegisterClusterRequest struct {
-	APIServer   string `json:"api_server"`
-	CertData    string `json:"certData"`
-	CaData      string `json:"caData"`
-	KeyData     string `json:"keyData"`
-	ClusterType string `json:"cluster_type"`
-}
-
-// RegisterClusterRequest specifies the parameters for a new cluster.
-func NewRegisterClusterRequestFromReader(reader io.Reader) (*RegisterClusterRequest, error) {
-	var registerClusterRequest RegisterClusterRequest
-	err := json.NewDecoder(reader).Decode(&registerClusterRequest)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode register cluster request")
-	}
-
-	return &registerClusterRequest, nil
 }

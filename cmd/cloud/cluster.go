@@ -45,7 +45,7 @@ func newCmdCluster() *cobra.Command {
 	cmd.AddCommand(newCmdClusterGet())
 	cmd.AddCommand(newCmdClusterList())
 	cmd.AddCommand(newCmdClusterUtilities())
-	cmd.AddCommand(newCmdClusterRegister())
+	// cmd.AddCommand(newCmdClusterRegister())
 
 	cmd.AddCommand(newCmdClusterSizeDictionary())
 	cmd.AddCommand(newCmdClusterShowStateReport())
@@ -116,6 +116,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		Networking:             flags.networking,
 		VPC:                    flags.vpc,
 		Provisioner:            model.ProvisionerKops,
+		ArgocdClusterRegister:  flags.argocdRegister,
 	}
 
 	if flags.useEKS {
@@ -225,6 +226,7 @@ func executeClusterProvisionCmd(flags clusterProvisionFlags) error {
 	request := &model.ProvisionClusterRequest{
 		Force:                  flags.reprovisionAllUtilities,
 		DesiredUtilityVersions: processUtilityFlags(flags.utilityFlags),
+		ArgocdClusterRegister:  flags.argocdRegister,
 	}
 
 	if flags.dryRun {
@@ -659,52 +661,6 @@ func newCmdClusterShowStateReport() *cobra.Command {
 	}
 
 	return cmd
-}
-
-func newCmdClusterRegister() *cobra.Command {
-	var flags clusterRegisterFlags
-	cmd := &cobra.Command{
-		Use:   "register",
-		Short: "Register a cluster within Argocd.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
-			return executeClusterRegisterCmd(flags)
-		},
-		PreRun: func(cmd *cobra.Command, args []string) {
-			flags.clusterFlags.addFlags(cmd)
-		},
-	}
-	flags.addFlags(cmd)
-
-	return cmd
-}
-
-func executeClusterRegisterCmd(flags clusterRegisterFlags) error {
-	client := model.NewClient(flags.serverAddress)
-
-	request := &model.RegisterClusterRequest{
-		APIServer:   flags.apiServer,
-		CertData:    flags.certData,
-		CaData:      flags.caData,
-		KeyData:     flags.keyData,
-		ClusterType: flags.clusterType,
-	}
-
-	if flags.dryRun {
-		return runDryRun(request)
-	}
-
-	err := client.RegisterCluster(flags.cluster, request)
-	if err != nil {
-		return errors.Wrap(err, "failed to register cluster")
-	}
-
-	// if err = printJSON(cluster); err != nil {
-	// 	return errors.Wrap(err, "failed to print cluster response")
-	// }
-
-	return nil
-
 }
 
 // processUtilityFlags handles processing the arguments passed for all
