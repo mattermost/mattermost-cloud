@@ -721,6 +721,10 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 		output += fmt.Sprintf(" ├ Priority Environment Variables: %d\n", len(installation.PriorityEnv))
 		output += fmt.Sprintf(" │ └ Env Keys Set: %s\n", strings.Join(envKeys, ", "))
 	}
+	output += " ├ Locks:\n"
+	output += fmt.Sprintf(" │ ├ API: %v\n", installation.APISecurityLock)
+	output += fmt.Sprintf(" │ ├ Deletion: %v\n", installation.DeletionLocked)
+	output += fmt.Sprintf(" │ └ Provisioner: %v\n", installation.LockAcquiredAt != 0)
 	output += fmt.Sprintf(" ├ Database Type: %s\n", installation.Database)
 	if model.IsMultiTenantRDS(installation.Database) {
 		var databases []*model.MultitenantDatabase
