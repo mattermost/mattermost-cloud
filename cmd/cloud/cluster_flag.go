@@ -327,23 +327,3 @@ func (flags *clusterUtilitiesFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster whose utilities are to be fetched.")
 	_ = command.MarkFlagRequired("cluster")
 }
-
-type clusterRegisterFlags struct {
-	clusterFlags
-	cluster     string
-	certData    string
-	caData      string
-	keyData     string
-	apiServer   string
-	clusterType string
-}
-
-func (flags *clusterRegisterFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be registered into Argocd.")
-	command.Flags().StringVar(&flags.certData, "cert-data", "", "")
-	command.Flags().StringVar(&flags.caData, "ca-data", "", "")
-	command.Flags().StringVar(&flags.keyData, "key-data", "", "")
-	command.Flags().StringVar(&flags.clusterType, "cluster-type", "", "")
-	command.Flags().StringVar(&flags.apiServer, "api-server", "", "The URL of the kubernetes API server")
-	_ = command.MarkFlagRequired("cluster")
-}
