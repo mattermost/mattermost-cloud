@@ -128,6 +128,7 @@ func executeServerCmd(flags serverFlags) error {
 		return errors.New("utilities-git-url must be set")
 	}
 	model.SetUtilityDefaults(flags.utilitiesGitURL)
+	model.SetGitopsRepoURL(flags.utilitiesGitURL)
 
 	logger := logger.WithField("instance", instanceID)
 

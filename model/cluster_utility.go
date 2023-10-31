@@ -50,6 +50,8 @@ const (
 // gitlabToken is the token that will be used for remote helm charts.
 var gitlabToken string
 
+var gitOpsRepoURL string
+
 // SetGitlabToken is used to define the gitlab token that will be used for remote
 // helm charts.
 func SetGitlabToken(val string) {
@@ -59,6 +61,14 @@ func SetGitlabToken(val string) {
 // GetGitlabToken returns the value of gitlabToken.
 func GetGitlabToken() string {
 	return gitlabToken
+}
+
+func SetGitopsRepoURL(gitopsUrl string) {
+	gitOpsRepoURL = gitopsUrl
+}
+
+func GetGitopsRepoURL() string {
+	return gitOpsRepoURL
 }
 
 // DefaultUtilityVersions holds the default values for all the HelmUtilityVersions
@@ -152,6 +162,11 @@ type UtilityGroupVersions struct {
 	Cloudprober         *HelmUtilityVersion
 }
 
+type UtilityArgocdClusterRegister struct {
+	ClusterType string `json:"ClusterType,omitempty"`
+	Registered  bool   `json:"Registered,omitempty"`
+}
+
 // AsMap returns the UtilityGroupVersion represented as a map with the
 // canonical names for each utility as the keys and the members of the
 // struct making up the values
@@ -176,8 +191,10 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 // UtilityMetadata is a container struct for any metadata related to
 // cluster utilities that needs to be persisted in the database
 type UtilityMetadata struct {
-	DesiredVersions UtilityGroupVersions
-	ActualVersions  UtilityGroupVersions
+	DesiredVersions       UtilityGroupVersions
+	ActualVersions        UtilityGroupVersions
+	ManagedByArgocd       bool
+	ArgocdClusterRegister UtilityArgocdClusterRegister
 }
 
 // NewUtilityMetadata creates an instance of UtilityMetadata given the raw
@@ -374,4 +391,23 @@ func UtilityIsUnmanaged(desired *HelmUtilityVersion, actual *HelmUtilityVersion)
 	}
 
 	return false
+}
+
+func (c *Cluster) SetManagedByArgocd(clusterValues map[string]string) {
+	if _, ok := clusterValues["force"]; ok {
+		c.UtilityMetadata.ArgocdClusterRegister.Registered = false
+	}
+	if (len(clusterValues)) != 0 && (!c.UtilityMetadata.ArgocdClusterRegister.Registered) {
+		for clusterValueKey, clusterValue := range clusterValues {
+			setArgocdClusterValues(&c.UtilityMetadata.ArgocdClusterRegister, clusterValueKey, clusterValue)
+		}
+		c.UtilityMetadata.ManagedByArgocd = true
+	}
+}
+
+func setArgocdClusterValues(clusterValues *UtilityArgocdClusterRegister, clusterValueKey, clusterValue string) {
+	switch clusterValueKey {
+	case "cluster-type":
+		clusterValues.ClusterType = clusterValue
+	}
 }
