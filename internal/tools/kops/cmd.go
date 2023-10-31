@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	outputDirName  = "output"
-	kubeConfigName = "kubeconfig"
+	outputDirName    = "output"
+	kubeConfigName   = "kubeconfig"
+	exportKubecfgTTL = "87600h"
 )
 
 // Cmd is the kops command to execute.
@@ -69,4 +70,8 @@ func (c *Cmd) GetKubeConfigPath() string {
 // Close cleans up the temporary output directory used by kops.
 func (c *Cmd) Close() error {
 	return os.RemoveAll(c.tempDir)
+}
+
+func (c *Cmd) GetExportKubecfgTTL() string {
+	return exportKubecfgTTL
 }
