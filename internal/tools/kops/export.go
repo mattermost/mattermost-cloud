@@ -11,13 +11,13 @@ import (
 )
 
 // ExportKubecfg invokes kops export kubecfg for the named cluster in the context of the created Cmd.
-func (c *Cmd) ExportKubecfg(name string) error {
+func (c *Cmd) ExportKubecfg(name, ttl string) error {
 	_, stderr, err := c.run(
 		"export",
 		"kubecfg",
 		arg("name", name),
 		arg("state", "s3://", c.s3StateStore),
-		arg("admin", "87600h"),
+		arg("admin", ttl),
 	)
 
 	if err != nil {
