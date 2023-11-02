@@ -475,7 +475,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
 	annotations := getIngressAnnotations()
-	addInternalSourceRangesToAnnotations(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
+	addSourceRangeWhitelistToAnnotations(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
@@ -1062,7 +1062,7 @@ func getHibernatingIngressAnnotations() *model.IngressAnnotations {
 	return annotations
 }
 
-func addInternalSourceRangesToAnnotations(annotations *model.IngressAnnotations, allowedIPRanges *model.AllowedIPRanges, internalIPRanges []string) {
+func addSourceRangeWhitelistToAnnotations(annotations *model.IngressAnnotations, allowedIPRanges *model.AllowedIPRanges, internalIPRanges []string) {
 	// If all allowedIPRange
 	if allowedIPRanges == nil || len(*allowedIPRanges) == 0 || allowedIPRanges.AllRulesAreDisabled() {
 		return
