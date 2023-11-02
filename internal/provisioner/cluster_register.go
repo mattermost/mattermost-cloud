@@ -116,9 +116,9 @@ func (cr *ClusterRegister) updateClusterFile(clusterFilePath string, clusterCred
 		Type:      cr.cluster.Provisioner,
 		Labels:    newClusterLabels,
 		APIServer: clusterCreds.ApiServer,
-		CaData:    b64.StdEncoding.EncodeToString([]byte(clusterCreds.ClusterCA)),
-		CertData:  b64.StdEncoding.EncodeToString([]byte(clusterCreds.ClientCA)),
-		KeyData:   b64.StdEncoding.EncodeToString([]byte(clusterCreds.ClientKey)),
+		CaData:    b64.StdEncoding.EncodeToString(clusterCreds.ClusterCA),
+		CertData:  b64.StdEncoding.EncodeToString(clusterCreds.ClientCA),
+		KeyData:   b64.StdEncoding.EncodeToString(clusterCreds.ClientKey),
 	}
 
 	err = argo.UpdateK8sClusterRegistrationFile(clusterFile, newCluster, clusterFilePath)
