@@ -265,7 +265,6 @@ func executeServerCmd(flags serverFlags) error {
 		"ETCD_LISTEN_METRICS_URLS": flags.etcdListenMetricsURL,
 	}
 
-	logger.Infof("%+v", flags.internalIPRanges)
 	provisioningParams := provisioner.ProvisioningParams{
 		S3StateStore:            flags.s3StateStore,
 		AllowCIDRRangeList:      flags.allowListCIDRRange,
