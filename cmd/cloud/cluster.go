@@ -45,7 +45,6 @@ func newCmdCluster() *cobra.Command {
 	cmd.AddCommand(newCmdClusterGet())
 	cmd.AddCommand(newCmdClusterList())
 	cmd.AddCommand(newCmdClusterUtilities())
-	// cmd.AddCommand(newCmdClusterRegister())
 
 	cmd.AddCommand(newCmdClusterSizeDictionary())
 	cmd.AddCommand(newCmdClusterShowStateReport())
