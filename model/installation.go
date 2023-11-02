@@ -96,6 +96,21 @@ type AllowedIPRange struct {
 	OwnerID string
 }
 
+// Returns boolean true if all rules are disabled, false otherwise
+func (a *AllowedIPRanges) AllRulesAreDisabled() bool {
+	if a == nil {
+		return true
+	}
+
+	for _, allowedIPRange := range *a {
+		if allowedIPRange.Enabled {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (a AllowedIPRanges) Value() (driver.Value, error) {
 	return json.Marshal(a)
 }
