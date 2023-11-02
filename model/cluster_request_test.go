@@ -25,6 +25,7 @@ func TestCreateClusterRequestValid(t *testing.T) {
 		{"mismatched node count", &model.CreateClusterRequest{NodeMinCount: 2, NodeMaxCount: 3}, true},
 		{"max pods too low", &model.CreateClusterRequest{MaxPodsPerNode: 1}, true},
 		{"eks no node group", &model.CreateClusterRequest{Provisioner: model.ProvisionerEKS}, true},
+		{"cluster-type not set", &model.CreateClusterRequest{ArgocdClusterRegister: map[string]string{"type": "customer"}}, true},
 	}
 
 	for _, tc := range testCases {
