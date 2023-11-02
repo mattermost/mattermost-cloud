@@ -161,6 +161,12 @@ func (request *CreateClusterRequest) Validate() error {
 	}
 	// TODO: check zones and instance types?
 
+	if request.ArgocdClusterRegister != nil {
+		if _, ok := request.ArgocdClusterRegister["cluster-type"]; !ok {
+			return errors.New("argocd register key cluster-type must be set")
+		}
+	}
+
 	if request.Provisioner == ProvisionerEKS {
 		if request.ClusterRoleARN == "" {
 			return errors.New("cluster role ARN for EKS cluster cannot be empty")
