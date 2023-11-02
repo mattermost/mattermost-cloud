@@ -335,11 +335,12 @@ func provisionCluster(
 	case cluster.UtilityMetadata.ManagedByArgocd:
 		switch {
 		case !cluster.UtilityMetadata.ArgocdClusterRegister.Registered:
-			clusterRegister, err := NewClusterRegister(cluster, awsClient.GetCloudEnvironmentName(), logger)
+			logger.Debug("Starting argocd cluster registration")
+			clusterRegister, err := NewClusterRegisterHandle(cluster, awsClient.GetCloudEnvironmentName(), logger)
 			if err != nil {
-				logger.WithError(err).Error("Failed to configure new cluster register client")
+				return errors.Wrap(err, "Failed to create new cluster register handle")
 			}
-			clusterRegister.clusterRegister(params.S3StateStore, cluster.ProvisionerMetadataKops.Name)
+			err = clusterRegister.clusterRegister(params.S3StateStore, cluster.ProvisionerMetadataKops.Name)
 			if err != nil {
 				return errors.Wrap(err, "failed to register cluster in argocd")
 			}
