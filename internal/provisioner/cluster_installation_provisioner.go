@@ -1064,7 +1064,7 @@ func getHibernatingIngressAnnotations() *model.IngressAnnotations {
 
 func addSourceRangeWhitelistToAnnotations(annotations *model.IngressAnnotations, allowedIPRanges *model.AllowedIPRanges, internalIPRanges []string) {
 	// If all allowedIPRanges are disabled we don't continue so we don't unintentionally lock the workspace to internal traffic only
-	if allowedIPRanges == nil || len(*allowedIPRanges) == 0 || allowedIPRanges.AllRulesAreDisabled() {
+	if allowedIPRanges.AllRulesAreDisabled() {
 		return
 	}
 

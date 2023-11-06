@@ -98,7 +98,7 @@ type AllowedIPRange struct {
 
 // Returns boolean true if all rules are disabled, false otherwise
 func (a *AllowedIPRanges) AllRulesAreDisabled() bool {
-	if a == nil {
+	if a == nil || len(*a) == 0 {
 		return true
 	}
 
