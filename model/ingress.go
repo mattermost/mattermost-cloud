@@ -25,16 +25,38 @@ func (ia *IngressAnnotations) ToMap() map[string]string {
 	if ia == nil {
 		return m
 	}
-	m["kubernetes.io/tls-acme"] = ia.TLSACME
-	m["nginx.ingress.kubernetes.io/proxy-buffering"] = ia.ProxyBuffering
-	m["nginx.ingress.kubernetes.io/proxy-body-size"] = ia.ProxyBodySize
-	m["nginx.ingress.kubernetes.io/proxy-send-timeout"] = ia.ProxySendTimeout
-	m["nginx.ingress.kubernetes.io/proxy-read-timeout"] = ia.ProxyReadTimeout
-	m["nginx.ingress.kubernetes.io/proxy-max-temp-file-size"] = ia.ProxyMaxTempFileSize
-	m["nginx.ingress.kubernetes.io/ssl-redirect"] = ia.SSLRedirect
-	m["nginx.ingress.kubernetes.io/configuration-snippet"] = ia.ConfigurationSnippet
-	m["nginx.org/server-snippets"] = ia.ServerSnippets
-	m["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(ia.WhitelistSourceRange, ",")
+
+	if ia.TLSACME != "" {
+		m["kubernetes.io/tls-acme"] = ia.TLSACME
+	}
+	if ia.ProxyBuffering != "" {
+		m["nginx.ingress.kubernetes.io/proxy-buffering"] = ia.ProxyBuffering
+	}
+	if ia.ProxyBodySize != "" {
+		m["nginx.ingress.kubernetes.io/proxy-body-size"] = ia.ProxyBodySize
+	}
+	if ia.ProxySendTimeout != "" {
+		m["nginx.ingress.kubernetes.io/proxy-send-timeout"] = ia.ProxySendTimeout
+	}
+	if ia.ProxyReadTimeout != "" {
+		m["nginx.ingress.kubernetes.io/proxy-read-timeout"] = ia.ProxyReadTimeout
+	}
+	if ia.ProxyMaxTempFileSize != "" {
+		m["nginx.ingress.kubernetes.io/proxy-max-temp-file-size"] = ia.ProxyMaxTempFileSize
+	}
+	if ia.SSLRedirect != "" {
+		m["nginx.ingress.kubernetes.io/ssl-redirect"] = ia.SSLRedirect
+	}
+	if ia.ConfigurationSnippet != "" {
+		m["nginx.ingress.kubernetes.io/configuration-snippet"] = ia.ConfigurationSnippet
+	}
+	if ia.ServerSnippets != "" {
+		m["nginx.org/server-snippets"] = ia.ServerSnippets
+	}
+	if len(ia.WhitelistSourceRange) > 0 {
+		m["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(ia.WhitelistSourceRange, ",")
+	}
+
 	return m
 }
 

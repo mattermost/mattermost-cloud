@@ -52,6 +52,55 @@ func TestIngressAnnotationsToMap(t *testing.T) {
 
 		require.Equal(t, expected, actual)
 	})
+
+	t.Run("returns expected map when some fields are empty", func(t *testing.T) {
+		ia := &model.IngressAnnotations{
+			TLSACME:              "",
+			ProxyBuffering:       "",
+			ProxyBodySize:        "",
+			ProxySendTimeout:     "",
+			ProxyReadTimeout:     "",
+			ProxyMaxTempFileSize: "",
+			SSLRedirect:          "",
+			ConfigurationSnippet: "",
+			ServerSnippets:       "",
+			WhitelistSourceRange: []string{},
+		}
+		expected := map[string]string{}
+
+		actual := ia.ToMap()
+
+		require.Equal(t, expected, actual)
+	})
+
+	t.Run("returns expected map when some fields are not empty", func(t *testing.T) {
+		ia := &model.IngressAnnotations{
+			TLSACME:              "",
+			ProxyBuffering:       "on",
+			ProxyBodySize:        "",
+			ProxySendTimeout:     "600",
+			ProxyReadTimeout:     "",
+			ProxyMaxTempFileSize: "",
+			SSLRedirect:          "",
+			ConfigurationSnippet: `
+                  proxy_force_ranges on;
+                  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
+			ServerSnippets:       "",
+			WhitelistSourceRange: []string{"192.168.0.1/24", "10.0.0.1/16"},
+		}
+		expected := map[string]string{
+			"nginx.ingress.kubernetes.io/proxy-buffering":    "on",
+			"nginx.ingress.kubernetes.io/proxy-send-timeout": "600",
+			"nginx.ingress.kubernetes.io/configuration-snippet": `
+                  proxy_force_ranges on;
+                  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
+			"nginx.ingress.kubernetes.io/whitelist-source-range": "192.168.0.1/24,10.0.0.1/16",
+		}
+
+		actual := ia.ToMap()
+
+		require.Equal(t, expected, actual)
+	})
 }
 
 func TestIngressAnnotationsSetDefaults(t *testing.T) {
