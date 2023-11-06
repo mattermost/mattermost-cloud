@@ -26,28 +26,47 @@ func TestAddSourceRangeWhitelistToAnnotations(t *testing.T) {
 
 	t.Run("allowed ranges, blank internal ranges", func(t *testing.T) {
 		annotations := getIngressAnnotations()
-		allowedRanges := &model.AllowedIPRanges{{CIDRBlock: "1.1.1.1/24"}}
-		addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, []string{""})
-		require.Equal(t, "1.1.1.1/24", annotations.WhitelistSourceRange)
-		require.Equal(t, annotations, getIngressAnnotations())
+		allowedRanges := &model.AllowedIPRanges{{CIDRBlock: "1.1.1.1/24", Enabled: true}}
+		addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, nil)
+		require.Equal(t, []string{"1.1.1.1/24"}, annotations.WhitelistSourceRange)
+		expectedAnnotations := getIngressAnnotations()
+		expectedAnnotations.WhitelistSourceRange = []string{"1.1.1.1/24"}
+		require.Equal(t, annotations, expectedAnnotations)
 	})
 
-	t.Run("allowed ranges, blank internal ranges", func(t *testing.T) {
+	t.Run("allowed range, internal range", func(t *testing.T) {
 		annotations := getIngressAnnotations()
-		allowedRanges := &model.AllowedIPRanges{{CIDRBlock: "1.1.1.1/24"}}
+		allowedRanges := &model.AllowedIPRanges{{CIDRBlock: "1.1.1.1/24", Enabled: true}}
 		addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, []string{"2.2.2.2/24"})
-		require.Equal(t, "1.1.1.1/24,2.2.2.2/24", annotations.WhitelistSourceRange)
-		require.Equal(t, annotations, getIngressAnnotations())
+		require.Equal(t, []string{"1.1.1.1/24", "2.2.2.2/24"}, annotations.WhitelistSourceRange)
+		expectedAnnotations := getIngressAnnotations()
+		expectedAnnotations.WhitelistSourceRange = []string{"1.1.1.1/24", "2.2.2.2/24"}
+		require.Equal(t, annotations, expectedAnnotations)
 	})
 
 	t.Run("multiple of both ranges", func(t *testing.T) {
 		annotations := getIngressAnnotations()
 		allowedRanges := &model.AllowedIPRanges{
-			{CIDRBlock: "1.1.1.1/24"},
-			{CIDRBlock: "1.1.1.2/24"},
+			{CIDRBlock: "1.1.1.1/24", Enabled: true},
+			{CIDRBlock: "1.1.1.2/24", Enabled: true},
 		}
-		addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, []string{"2.2.2.2/24,2.2.2.3/24"})
-		require.Equal(t, "1.1.1.1/24,1.1.1.2/24,2.2.2.2/24,2.2.2.3/24", annotations.WhitelistSourceRange)
-		require.Equal(t, annotations, getIngressAnnotations())
+		addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, []string{"2.2.2.2/24", "2.2.2.3/24"})
+		require.Equal(t, []string{"1.1.1.1/24", "1.1.1.2/24", "2.2.2.2/24", "2.2.2.3/24"}, annotations.WhitelistSourceRange)
+		expectedAnnotations := getIngressAnnotations()
+		expectedAnnotations.WhitelistSourceRange = []string{"1.1.1.1/24", "1.1.1.2/24", "2.2.2.2/24", "2.2.2.3/24"}
+		require.Equal(t, annotations, expectedAnnotations)
+	})
+
+	t.Run("multiple of both ranges, some disabled allowed ranges", func(t *testing.T) {
+		annotations := getIngressAnnotations()
+		allowedRanges := &model.AllowedIPRanges{
+			{CIDRBlock: "1.1.1.1/24", Enabled: true},
+			{CIDRBlock: "1.1.1.2/24", Enabled: false},
+		}
+		addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, []string{"2.2.2.2/24", "2.2.2.3/24"})
+		require.Equal(t, []string{"1.1.1.1/24", "2.2.2.2/24", "2.2.2.3/24"}, annotations.WhitelistSourceRange)
+		expectedAnnotations := getIngressAnnotations()
+		expectedAnnotations.WhitelistSourceRange = []string{"1.1.1.1/24", "2.2.2.2/24", "2.2.2.3/24"}
+		require.Equal(t, annotations, expectedAnnotations)
 	})
 }

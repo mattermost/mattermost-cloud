@@ -1068,7 +1068,7 @@ func addSourceRangeWhitelistToAnnotations(annotations *model.IngressAnnotations,
 		return
 	}
 
-	allIPRanges := make([]string, 0)
+	var allIPRanges []string
 
 	for _, entry := range *allowedIPRanges {
 		if !common.Contains(allIPRanges, entry.CIDRBlock) && entry.Enabled {
