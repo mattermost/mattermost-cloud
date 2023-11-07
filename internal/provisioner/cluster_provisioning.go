@@ -340,10 +340,10 @@ func provisionCluster(
 			if err != nil {
 				return errors.Wrap(err, "Failed to create new cluster register handle")
 			}
-			err = clusterRegister.clusterRegister(params.S3StateStore, cluster.ProvisionerMetadataKops.Name)
-			if err != nil {
+			if err = clusterRegister.clusterRegister(params.S3StateStore); err != nil {
 				return errors.Wrap(err, "failed to register cluster in argocd")
 			}
+
 			cluster.UtilityMetadata.ArgocdClusterRegister.Registered = true
 			logger.Infof("Cluster: %s successfully registered in argocd", cluster.ID)
 
