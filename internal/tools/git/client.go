@@ -26,7 +26,6 @@ func NewGitClient(oauthToken, tempDir, remoteURL string) (Client, error) {
 	repo, err := git.PlainClone(tempDir, false, &git.CloneOptions{
 		URL:  remoteURL,
 		Auth: auth,
-		//Progress: os.Stdout,
 	})
 
 	if err != nil {
