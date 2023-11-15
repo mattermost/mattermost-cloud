@@ -19,6 +19,10 @@ type WebhookHeader struct {
 
 type Headers []WebhookHeader
 
+func (wh Headers) Count() int {
+	return len(wh)
+}
+
 func (wh Headers) Value() (driver.Value, error) {
 	return json.Marshal(wh)
 }

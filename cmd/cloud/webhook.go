@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -146,10 +147,10 @@ func executeWebhookListCmd(flags webhookListFlag) error {
 	if flags.outputToTable {
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		table.SetHeader([]string{"ID", "OWNER", "URL"})
+		table.SetHeader([]string{"ID", "OWNER", "URL", "HEADERS"})
 
 		for _, webhook := range webhooks {
-			table.Append([]string{webhook.ID, webhook.OwnerID, webhook.URL})
+			table.Append([]string{webhook.ID, webhook.OwnerID, webhook.URL, fmt.Sprintf("%d", webhook.Headers.Count())})
 		}
 		table.Render()
 
