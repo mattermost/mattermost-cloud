@@ -37,7 +37,19 @@ func (a *Argock8sRegister) ReadArgoK8sRegistrationFile(clusterFile []byte) (*Arg
 
 // UpdateK8sClusterRegistrationFile take a argocd cluster file and Add new Cluster spec
 func (a *Argock8sRegister) UpdateK8sClusterRegistrationFile(cluster *Argock8sRegister, newCluster ArgocdClusterRegisterParameters, filePath string) error {
-	cluster.Clusters = append(cluster.Clusters, newCluster)
+	index := -1
+	for i, v := range cluster.Clusters {
+		if v.Name == newCluster.Name {
+			index = i
+			break
+		}
+	}
+
+	if index != -1 {
+		cluster.Clusters[index] = newCluster
+	} else {
+		cluster.Clusters = append(cluster.Clusters, newCluster)
+	}
 
 	updatedYAML, err := yaml.Marshal(&cluster)
 	if err != nil {
