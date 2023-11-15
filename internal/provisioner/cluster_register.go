@@ -88,7 +88,7 @@ func (cr *ClusterRegister) clusterRegister(s3StateStore string) error {
 		return errors.Wrap(err, "failed to push to repo")
 	}
 
-	defer cr.gitClient.Close(cr.clusterFilePath, logger)
+	defer cr.gitClient.Close(cr.tempDir, logger)
 
 	return nil
 }
@@ -173,7 +173,7 @@ func (cr *ClusterRegister) deregisterClusterFromArgocd() error {
 		return errors.Wrap(err, "failed to push to repo")
 	}
 
-	defer cr.gitClient.Close(cr.clusterFilePath, logger)
+	defer cr.gitClient.Close(cr.tempDir, logger)
 
 	return nil
 }
