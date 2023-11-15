@@ -483,7 +483,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
 
-	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
+	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
 		logger.Debug("Creating or updating Mattermost installation SLI")
 		err = prometheus.CreateOrUpdateInstallationSLI(clusterInstallation, k8sClient, installationName, logger)
 		if err != nil {
