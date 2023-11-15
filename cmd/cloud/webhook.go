@@ -147,7 +147,7 @@ func executeWebhookListCmd(flags webhookListFlag) error {
 	if flags.outputToTable {
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		table.SetHeader([]string{"ID", "OWNER", "URL", "HEADERS"})
+		table.SetHeader([]string{"ID", "OWNER", "URL", "HTTP HEADERS"})
 
 		for _, webhook := range webhooks {
 			table.Append([]string{webhook.ID, webhook.OwnerID, webhook.URL, fmt.Sprintf("%d", webhook.Headers.Count())})
