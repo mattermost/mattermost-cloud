@@ -4,7 +4,10 @@
 
 package model
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type IngressAnnotations struct {
 	TLSACME              string
@@ -94,4 +97,29 @@ func (ia *IngressAnnotations) SetDefaults() {
 
 func (ia *IngressAnnotations) SetHibernatingDefaults() {
 	ia.ConfigurationSnippet = "return 410;"
+}
+
+func ConfigureIngressAnnotations(whitelist []string, existingSnippet string) *IngressAnnotations {
+	// Create the allow directives for each IP in the whitelist
+	var allowDirectivesBuilder strings.Builder
+	for _, ip := range whitelist {
+		if ip != "" { // Ensuring that the IP is not empty
+			allowDirectivesBuilder.WriteString(fmt.Sprintf("allow %s;\n", ip))
+		}
+	}
+
+	// Append the new whitelist logic to the existing configuration snippet
+	configSnippet := existingSnippet + "\n" + allowDirectivesBuilder.String() + `
+        deny all;
+        error_page 403 =419 @custom;
+        location @custom {
+            return 419;
+        }
+    `
+
+	// Setting up the IngressAnnotations struct
+	ia := &IngressAnnotations{
+		ConfigurationSnippet: configSnippet,
+	}
+	return ia
 }
