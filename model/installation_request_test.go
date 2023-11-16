@@ -498,20 +498,31 @@ func TestMergeNewIngressSourceRangesWithExisting(t *testing.T) {
 	sortAllowedIPRanges(mergedRanges)
 	assert.Equal(t, expectedRanges, *mergedRanges)
 
-	// Test merging with nil patchAllowedRanges
-	patchInstallationRequest.AllowedIPRanges = nil
-	mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
-	assert.NoError(t, err)
-	sortAllowedIPRanges(&allowedRanges)
-	sortAllowedIPRanges(mergedRanges)
-	assert.Equal(t, allowedRanges, *mergedRanges)
+	t.Run("Test merging with nil patchAllowedRanges", func(t *testing.T) {
+		patchInstallationRequest.AllowedIPRanges = nil
+		mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
+		assert.NoError(t, err)
+		sortAllowedIPRanges(&allowedRanges)
+		sortAllowedIPRanges(mergedRanges)
+		assert.Equal(t, allowedRanges, *mergedRanges)
+	})
 
-	// Test merging with invalid CIDR block
-	patchAllowedRanges[0].CIDRBlock = "invalid"
-	patchInstallationRequest.AllowedIPRanges = &patchAllowedRanges
-	mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
-	assert.Error(t, err)
-	assert.Nil(t, mergedRanges)
+	t.Run("Test merging with invalid CIDR block", func(t *testing.T) {
+		patchAllowedRanges[0].CIDRBlock = "invalid"
+		patchInstallationRequest.AllowedIPRanges = &patchAllowedRanges
+		mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
+		assert.Error(t, err)
+		assert.Nil(t, mergedRanges)
+	})
+
+	t.Run("Test merging with nil installation.AllowedIPRanges", func(t *testing.T) {
+		installation.AllowedIPRanges = nil
+		mergedRanges, err = patchInstallationRequest.MergeNewIngressSourceRangesWithExisting(installation)
+		assert.NoError(t, err)
+		sortAllowedIPRanges(&patchAllowedRanges)
+		sortAllowedIPRanges(mergedRanges)
+		assert.Equal(t, patchAllowedRanges, *mergedRanges)
+	})
 }
 
 func TestPatchInstallationRequestApply(t *testing.T) {
