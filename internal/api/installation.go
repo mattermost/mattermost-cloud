@@ -52,6 +52,7 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	// DNS manipulation
 	installationRouter.Handle("/dns", addContext(handleAddDNSRecord)).Methods("POST")
 	installationRouter.Handle("/dns/{installationDNS}/set-primary", addContext(handleSetDomainNamePrimary)).Methods("POST")
+	installationRouter.Handle("/dns/{installationDNS}", addContext(handleDeleteDNSRecord)).Methods("DELETE")
 }
 
 // handleGetInstallation responds to GET /api/installation/{installation}, returning the installation in question.

@@ -18,6 +18,7 @@ func newCmdInstallationDNS() *cobra.Command {
 
 	cmd.AddCommand(newCmdInstallationDNSAdd())
 	cmd.AddCommand(newCmdInstallationDNSSetPrimary())
+	cmd.AddCommand(newCmdInstallationDNSDelete())
 
 	return cmd
 }
@@ -76,6 +77,38 @@ func newCmdInstallationDNSSetPrimary() *cobra.Command {
 			installation, err := client.SetInstallationDomainPrimary(flags.installationID, flags.domainNameID)
 			if err != nil {
 				return errors.Wrap(err, "failed to set installation domain primary")
+			}
+
+			if err = printJSON(installation); err != nil {
+				return errors.Wrap(err, "failed to print response")
+			}
+
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdInstallationDNSDelete() *cobra.Command {
+	var flags installationDNSDeleteFlags
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete an existing installation domain name.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			client := model.NewClient(flags.serverAddress)
+
+			installation, err := client.DeleteInstallationDNS(flags.installationID, flags.domainNameID)
+			if err != nil {
+				return errors.Wrap(err, "failed to set delete installation DNS record")
 			}
 
 			if err = printJSON(installation); err != nil {

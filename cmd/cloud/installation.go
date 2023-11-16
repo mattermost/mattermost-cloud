@@ -694,11 +694,6 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 		return nil
 	}
 
-	var dnsName string
-	if len(installation.DNSRecords) > 0 {
-		dnsName = installation.DNSRecords[0].DomainName
-	}
-
 	output := fmt.Sprintf("Installation: %s\n", installation.ID)
 	output += fmt.Sprintf(" ├ Created: %s\n", installation.CreationDateString())
 	output += fmt.Sprintf(" ├ State: %s\n", installation.State)
@@ -708,7 +703,16 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 	case model.InstallationStateDeletionPending:
 		output += fmt.Sprintf(" │ └ Scheduled Deletion: %s\n", installation.DeletionPendingExpiryCompleteTimeString())
 	}
-	output += fmt.Sprintf(" ├ DNS: %s\n", dnsName)
+	output += fmt.Sprintf(" ├ DNS: %s (primary)\n", installation.DNS) //nolint
+	if len(installation.DNSRecords) > 1 {
+		var alternateDNS []string
+		for _, record := range installation.DNSRecords {
+			if !record.IsPrimary {
+				alternateDNS = append(alternateDNS, record.DomainName)
+			}
+		}
+		output += fmt.Sprintf(" │ └ Alternate Domains: %s\n", strings.Join(alternateDNS, ", "))
+	}
 	output += fmt.Sprintf(" ├ Version: %s:%s\n", installation.Image, installation.Version)
 	output += fmt.Sprintf(" ├ Size: %s\n", installation.Size)
 	output += fmt.Sprintf(" ├ Affinity: %s\n", installation.Affinity)

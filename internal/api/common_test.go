@@ -16,6 +16,12 @@ func (s *mockSupervisor) Do() error {
 	return nil
 }
 
+type mockDNSProvider struct{}
+
+func (s *mockDNSProvider) DeleteDNSRecords(customerDNSName []string, logger log.FieldLogger) error {
+	return nil
+}
+
 type mockMetrics struct{}
 
 func (m *mockMetrics) IncrementAPIRequest() {}

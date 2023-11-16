@@ -127,6 +127,7 @@ type Store interface {
 	GetInstallationDNS(id string) (*model.InstallationDNS, error)
 	SwitchPrimaryInstallationDomain(installationID string, installationDNSID string) error
 	GetDNSRecordsForInstallation(installationID string) ([]*model.InstallationDNS, error)
+	DeleteInstallationDNS(installationID, dnsName string) error
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
@@ -156,6 +157,11 @@ type EventProducer interface {
 	ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error
 }
 
+// InstallationDNSProvider allows for domain name management of installations.
+type InstallationDNSProvider interface {
+	DeleteDNSRecords(customerDNSName []string, logger log.FieldLogger) error
+}
+
 // Metrics exposes metrics from API usage.
 type Metrics interface {
 	IncrementAPIRequest()
@@ -172,6 +178,7 @@ type Context struct {
 	DBProvider                        DBProvider
 	EventProducer                     EventProducer
 	AwsClient                         AwsClient
+	DNSProvider                       InstallationDNSProvider
 	Metrics                           Metrics
 	Logger                            log.FieldLogger
 	InstallationDeletionExpiryDefault time.Duration
@@ -188,6 +195,7 @@ func (c *Context) Clone() *Context {
 		DBProvider:                        c.DBProvider,
 		EventProducer:                     c.EventProducer,
 		AwsClient:                         c.AwsClient,
+		DNSProvider:                       c.DNSProvider,
 		Metrics:                           c.Metrics,
 		Logger:                            c.Logger,
 		InstallationDeletionExpiryDefault: c.InstallationDeletionExpiryDefault,

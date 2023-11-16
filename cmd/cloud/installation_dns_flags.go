@@ -13,7 +13,7 @@ type installationDNSAddFlags struct {
 }
 
 func (flags *installationDNSAddFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to add domain to.")
+	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to add domain record to.")
 	command.Flags().StringVar(&flags.dnsName, "domain", "", "Domain name to map to the installation.")
 	_ = command.MarkFlagRequired("installation")
 	_ = command.MarkFlagRequired("domain")
@@ -30,5 +30,17 @@ func (flags *installationDNSSetPrimaryFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.domainNameID, "domain-id", "", "The id of domain name to set as primary.")
 	_ = command.MarkFlagRequired("installation")
 	_ = command.MarkFlagRequired("domain-id")
+}
 
+type installationDNSDeleteFlags struct {
+	clusterFlags
+	installationID string
+	domainNameID   string
+}
+
+func (flags *installationDNSDeleteFlags) addFlags(command *cobra.Command) {
+	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to delete domain record from.")
+	command.Flags().StringVar(&flags.domainNameID, "domain-id", "", "The id of domain name to delete.")
+	_ = command.MarkFlagRequired("installation")
+	_ = command.MarkFlagRequired("domain-id")
 }

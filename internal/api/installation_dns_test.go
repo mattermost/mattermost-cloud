@@ -174,6 +174,12 @@ func Test_SetDomainNamePrimary(t *testing.T) {
 		assert.Contains(t, err.Error(), "404")
 	})
 
+	t.Run("cannot set primary record as primary", func(t *testing.T) {
+		_, err = client.SetInstallationDomainPrimary(installation.ID, installation.DNSRecords[0].ID)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "400")
+	})
+
 	installation, err = client.SetInstallationDomainPrimary(installation.ID, installation.DNSRecords[2].ID)
 	require.NoError(t, err)
 	assert.Equal(t, true, installation.DNSRecords[2].IsPrimary)
@@ -189,4 +195,52 @@ func Test_SetDomainNamePrimary(t *testing.T) {
 		return installationFetched.DNSRecords[i].DomainName < installationFetched.DNSRecords[j].DomainName
 	})
 	assert.Equal(t, installationFetched, installation)
+}
+
+func Test_DeleteInstallationDNS(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
+		DNSProvider:   &mockDNSProvider{},
+		Logger:        logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+	model.SetDeployOperators(true, true)
+
+	client := model.NewClient(ts.URL)
+
+	// Create installation with multiple DNS right away.
+	multiDNSInstallationReq := &model.CreateInstallationRequest{
+		Name:     "dns",
+		DNSNames: []string{"dns.example.com", "dns.dns.com"},
+		OwnerID:  "test",
+	}
+	installation, err := client.CreateInstallation(multiDNSInstallationReq)
+	require.NoError(t, err)
+	installation.State = model.InstallationStateStable
+	err = sqlStore.UpdateInstallationState(installation.Installation)
+	require.NoError(t, err)
+
+	installation, err = client.AddInstallationDNS(installation.ID, &model.AddDNSRecordRequest{
+		DNS: "dns.dns3.com",
+	})
+	require.NoError(t, err)
+	// New domain name should not be primary.
+	assert.Equal(t, false, installation.DNSRecords[2].IsPrimary)
+
+	installation, err = client.DeleteInstallationDNS(installation.ID, installation.DNSRecords[2].ID)
+	require.NoError(t, err)
+	require.Len(t, installation.DNSRecords, 2)
+
+	installation, err = client.DeleteInstallationDNS(installation.ID, installation.DNSRecords[0].ID)
+	require.Error(t, err)
+	require.Nil(t, installation)
 }
