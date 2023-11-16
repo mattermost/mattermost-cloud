@@ -75,7 +75,7 @@ func (gc *Grafana) UpdateGrafanaClusterResizeAnnotation(clusterID string, logger
 	)
 }
 
-// addAllAnnoationsAndLogErrors attempts to create a given annoation for all
+// addAllAnnoationsAndLogErrors attempts to create a given annotation for all
 // configured grafana clients and logs any errors encountered.
 func (gc *Grafana) addAllAnnoationsAndLogErrors(text string, extraTags []string, logger log.FieldLogger) {
 	for i, client := range gc.clients {
@@ -102,7 +102,7 @@ func (gc *Grafana) addGrafanaAnnotation(client *gapi.Client, text string, extraT
 	return nil
 }
 
-// updateAllAnnotationsAndLogErrors attempts to update a given annoation for all
+// updateAllAnnotationsAndLogErrors attempts to update a given annotation for all
 // configured grafana clients and logs any errors encountered.
 func (gc *Grafana) updateAllAnnotationsAndLogErrors(tagFilters []string, logger log.FieldLogger) {
 	for i, client := range gc.clients {
@@ -113,7 +113,7 @@ func (gc *Grafana) updateAllAnnotationsAndLogErrors(tagFilters []string, logger 
 	}
 }
 
-// updateGrafanaAnnotation updates the end time of an existing Grafana annoation.
+// updateGrafanaAnnotation updates the end time of an existing Grafana annotation.
 func updateGrafanaAnnotation(client *gapi.Client, tagFilters []string, logger log.FieldLogger) error {
 	values := url.Values{}
 	for _, filter := range tagFilters {

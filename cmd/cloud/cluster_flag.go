@@ -199,12 +199,14 @@ type clusterUpgradeFlagChanged struct {
 	isVersionChanged        bool
 	isAmiChanged            bool
 	isMaxPodsPerNodeChanged bool
+	isKMSkeyChanged         bool
 }
 
 func (flags *clusterUpgradeFlagChanged) addFlags(command *cobra.Command) {
 	flags.isVersionChanged = command.Flags().Changed("version")
 	flags.isAmiChanged = command.Flags().Changed("ami")
 	flags.isMaxPodsPerNodeChanged = command.Flags().Changed("max-pods-per-node")
+	flags.isKMSkeyChanged = command.Flags().Changed("kms-key-id")
 }
 
 type clusterUpgradeFlags struct {
@@ -215,6 +217,7 @@ type clusterUpgradeFlags struct {
 	version        string
 	ami            string
 	maxPodsPerNode int64
+	kmsKeyId       string
 }
 
 func (flags *clusterUpgradeFlags) addFlags(command *cobra.Command) {
@@ -224,6 +227,7 @@ func (flags *clusterUpgradeFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.version, "version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
 	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI to use for the cluster hosts.")
 	command.Flags().Int64Var(&flags.maxPodsPerNode, "max-pods-per-node", 0, "The maximum number of pods that can run on a single worker node.")
+	command.Flags().StringVar(&flags.kmsKeyId, "kms-key-id", "", "Custom KMS key for enterprise customers.")
 
 	_ = command.MarkFlagRequired("cluster")
 }
@@ -237,6 +241,7 @@ type clusterResizeFlags struct {
 	nodeMinCount     int64
 	nodeMaxCount     int64
 	nodegroups       []string
+	sizeOptions
 }
 
 func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
@@ -248,6 +253,7 @@ func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
 	command.Flags().Int64Var(&flags.nodeMinCount, "size-node-min-count", 0, "The minimum number of k8s worker nodes. Overwrites value from 'size'.")
 	command.Flags().Int64Var(&flags.nodeMaxCount, "size-node-max-count", 0, "The maximum number of k8s worker nodes. Overwrites value from 'size'.")
 	command.Flags().StringSliceVar(&flags.nodegroups, "nodegroups", nil, "The list of nodegroups to resize. Must specify if the cluster has multiple nodegroups.")
+	command.Flags().StringVar(&flags.masterInstanceType, "size-master-instance-type", "", "The instance type describing the k8s master nodes. Overwrites value from 'size'.")
 
 	_ = command.MarkFlagRequired("cluster")
 }

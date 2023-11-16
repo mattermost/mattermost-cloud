@@ -83,6 +83,7 @@ type InstallationFilter struct {
 	State           string
 	DNS             string
 	Name            string
+	DeletionLocked  *bool
 }
 
 type AllowedIPRanges []AllowedIPRange
@@ -93,6 +94,21 @@ type AllowedIPRange struct {
 	Enabled     bool
 	// TODO - necessary?
 	OwnerID string
+}
+
+// Returns boolean true if all rules are disabled, false otherwise
+func (a *AllowedIPRanges) AllRulesAreDisabled() bool {
+	if a == nil || len(*a) == 0 {
+		return true
+	}
+
+	for _, allowedIPRange := range *a {
+		if allowedIPRange.Enabled {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (a AllowedIPRanges) Value() (driver.Value, error) {

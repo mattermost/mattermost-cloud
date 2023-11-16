@@ -6,6 +6,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/url"
@@ -296,6 +297,7 @@ type GetInstallationsRequest struct {
 	OverrideIPRanges            bool
 	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
+	DeletionLocked              *bool
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
@@ -315,6 +317,9 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	}
 	if !request.IncludeGroupConfigOverrides {
 		q.Add("include_group_config_overrides", "false")
+	}
+	if request.DeletionLocked != nil {
+		q.Add("deletion_locked", fmt.Sprintf("%t", *request.DeletionLocked))
 	}
 	request.Paging.AddToQuery(q)
 
@@ -469,6 +474,11 @@ func (p *PatchInstallationDeletionRequest) Apply(installation *Installation) boo
 func (p *PatchInstallationRequest) MergeNewIngressSourceRangesWithExisting(installation *Installation) (*AllowedIPRanges, error) {
 	if p.AllowedIPRanges == nil {
 		return installation.AllowedIPRanges, nil
+	}
+
+	// If the installation.AllowedIPRanges is nil, then we can just return the patchAllowedRanges
+	if installation.AllowedIPRanges == nil {
+		return p.AllowedIPRanges, nil
 	}
 
 	allowedRanges := *installation.AllowedIPRanges

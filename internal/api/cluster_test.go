@@ -771,6 +771,33 @@ func TestUpgradeCluster(t *testing.T) {
 		assert.Nil(t, clusterResp)
 	})
 
+	t.Run("while stable, to add valid custom KMS", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
+
+		kms_key_id := "arn:aws:kms:us-east-1:8682519362148:key/01f0d25f-24b9-41b1-be98-927d486adf7d"
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{KmsKeyId: &kms_key_id})
+		require.NoError(t, errTest)
+		assert.NotNil(t, clusterResp)
+
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster2.State)
+		assert.Equal(t, kms_key_id, cluster2.ProvisionerMetadataKops.ChangeRequest.KmsKeyId)
+		assert.Empty(t, cluster2.ProvisionerMetadataKops.AMI)
+	})
+
+	t.Run("while stable, to invalid custom KMS", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
+
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{KmsKeyId: sToP("invalid")})
+		require.EqualError(t, errTest, "failed with status code 400")
+		assert.Nil(t, clusterResp)
+	})
+
 	t.Run("while stable, to valid version and new AMI", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
@@ -1046,6 +1073,20 @@ func TestResizeCluster(t *testing.T) {
 		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
 		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
+	})
+
+	t.Run("resize master instance type of eks cluster fails", func(t *testing.T) {
+		cluster1.Provisioner = model.ProvisionerEKS
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
+
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{
+			MasterInstanceType: sToP("test4"),
+		})
+
+		require.EqualError(t, errTest, "failed with status code 400")
+		assert.Nil(t, clusterResp)
+
 	})
 }
 

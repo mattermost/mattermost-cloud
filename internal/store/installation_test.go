@@ -45,16 +45,17 @@ func TestInstallations(t *testing.T) {
 	annotations := []*model.Annotation{{Name: "annotation1"}, {Name: "annotation2"}}
 
 	installation1 := &model.Installation{
-		Name:      "test1",
-		OwnerID:   ownerID1,
-		Version:   "version",
-		Database:  model.InstallationDatabaseMysqlOperator,
-		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
-		Affinity:  model.InstallationAffinityIsolated,
-		GroupID:   &groupID1,
-		CRVersion: model.V1betaCRVersion,
-		State:     model.InstallationStateCreationRequested,
+		Name:           "test1",
+		OwnerID:        ownerID1,
+		Version:        "version",
+		Database:       model.InstallationDatabaseMysqlOperator,
+		Filestore:      model.InstallationFilestoreMinioOperator,
+		Size:           mmv1alpha1.Size100String,
+		Affinity:       model.InstallationAffinityIsolated,
+		GroupID:        &groupID1,
+		CRVersion:      model.V1betaCRVersion,
+		State:          model.InstallationStateCreationRequested,
+		DeletionLocked: true,
 		PriorityEnv: model.EnvVarMap{
 			"V1": model.EnvVar{
 				Value: "test",
@@ -357,6 +358,22 @@ func TestInstallations(t *testing.T) {
 				Name:   "test1",
 			},
 			[]*model.Installation{installation1},
+		},
+		{
+			"deletion locked true",
+			&model.InstallationFilter{
+				Paging:         model.AllPagesNotDeleted(),
+				DeletionLocked: bToP(true),
+			},
+			[]*model.Installation{installation1},
+		},
+		{
+			"deletion locked falise",
+			&model.InstallationFilter{
+				Paging:         model.AllPagesNotDeleted(),
+				DeletionLocked: bToP(false),
+			},
+			[]*model.Installation{installation2, installation3},
 		},
 	}
 
@@ -1291,4 +1308,8 @@ func fixDNSRecords(num int) []*model.InstallationDNS {
 	return []*model.InstallationDNS{
 		{DomainName: fmt.Sprintf("dns-%d.example.com", num)},
 	}
+}
+
+func bToP(b bool) *bool {
+	return &b
 }

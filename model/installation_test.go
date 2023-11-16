@@ -571,3 +571,37 @@ func TestAllowedIPRangesAreValid(t *testing.T) {
 	var nilIPRanges *AllowedIPRanges
 	assert.True(t, nilIPRanges.AreValid())
 }
+
+func TestAllowedIPRangesAllRulesAreDisabled(t *testing.T) {
+	t.Run("returns true when AllowedIPRanges is nil", func(t *testing.T) {
+		var a *AllowedIPRanges
+
+		actual := a.AllRulesAreDisabled()
+
+		require.True(t, actual)
+	})
+
+	t.Run("returns true when all rules are disabled", func(t *testing.T) {
+		a := AllowedIPRanges{
+			{Enabled: false},
+			{Enabled: false},
+			{Enabled: false},
+		}
+
+		actual := a.AllRulesAreDisabled()
+
+		require.True(t, actual)
+	})
+
+	t.Run("returns false when at least one rule is enabled", func(t *testing.T) {
+		a := AllowedIPRanges{
+			{Enabled: false},
+			{Enabled: true},
+			{Enabled: false},
+		}
+
+		actual := a.AllRulesAreDisabled()
+
+		require.False(t, actual)
+	})
+}

@@ -144,11 +144,12 @@ func TestGetInstallations(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 
 		installation2 := &model.Installation{
-			OwnerID:  ownerID2,
-			Version:  "version",
-			Name:     "dns2.example",
-			Affinity: model.InstallationAffinityIsolated,
-			State:    model.InstallationStateCreationRequested,
+			OwnerID:        ownerID2,
+			Version:        "version",
+			Name:           "dns2.example",
+			Affinity:       model.InstallationAffinityIsolated,
+			State:          model.InstallationStateCreationRequested,
+			DeletionLocked: true,
 		}
 		err = sqlStore.CreateInstallation(installation2, nil, nil)
 		require.NoError(t, err)
@@ -305,6 +306,22 @@ func TestGetInstallations(t *testing.T) {
 						Name:   "dns",
 					},
 					[]*model.Installation{installation1},
+				},
+				{
+					"filter by deletion-locked true",
+					&model.GetInstallationsRequest{
+						Paging:         model.AllPagesNotDeleted(),
+						DeletionLocked: bToP(true),
+					},
+					[]*model.Installation{installation2},
+				},
+				{
+					"filter by deletion-locked false",
+					&model.GetInstallationsRequest{
+						Paging:         model.AllPagesNotDeleted(),
+						DeletionLocked: bToP(false),
+					},
+					[]*model.Installation{installation1, installation3},
 				},
 			}
 

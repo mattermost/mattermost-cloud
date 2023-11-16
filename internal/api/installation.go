@@ -101,13 +101,21 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	deletionLocked, err := parseDeletionLocked(r.URL)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to parse deletion_locked parameters")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	filter := &model.InstallationFilter{
-		OwnerID: r.URL.Query().Get("owner"),
-		GroupID: r.URL.Query().Get("group"),
-		State:   r.URL.Query().Get("state"),
-		Paging:  paging,
-		DNS:     r.URL.Query().Get("dns_name"),
-		Name:    r.URL.Query().Get("name"),
+		OwnerID:        r.URL.Query().Get("owner"),
+		GroupID:        r.URL.Query().Get("group"),
+		State:          r.URL.Query().Get("state"),
+		DNS:            r.URL.Query().Get("dns_name"),
+		Name:           r.URL.Query().Get("name"),
+		DeletionLocked: deletionLocked,
+		Paging:         paging,
 	}
 
 	installations, err := c.Store.GetInstallationDTOs(filter, includeGroupConfig, includeGroupConfigOverrides)

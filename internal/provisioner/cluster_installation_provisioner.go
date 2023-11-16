@@ -474,10 +474,8 @@ func (provisioner Provisioner) updateClusterInstallation(
 	// Just to be sure, for the update we reset deprecated fields.
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
-	annotations := mattermost.Spec.Ingress.Annotations
-	if installation.AllowedIPRanges != nil && len(*installation.AllowedIPRanges) > 0 {
-		annotations = addInternalSourceRanges(annotations, installation.AllowedIPRanges.ToAnnotationString(), provisioner.params.InternalIPRanges)
-	}
+	annotations := getIngressAnnotations()
+	addSourceRangeWhitelistToAnnotations(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
@@ -485,7 +483,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
 
-	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
+	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
 		logger.Debug("Creating or updating Mattermost installation SLI")
 		err = prometheus.CreateOrUpdateInstallationSLI(clusterInstallation, k8sClient, installationName, logger)
 		if err != nil {
@@ -831,15 +829,15 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, insta
 	mattermost.Spec.Replicas = int32Ptr(0)
 	mattermost.Spec.Size = ""
 	if mattermost.Spec.Ingress != nil { // In case Installation was not yet updated and still uses old Ingress spec.
-		mattermost.Spec.Ingress.Annotations = getHibernatingIngressAnnotations()
+		mattermost.Spec.Ingress.Annotations = getHibernatingIngressAnnotations().ToMap()
 	} else {
-		mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
+		mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations().ToMap()
 	}
 
 	mattermost.Spec.ResourceLabels = clusterInstallationHibernatedLabels(installation, clusterInstallation)
 }
 
-func makeIngressSpec(installationDNS []*model.InstallationDNS, annotations map[string]string) *mmv1beta1.Ingress {
+func makeIngressSpec(installationDNS []*model.InstallationDNS, annotations *model.IngressAnnotations) *mmv1beta1.Ingress {
 	primaryRecord := installationDNS[0]
 	for _, rec := range installationDNS {
 		if rec.IsPrimary {
@@ -853,7 +851,7 @@ func makeIngressSpec(installationDNS []*model.InstallationDNS, annotations map[s
 		Enabled:      true,
 		Host:         primaryRecord.DomainName,
 		Hosts:        mapDomains(installationDNS),
-		Annotations:  annotations,
+		Annotations:  annotations.ToMap(),
 		IngressClass: &ingressClass,
 	}
 }
@@ -1050,57 +1048,41 @@ func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVa
 }
 
 // getIngressAnnotations returns ingress annotations used by Mattermost installations.
-func getIngressAnnotations() map[string]string {
-	return map[string]string{
-		"kubernetes.io/tls-acme":                               "true",
-		"nginx.ingress.kubernetes.io/proxy-buffering":          "on",
-		"nginx.ingress.kubernetes.io/proxy-body-size":          "100m",
-		"nginx.ingress.kubernetes.io/proxy-send-timeout":       "600",
-		"nginx.ingress.kubernetes.io/proxy-read-timeout":       "600",
-		"nginx.ingress.kubernetes.io/proxy-max-temp-file-size": "0",
-		"nginx.ingress.kubernetes.io/ssl-redirect":             "true",
-		"nginx.ingress.kubernetes.io/configuration-snippet": `
-				  proxy_force_ranges on;
-				  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
-		"nginx.org/server-snippets": "gzip on;",
-	}
+func getIngressAnnotations() *model.IngressAnnotations {
+	annotations := &model.IngressAnnotations{}
+	annotations.SetDefaults()
+	return annotations
 }
 
 // getHibernatingIngressAnnotations returns ingress annotations used by
 // hibernating Mattermost installations.
-func getHibernatingIngressAnnotations() map[string]string {
-	annotations := getIngressAnnotations()
-	annotations["nginx.ingress.kubernetes.io/configuration-snippet"] = "return 410;"
-
+func getHibernatingIngressAnnotations() *model.IngressAnnotations {
+	annotations := &model.IngressAnnotations{}
+	annotations.SetHibernatingDefaults()
 	return annotations
 }
 
-func addInternalSourceRanges(annotations map[string]string, allowedIPRanges string, internalIPRanges string) map[string]string {
+func addSourceRangeWhitelistToAnnotations(annotations *model.IngressAnnotations, allowedIPRanges *model.AllowedIPRanges, internalIPRanges []string) {
+	// If all allowedIPRanges are disabled we don't continue so we don't unintentionally lock the workspace to internal traffic only
+	if allowedIPRanges.AllRulesAreDisabled() {
+		return
+	}
 
-	existingRanges := make([]string, 0)
+	var allIPRanges []string
 
-	if allowedIPRanges != "" {
-		ips := strings.Split(allowedIPRanges, ",")
-		for _, ip := range ips {
-			if !common.Contains(existingRanges, ip) {
-				existingRanges = append(existingRanges, ip)
-			}
+	for _, entry := range *allowedIPRanges {
+		if !common.Contains(allIPRanges, entry.CIDRBlock) && entry.Enabled {
+			allIPRanges = append(allIPRanges, entry.CIDRBlock)
 		}
 	}
 
-	if internalIPRanges != "" {
-		ips := strings.Split(internalIPRanges, ",")
-		for _, ip := range ips {
-			if !common.Contains(existingRanges, ip) {
-				existingRanges = append(existingRanges, ip)
-			}
+	for _, entry := range internalIPRanges {
+		if !common.Contains(allIPRanges, entry) {
+			allIPRanges = append(allIPRanges, entry)
 		}
 	}
-	allowiplistRange := strings.Join(existingRanges, ",")
-	allowiplistRange = strings.TrimPrefix(allowiplistRange, ",")
-	annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = allowiplistRange
 
-	return annotations
+	annotations.WhitelistSourceRange = allIPRanges
 }
 
 func int32Ptr(i int) *int32 {
