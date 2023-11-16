@@ -1,6 +1,7 @@
 package model_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -168,4 +169,25 @@ func TestIngressAnnotationsSetHibernatingDefaults(t *testing.T) {
 
 		require.Equal(t, expected, ia)
 	})
+}
+
+func TestConfigureIngressAnnotations(t *testing.T) {
+	whitelist := []string{"123.456.78.90", "98.76.54.32"}
+	existingSnippet := "proxy_buffer_size 128k;"
+
+	annotations := model.ConfigureIngressAnnotations(whitelist, existingSnippet)
+
+	if !strings.Contains(annotations.ConfigurationSnippet, existingSnippet) {
+		t.Errorf("Existing configuration snippet was not included")
+	}
+
+	for _, ip := range whitelist {
+		if !strings.Contains(annotations.ConfigurationSnippet, "allow "+ip+";") {
+			t.Errorf("Whitelist IP %s was not included correctly", ip)
+		}
+	}
+
+	if !strings.Contains(annotations.ConfigurationSnippet, "return 419;") {
+		t.Errorf("Custom return code logic was not included")
+	}
 }
