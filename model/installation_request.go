@@ -476,6 +476,11 @@ func (p *PatchInstallationRequest) MergeNewIngressSourceRangesWithExisting(insta
 		return installation.AllowedIPRanges, nil
 	}
 
+	// If the installation.AllowedIPRanges is nil, then we can just return the patchAllowedRanges
+	if installation.AllowedIPRanges == nil {
+		return p.AllowedIPRanges, nil
+	}
+
 	allowedRanges := *installation.AllowedIPRanges
 	patchAllowedRanges := *p.AllowedIPRanges
 
