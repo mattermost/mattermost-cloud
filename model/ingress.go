@@ -103,19 +103,15 @@ func ConfigureIngressAnnotations(whitelist []string, existingSnippet string) *In
 	// Create the allow directives for each IP in the whitelist
 	var allowDirectivesBuilder strings.Builder
 	for _, ip := range whitelist {
-		if ip != "" { // Ensuring that the IP is not empty
+		if ip != "" {
 			allowDirectivesBuilder.WriteString(fmt.Sprintf("allow %s;\n", ip))
 		}
 	}
 
-	// Append the new whitelist logic to the existing configuration snippet
 	configSnippet := existingSnippet + "\n" + allowDirectivesBuilder.String() + `
-        deny all;
-        error_page 403 =419 @custom;
-        location @custom {
-            return 419;
-        }
-    `
+       deny all;
+       error_page 403 =419 /custom_419_page;
+   `
 
 	// Setting up the IngressAnnotations struct
 	ia := &IngressAnnotations{

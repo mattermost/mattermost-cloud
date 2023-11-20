@@ -6,72 +6,12 @@ package provisioner
 
 import (
 	"fmt"
+	"github.com/mattermost/mattermost-cloud/model"
 	"reflect"
 	"strings"
-	"testing"
-
-	"github.com/mattermost/mattermost-cloud/model"
 )
+import "testing"
 
-//	func TestAddSourceRangeWhitelistToAnnotations(t *testing.T) {
-//		t.Run("nil allowed ranges, blank internal ranges", func(t *testing.T) {
-//			annotations := getIngressAnnotations()
-//			addSourceRangeWhitelistToAnnotations(annotations, nil, []string{""})
-//			require.Equal(t, getIngressAnnotations(), annotations)
-//		})
-//
-//		t.Run("nil allowed ranges, internal ranges", func(t *testing.T) {
-//			annotations := getIngressAnnotations()
-//			addSourceRangeWhitelistToAnnotations(annotations, nil, []string{"2.2.2.2/24"})
-//			require.Equal(t, getIngressAnnotations(), annotations)
-//		})
-//
-//		t.Run("allowed ranges, blank internal ranges", func(t *testing.T) {
-//			annotations := getIngressAnnotations()
-//			allowedRanges := &model.AllowedIPRanges{{CIDRBlock: "1.1.1.1/24", Enabled: true}}
-//			addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, nil)
-//			require.Equal(t, []string{"1.1.1.1/24"}, annotations.WhitelistSourceRange)
-//			expectedAnnotations := getIngressAnnotations()
-//			expectedAnnotations.WhitelistSourceRange = []string{"1.1.1.1/24"}
-//			require.Equal(t, annotations, expectedAnnotations)
-//		})
-//
-//		t.Run("allowed range, internal range", func(t *testing.T) {
-//			annotations := getIngressAnnotations()
-//			allowedRanges := &model.AllowedIPRanges{{CIDRBlock: "1.1.1.1/24", Enabled: true}}
-//			addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, []string{"2.2.2.2/24"})
-//			require.Equal(t, []string{"1.1.1.1/24", "2.2.2.2/24"}, annotations.WhitelistSourceRange)
-//			expectedAnnotations := getIngressAnnotations()
-//			expectedAnnotations.WhitelistSourceRange = []string{"1.1.1.1/24", "2.2.2.2/24"}
-//			require.Equal(t, annotations, expectedAnnotations)
-//		})
-//
-//		t.Run("multiple of both ranges", func(t *testing.T) {
-//			annotations := getIngressAnnotations()
-//			allowedRanges := &model.AllowedIPRanges{
-//				{CIDRBlock: "1.1.1.1/24", Enabled: true},
-//				{CIDRBlock: "1.1.1.2/24", Enabled: true},
-//			}
-//			addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, []string{"2.2.2.2/24", "2.2.2.3/24"})
-//			require.Equal(t, []string{"1.1.1.1/24", "1.1.1.2/24", "2.2.2.2/24", "2.2.2.3/24"}, annotations.WhitelistSourceRange)
-//			expectedAnnotations := getIngressAnnotations()
-//			expectedAnnotations.WhitelistSourceRange = []string{"1.1.1.1/24", "1.1.1.2/24", "2.2.2.2/24", "2.2.2.3/24"}
-//			require.Equal(t, annotations, expectedAnnotations)
-//		})
-//
-//		t.Run("multiple of both ranges, some disabled allowed ranges", func(t *testing.T) {
-//			annotations := getIngressAnnotations()
-//			allowedRanges := &model.AllowedIPRanges{
-//				{CIDRBlock: "1.1.1.1/24", Enabled: true},
-//				{CIDRBlock: "1.1.1.2/24", Enabled: false},
-//			}
-//			addSourceRangeWhitelistToAnnotations(annotations, allowedRanges, []string{"2.2.2.2/24", "2.2.2.3/24"})
-//			require.Equal(t, []string{"1.1.1.1/24", "2.2.2.2/24", "2.2.2.3/24"}, annotations.WhitelistSourceRange)
-//			expectedAnnotations := getIngressAnnotations()
-//			expectedAnnotations.WhitelistSourceRange = []string{"1.1.1.1/24", "2.2.2.2/24", "2.2.2.3/24"}
-//			require.Equal(t, annotations, expectedAnnotations)
-//		})
-//	}
 func TestAddSourceRangeWhitelistToAnnotations_WhitelistLogic(t *testing.T) {
 	annotations := &model.IngressAnnotations{}
 	allowedIPRanges := &model.AllowedIPRanges{
@@ -88,14 +28,17 @@ func TestAddSourceRangeWhitelistToAnnotations_WhitelistLogic(t *testing.T) {
 		t.Errorf("Expected WhitelistSourceRange to be %v, got %v", expectedIPs, annotations.WhitelistSourceRange)
 	}
 
-	// Check if ConfigurationSnippet contains the correct 'allow' directives and custom 419 logic
+	// Check if ConfigurationSnippet contains the correct 'allow' directives
 	for _, ip := range expectedIPs {
 		if !strings.Contains(annotations.ConfigurationSnippet, fmt.Sprintf("allow %s;", ip)) {
 			t.Errorf("ConfigurationSnippet missing allow directive for %s", ip)
 		}
 	}
-	if !strings.Contains(annotations.ConfigurationSnippet, "return 419;") {
-		t.Errorf("ConfigurationSnippet missing custom 419 logic")
+
+	// Check if the custom logic for handling a 419 status code is correctly added
+	expectedErrorPageDirective := "error_page 403 =419 /custom_419_page;"
+	if !strings.Contains(annotations.ConfigurationSnippet, expectedErrorPageDirective) {
+		t.Errorf("Expected to find '%s' in ConfigurationSnippet, got %s", expectedErrorPageDirective, annotations.ConfigurationSnippet)
 	}
 }
 
@@ -114,7 +57,6 @@ func TestAddSourceRangeWhitelistToAnnotations_ExistingConfigPreservation(t *test
 		t.Errorf("Existing configuration was not preserved in ConfigurationSnippet")
 	}
 }
-
 func TestAddSourceRangeWhitelistToAnnotations_AllRulesDisabled(t *testing.T) {
 	annotations := &model.IngressAnnotations{}
 	allowedIPRanges := &model.AllowedIPRanges{
