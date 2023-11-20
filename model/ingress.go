@@ -108,14 +108,20 @@ func ConfigureIngressAnnotations(whitelist []string, existingSnippet string) *In
 		}
 	}
 
-	configSnippet := existingSnippet + "\n" + allowDirectivesBuilder.String() + `
+    // Build the configSnippet using strings.Builder
+    configSnippetBuilder := strings.Builder{}
+    configSnippetBuilder.WriteString(existingSnippet)
+    configSnippetBuilder.WriteString("\n")
+    configSnippetBuilder.WriteString(allowDirectivesBuilder.String())
+    configSnippetBuilder.WriteString(`
        deny all;
        error_page 403 =419 /custom_419_page;
-   `
+   `)
+    configSnippet := configSnippetBuilder.String()
 
-	// Setting up the IngressAnnotations struct
-	ia := &IngressAnnotations{
-		ConfigurationSnippet: configSnippet,
-	}
-	return ia
+    // Setting up the IngressAnnotations struct
+    ia := &IngressAnnotations{
+        ConfigurationSnippet: configSnippet,
+    }
+    return ia
 }
