@@ -1062,29 +1062,6 @@ func getHibernatingIngressAnnotations() *model.IngressAnnotations {
 	return annotations
 }
 
-//func addSourceRangeWhitelistToAnnotations(annotations *model.IngressAnnotations, allowedIPRanges *model.AllowedIPRanges, internalIPRanges []string) {
-//	// If all allowedIPRanges are disabled we don't continue so we don't unintentionally lock the workspace to internal traffic only
-//	if allowedIPRanges.AllRulesAreDisabled() {
-//		return
-//	}
-//
-//	var allIPRanges []string
-//
-//	for _, entry := range *allowedIPRanges {
-//		if !common.Contains(allIPRanges, entry.CIDRBlock) && entry.Enabled {
-//			allIPRanges = append(allIPRanges, entry.CIDRBlock)
-//		}
-//	}
-//
-//	for _, entry := range internalIPRanges {
-//		if !common.Contains(allIPRanges, entry) {
-//			allIPRanges = append(allIPRanges, entry)
-//		}
-//	}
-//
-//	annotations.WhitelistSourceRange = allIPRanges
-//}
-
 func addSourceRangeWhitelistToAnnotations(annotations *model.IngressAnnotations, allowedIPRanges *model.AllowedIPRanges, internalIPRanges []string) {
 	// If all allowedIPRanges are disabled, we don't continue, so we don't unintentionally lock the workspace to internal traffic only
 	if allowedIPRanges.AllRulesAreDisabled() {
