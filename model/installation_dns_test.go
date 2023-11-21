@@ -16,29 +16,40 @@ func TestAddInstallationDNS_Validate(t *testing.T) {
 		description      string
 		isError          bool
 		installationName string
+		nameMatch        bool
 		request          *AddDNSRecordRequest
 	}{
 		{
 			description:      "valid DNS",
 			isError:          false,
 			installationName: "my-installation",
+			nameMatch:        true,
 			request:          &AddDNSRecordRequest{DNS: "my-installation.dns.com"},
 		},
 		{
 			description:      "invalid DNS",
 			isError:          true,
 			installationName: "my-installation",
+			nameMatch:        true,
 			request:          &AddDNSRecordRequest{DNS: "my-installation. dns.com"},
 		},
 		{
-			description:      "DNS does not start with installation name",
+			description:      "DNS does not start with installation name, but required",
 			isError:          true,
 			installationName: "my-installation",
+			nameMatch:        true,
+			request:          &AddDNSRecordRequest{DNS: "not-my-installation.dns.com"},
+		},
+		{
+			description:      "DNS does not start with installation name and not required",
+			isError:          false,
+			installationName: "my-installation",
+			nameMatch:        false,
 			request:          &AddDNSRecordRequest{DNS: "not-my-installation.dns.com"},
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			err := testCase.request.Validate(testCase.installationName)
+			err := testCase.request.Validate(testCase.installationName, testCase.nameMatch)
 			if testCase.isError {
 				assert.Error(t, err)
 			} else {

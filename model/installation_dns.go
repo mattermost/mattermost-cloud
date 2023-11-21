@@ -21,19 +21,26 @@ type InstallationDNS struct {
 	DeleteAt       int64
 }
 
+func (dns *InstallationDNS) IsDeleted() bool {
+	return dns.DeleteAt != 0
+}
+
 // AddDNSRecordRequest represents request body for adding domain name to Installation.
 type AddDNSRecordRequest struct {
 	DNS string
 }
 
 // Validate validates AddDNSRecordRequest.
-func (request *AddDNSRecordRequest) Validate(installationName string) error {
+func (request *AddDNSRecordRequest) Validate(installationName string, requireNameMatch bool) error {
 	err := isValidDNS(request.DNS)
 	if err != nil {
 		return errors.Wrap(err, "dns is invalid")
 	}
+	if requireNameMatch {
+		return ensureDNSMatchesName(request.DNS, installationName)
+	}
 
-	return ensureDNSMatchesName(request.DNS, installationName)
+	return nil
 }
 
 // NewAddDNSRecordRequestFromReader will create a AddDNSRecordRequest from an io.Reader with JSON data.

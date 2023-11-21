@@ -421,6 +421,7 @@ func executeServerCmd(flags serverFlags) error {
 		EventProducer:                     eventsProducer,
 		Environment:                       awsClient.GetCloudEnvironmentName(),
 		AwsClient:                         awsClient,
+		DNSProvider:                       dnsManager,
 		Metrics:                           cloudMetrics,
 		InstallationDeletionExpiryDefault: flags.installationDeletionPendingTime,
 		Logger:                            logger,
