@@ -1082,8 +1082,6 @@ func addSourceRangeWhitelistToAnnotations(annotations *model.IngressAnnotations,
 		}
 	}
 
-	annotations.WhitelistSourceRange = allIPRanges
-
 	//update the ConfigurationSnippet
 	updatedAnnotations := model.ConfigureIngressAnnotations(allIPRanges, annotations.ConfigurationSnippet)
 	annotations.ConfigurationSnippet = updatedAnnotations.ConfigurationSnippet

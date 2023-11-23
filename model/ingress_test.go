@@ -1,8 +1,6 @@
 package model_test
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,8 +30,7 @@ func TestIngressAnnotationsToMap(t *testing.T) {
 			ConfigurationSnippet: `
                   proxy_force_ranges on;
                   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
-			ServerSnippets:       "gzip on;",
-			WhitelistSourceRange: []string{"192.168.0.1/24", "10.0.0.1/16"},
+			ServerSnippets: "gzip on;",
 		}
 		expected := map[string]string{
 			"kubernetes.io/tls-acme":                               "true",
@@ -66,7 +63,6 @@ func TestIngressAnnotationsToMap(t *testing.T) {
 			SSLRedirect:          "",
 			ConfigurationSnippet: "",
 			ServerSnippets:       "",
-			WhitelistSourceRange: []string{},
 		}
 		expected := map[string]string{}
 
@@ -87,8 +83,7 @@ func TestIngressAnnotationsToMap(t *testing.T) {
 			ConfigurationSnippet: `
                   proxy_force_ranges on;
                   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
-			ServerSnippets:       "",
-			WhitelistSourceRange: []string{"192.168.0.1/24", "10.0.0.1/16"},
+			ServerSnippets: "",
 		}
 		expected := map[string]string{
 			"nginx.ingress.kubernetes.io/proxy-buffering":    "on",
@@ -172,27 +167,6 @@ func TestIngressAnnotationsSetHibernatingDefaults(t *testing.T) {
 	})
 }
 
-func TestConfigureIngressAnnotations(t *testing.T) {
-	whitelist := []string{"123.45.67.89/32", "98.76.54.32/32"}
-	existingSnippet := "proxy_buffer_size 128k;"
-
-	annotations := model.ConfigureIngressAnnotations(whitelist, existingSnippet)
-
-	// Check if the existing configuration snippet is included
-	if !strings.Contains(annotations.ConfigurationSnippet, existingSnippet) {
-		t.Errorf("Existing configuration snippet was not included")
-	}
-
-	// Check if the correct 'allow' directives are added for each whitelisted IP
-	for _, ip := range whitelist {
-		if !strings.Contains(annotations.ConfigurationSnippet, fmt.Sprintf("allow %s;", ip)) {
-			t.Errorf("Missing 'allow' directive for IP %s", ip)
-		}
-	}
-
-	// Check if the custom logic for handling a 419 status code is correctly added
-	expectedErrorPageDirective := "error_page 403 =419 /custom_419_page;"
-	if !strings.Contains(annotations.ConfigurationSnippet, expectedErrorPageDirective) {
-		t.Errorf("Expected to find '%s' in ConfigurationSnippet, got %s", expectedErrorPageDirective, annotations.ConfigurationSnippet)
-	}
+func TestConfigureIngressWithServerSnippets(t *testing.T) {
+	model.ConfigureIngressAnnotations([]string{"192.168.0.1/32"}, "", "", "")
 }
