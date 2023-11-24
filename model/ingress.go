@@ -17,6 +17,7 @@ type IngressAnnotations struct {
 	ConfigurationSnippet string
 	ServerSnippets       string
 	WhitelistSourceRange []string
+	CustomHttpErrors     []string
 }
 
 func (ia *IngressAnnotations) ToMap() map[string]string {
@@ -56,6 +57,9 @@ func (ia *IngressAnnotations) ToMap() map[string]string {
 	if len(ia.WhitelistSourceRange) > 0 {
 		m["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(ia.WhitelistSourceRange, ",")
 	}
+	if len(ia.CustomHttpErrors) > 0 {
+		m["nginx.ingress.kubernetes.io/custom-http-errors"] = strings.Join(ia.CustomHttpErrors, ",")
+	}
 
 	return m
 }
@@ -89,6 +93,9 @@ func (ia *IngressAnnotations) SetDefaults() {
 	}
 	if ia.ServerSnippets == "" {
 		ia.ServerSnippets = "gzip on;"
+	}
+	if len(ia.CustomHttpErrors) == 0 {
+		ia.CustomHttpErrors = []string{"403"}
 	}
 }
 

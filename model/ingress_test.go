@@ -32,6 +32,7 @@ func TestIngressAnnotationsToMap(t *testing.T) {
                   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
 			ServerSnippets:       "gzip on;",
 			WhitelistSourceRange: []string{"192.168.0.1/24", "10.0.0.1/16"},
+			CustomHttpErrors:     []string{"403"},
 		}
 		expected := map[string]string{
 			"kubernetes.io/tls-acme":                               "true",
@@ -46,6 +47,7 @@ func TestIngressAnnotationsToMap(t *testing.T) {
                   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
 			"nginx.org/server-snippets":                          "gzip on;",
 			"nginx.ingress.kubernetes.io/whitelist-source-range": "192.168.0.1/24,10.0.0.1/16",
+			"nginx.ingress.kubernetes.io/custom-http-errors":     "403",
 		}
 
 		actual := ia.ToMap()
@@ -65,6 +67,7 @@ func TestIngressAnnotationsToMap(t *testing.T) {
 			ConfigurationSnippet: "",
 			ServerSnippets:       "",
 			WhitelistSourceRange: []string{},
+			CustomHttpErrors:     []string{},
 		}
 		expected := map[string]string{}
 
@@ -87,6 +90,7 @@ func TestIngressAnnotationsToMap(t *testing.T) {
                   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
 			ServerSnippets:       "",
 			WhitelistSourceRange: []string{"192.168.0.1/24", "10.0.0.1/16"},
+			CustomHttpErrors:     []string{"403"},
 		}
 		expected := map[string]string{
 			"nginx.ingress.kubernetes.io/proxy-buffering":    "on",
@@ -95,6 +99,7 @@ func TestIngressAnnotationsToMap(t *testing.T) {
                   proxy_force_ranges on;
                   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
 			"nginx.ingress.kubernetes.io/whitelist-source-range": "192.168.0.1/24,10.0.0.1/16",
+			"nginx.ingress.kubernetes.io/custom-http-errors":     "403",
 		}
 
 		actual := ia.ToMap()
@@ -117,7 +122,8 @@ func TestIngressAnnotationsSetDefaults(t *testing.T) {
 			ConfigurationSnippet: `
                   proxy_force_ranges on;
                   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
-			ServerSnippets: "gzip on;",
+			ServerSnippets:   "gzip on;",
+			CustomHttpErrors: []string{"403"},
 		}
 
 		ia.SetDefaults()
@@ -136,6 +142,7 @@ func TestIngressAnnotationsSetDefaults(t *testing.T) {
 			SSLRedirect:          "false",
 			ConfigurationSnippet: "return 404;",
 			ServerSnippets:       "gzip off;",
+			CustomHttpErrors:     []string{"403"},
 		}
 		expected := &model.IngressAnnotations{
 			TLSACME:              "false",
@@ -147,6 +154,7 @@ func TestIngressAnnotationsSetDefaults(t *testing.T) {
 			SSLRedirect:          "false",
 			ConfigurationSnippet: "return 404;",
 			ServerSnippets:       "gzip off;",
+			CustomHttpErrors:     []string{"403"},
 		}
 
 		ia.SetDefaults()
