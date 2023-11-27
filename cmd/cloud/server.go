@@ -237,6 +237,14 @@ func executeServerCmd(flags serverFlags) error {
 		logger.Warn("[DEV] Server is configured to not use cluster VPC claim functionality")
 	}
 
+	if flags.portalURL == "" {
+		return errors.New("portal-url must be set")
+	}
+	os.Setenv("PORTAL_URL", flags.portalURL)
+	if err != nil {
+		return errors.Wrap(err, "Error setting environment variable.")
+	}
+
 	awsConfig, err := awsTools.NewAWSConfig(context.TODO())
 	if err != nil {
 		return errors.Wrap(err, "failed to get aws configuration")
@@ -371,7 +379,7 @@ func executeServerCmd(flags serverFlags) error {
 		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerObj, eventsProducer, logger))
 	}
 
-	// Setup the supervisor to effect any requested changes. It is wrapped in a
+	// Set up the supervisor to effect any requested changes. It is wrapped in a
 	// scheduler to trigger it periodically in addition to being poked by the API
 	// layer.
 	if flags.poll == 0 {

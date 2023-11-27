@@ -286,7 +286,16 @@ func provisionCluster(
 			logger.Infof("Successfully deployed service pod %q", podRunning.GetName())
 		}
 	}
+	nginxNamespace := "nginx"
+	err = ensureNamespaceExists(k8sClient, nginxNamespace)
+	if err != nil {
+		return errors.Wrap(err, "Error ensuring namespace exists")
+	}
 
+	err = createCustomErrorPagesConfigMap(k8sClient, nginxNamespace)
+	if err != nil {
+		return errors.Wrap(err, "Error creating custom error pages ConfigMap")
+	}
 	ugh, err := utility.NewUtilityGroupHandle(params.AllowCIDRRangeList, kubeconfigPath, cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")

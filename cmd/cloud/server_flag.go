@@ -197,6 +197,7 @@ type serverFlags struct {
 	logFilesPerClusterPath   string
 	grafanaURL               string
 	grafanaTokens            []string
+	portalURL                string
 
 	database      string
 	maxSchemas    int64
@@ -225,6 +226,7 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.enableLogFilesPerCluster, "enable-log-files-per-cluster", false, "Store individual log files per cluster.")
 	command.Flags().StringVar(&flags.logFilesPerClusterPath, "log-files-per-cluster-path", "", "Where to store the cluster log files.")
 	command.Flags().StringVar(&flags.grafanaURL, "grafana-url", "", "The URL of a Grafana endpoint to send annotations to.")
+	command.Flags().StringVar(&flags.portalURL, "portal-url", "", "The URL of portal endpoint.")
 	command.Flags().StringSliceVar(&flags.grafanaTokens, "grafana-tokens", []string{""}, "Grafana tokens which will be used with the provided URL")
 	command.MarkFlagsRequiredTogether("enable-log-files-per-cluster", "log-files-per-cluster-path")
 

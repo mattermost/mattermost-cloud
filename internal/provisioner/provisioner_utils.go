@@ -7,6 +7,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -147,7 +148,7 @@ func getClusterResources(kubeconfigPath string, onlySchedulable bool, logger log
 	}, nil
 }
 
-// waitForNamespacesDeleted is used to check when all of the provided namespaces
+// waitForNamespacesDeleted is used to check when all the provided namespaces
 // have been fully terminated.
 func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClient *k8s.KubeClient) error {
 	for {
@@ -173,4 +174,74 @@ func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClien
 			time.Sleep(5 * time.Second)
 		}
 	}
+}
+
+// createCustomErrorPagesConfigMap creates a ConfigMap with custom error pages.
+// The URL in the 403 error page is taken from the PORTAL_URL environment variable.
+func createCustomErrorPagesConfigMap(k8sClient *k8s.KubeClient, namespace string) error {
+	portalURL := os.Getenv("PORTAL_URL")
+	if portalURL == "" {
+		return errors.New("PORTAL_URL environment variable is not set")
+	}
+
+	// ConfigMap data
+	configMapData := map[string]string{
+		"404": `<!DOCTYPE html>
+<html>
+  <head><title>PAGE NOT FOUND</title></head>
+  <body>PAGE NOT FOUND</body>
+</html>`,
+		"503": `<!DOCTYPE html>
+<html>
+  <head><title>CUSTOM SERVICE UNAVAILABLE</title></head>
+  <body>CUSTOM SERVICE UNAVAILABLE</body>
+</html>`,
+		"403": fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta http-equiv="refresh" content="0; url=%s/cloud/inaccessible" />
+    <title>HTML 5 Boilerplate</title>
+</head>
+<body>
+</body>
+</html>`, portalURL),
+	}
+
+	// Create ConfigMap
+	configMap := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "custom-error-pages",
+			Namespace: namespace,
+		},
+		Data: configMapData,
+	}
+
+	_, err := k8sClient.Clientset.CoreV1().ConfigMaps(namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to create ConfigMap")
+	}
+
+	return nil
+}
+
+// ensureNamespaceExists checks if a namespace exists and creates it if it does not.
+func ensureNamespaceExists(k8sClient *k8s.KubeClient, namespace string) error {
+	_, err := k8sClient.Clientset.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+	if k8sErrors.IsNotFound(err) {
+		ns := &v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace,
+			},
+		}
+		_, err = k8sClient.Clientset.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
+		if err != nil {
+			return errors.Wrap(err, "failed to create namespace")
+		}
+	} else if err != nil {
+		return errors.Wrap(err, "failed to get namespace")
+	}
+	return nil
 }
