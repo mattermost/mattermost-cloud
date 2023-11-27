@@ -9,12 +9,14 @@ import (
 
 type Client interface {
 	Checkout(branchName string, logger log.FieldLogger) error
-	Commit(filePath, commitMsg, authorName string, logger log.FieldLogger) error
+	Commit(filePath, commitMsg string, logger log.FieldLogger) error
 	Push(logger log.FieldLogger) error
 	Close(tempDir string, logger log.FieldLogger) error
 }
 
-func NewGitClient(oauthToken, tempDir, remoteURL string) (Client, error) {
+// Git is a wrapper around go-git to provide a simple interface for interacting with git.
+// TODO: Handle concurrent access to the repo.
+func NewGitClient(oauthToken, tempDir, remoteURL, authorName string) (Client, error) {
 	if len(oauthToken) == 0 {
 		return &noopClient{}, errors.New("no git token provided")
 	}
@@ -33,7 +35,8 @@ func NewGitClient(oauthToken, tempDir, remoteURL string) (Client, error) {
 	}
 
 	return &Git{
-		auth: auth,
-		repo: repo,
+		auth:       auth,
+		repo:       repo,
+		authorName: authorName,
 	}, nil
 }

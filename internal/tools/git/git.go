@@ -13,8 +13,9 @@ import (
 )
 
 type Git struct {
-	repo *git.Repository
-	auth http.AuthMethod
+	repo       *git.Repository
+	auth       http.AuthMethod
+	authorName string
 }
 
 func (g *Git) Checkout(branchName string, logger log.FieldLogger) error {
@@ -28,14 +29,14 @@ func (g *Git) Checkout(branchName string, logger log.FieldLogger) error {
 		Force:  true,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "unable to checkout repository to branch: %v\n", branchName)
+		return errors.Wrapf(err, "unable to checkout repository to branch: %v", branchName)
 	}
 	logger.Debugf("Checkout branch %s successfully", branchName)
 
 	return nil
 }
 
-func (g *Git) Commit(filePath, commitMsg, authorName string, logger log.FieldLogger) error {
+func (g *Git) Commit(filePath, commitMsg string, logger log.FieldLogger) error {
 
 	w, err := g.repo.Worktree()
 	if err != nil {
@@ -47,16 +48,16 @@ func (g *Git) Commit(filePath, commitMsg, authorName string, logger log.FieldLog
 		return errors.Wrapf(err, "unable to add file to the worktree: %v", filePath)
 	}
 
-	_, err = w.Commit(commitMsg, &git.CommitOptions{
+	commitSHA, err := w.Commit(commitMsg, &git.CommitOptions{
 		Author: &object.Signature{
-			Name: authorName,
+			Name: g.authorName,
 			When: time.Now(),
 		},
 	})
 	if err != nil {
 		return errors.Wrapf(err, "unable to commit changes to the repository %v:", w.Filesystem.Root())
 	}
-	logger.Debug("Git commit successfully")
+	logger.Debugf("Git commit successfully, sha: %s", commitSHA.String())
 
 	return nil
 }
@@ -65,7 +66,7 @@ func (g *Git) Push(logger log.FieldLogger) error {
 	err := g.repo.Push(&git.PushOptions{
 		Auth:     g.auth,
 		Progress: os.Stdout,
-		Force:    true,
+		//Force:    true,
 	})
 
 	if err != nil {
