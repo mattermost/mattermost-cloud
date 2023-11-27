@@ -347,7 +347,7 @@ func provisionCluster(
 			cluster.UtilityMetadata.ArgocdClusterRegister.Registered = true
 			logger.Infof("Cluster: %s successfully registered in argocd", cluster.ID)
 
-		case cluster.UtilityMetadata.ArgocdClusterRegister.Registered:
+		default:
 			logger.Info("Cluster already registered, skipping argocd cluster register")
 		}
 	default:
