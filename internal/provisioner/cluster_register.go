@@ -45,7 +45,7 @@ func NewClusterRegisterHandle(cluster *model.Cluster, cloudEnvironmentName strin
 
 	gitOpsRepoURL := model.GetGitopsRepoURL()
 	argocdRepoURL := gitOpsRepoURL + gitOpsRepoPath
-	gitClient, err := git.NewGitClient(gitlabOAuthToken, tempDir, argocdRepoURL)
+	gitClient, err := git.NewGitClient(gitlabOAuthToken, tempDir, argocdRepoURL, "Provisioner")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create new git client")
 	}
@@ -66,6 +66,8 @@ func NewClusterRegisterHandle(cluster *model.Cluster, cloudEnvironmentName strin
 func (cr *ClusterRegister) clusterRegister(s3StateStore string) error {
 	logger := cr.logger.WithField("cluster", cr.cluster.ID)
 
+	defer cr.gitClient.Close(cr.tempDir, logger)
+
 	clusterCreds, err := cr.getClusterCreds(s3StateStore)
 	if err != nil {
 		return errors.Wrap(err, "failed to get cluster credentials")
@@ -80,15 +82,13 @@ func (cr *ClusterRegister) clusterRegister(s3StateStore string) error {
 	}
 
 	commitMsg := "Adding new cluster: " + cr.cluster.ID
-	if err = cr.gitClient.Commit(cr.clusterFile, commitMsg, "Provisioner", logger); err != nil {
+	if err = cr.gitClient.Commit(cr.clusterFile, commitMsg, logger); err != nil {
 		return errors.Wrap(err, "failed to commit to repo")
 	}
 
 	if err = cr.gitClient.Push(logger); err != nil {
 		return errors.Wrap(err, "failed to push to repo")
 	}
-
-	defer cr.gitClient.Close(cr.tempDir, logger)
 
 	return nil
 }
@@ -99,8 +99,7 @@ func (cr *ClusterRegister) updateClusterFile(clusterCreds *k8s.KubeconfigCreds) 
 		return errors.Wrap(err, "failed to read cluster file")
 	}
 
-	var argo argocd.Argock8sRegister
-	clusterFile, err := argo.ReadArgoK8sRegistrationFile(clusteFile)
+	clusterFile, err := argocd.ReadArgoK8sRegistrationFile(clusteFile)
 	if err != nil {
 		return errors.Wrap(err, "failed to load cluster registration file into argo struct")
 	}
@@ -120,7 +119,7 @@ func (cr *ClusterRegister) updateClusterFile(clusterCreds *k8s.KubeconfigCreds) 
 		KeyData:   b64.StdEncoding.EncodeToString(clusterCreds.ClientKey),
 	}
 
-	if err = argo.UpdateK8sClusterRegistrationFile(clusterFile, newCluster, cr.clusterFilePath); err != nil {
+	if err = argocd.UpdateK8sClusterRegistrationFile(clusterFile, newCluster, cr.clusterFilePath); err != nil {
 		return errors.Wrap(err, "failed to update cluster registration file")
 	}
 	return nil
@@ -131,7 +130,7 @@ func (cr *ClusterRegister) getClusterCreds(s3StateStore string) (*k8s.Kubeconfig
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create new kops client")
 	}
-	if err = kopsClient.ExportKubecfg(cr.cluster.ProvisionerMetadataKops.Name, "876000h"); err != nil {
+	if err = kopsClient.ExportKubecfg(cr.cluster.ProvisionerMetadataKops.Name); err != nil {
 		return nil, errors.Wrap(err, "failed export kube config")
 	}
 
@@ -145,6 +144,8 @@ func (cr *ClusterRegister) getClusterCreds(s3StateStore string) (*k8s.Kubeconfig
 func (cr *ClusterRegister) deregisterClusterFromArgocd() error {
 	logger := cr.logger.WithField("cluster", cr.cluster.ID)
 
+	defer cr.gitClient.Close(cr.tempDir, logger)
+
 	if err := cr.gitClient.Checkout("main", logger); err != nil {
 		return errors.Wrap(err, "failed to checkout repo")
 	}
@@ -154,26 +155,23 @@ func (cr *ClusterRegister) deregisterClusterFromArgocd() error {
 		return errors.Wrap(err, "failed to read cluster file")
 	}
 
-	var argo argocd.Argock8sRegister
-	argoK8sFile, err := argo.ReadArgoK8sRegistrationFile(clusteFile)
+	argoK8sFile, err := argocd.ReadArgoK8sRegistrationFile(clusteFile)
 	if err != nil {
 		return errors.Wrap(err, "failed to load cluster registration file into argo struct")
 	}
 
-	if err = argo.DeleteK8sClusterFromRegistrationFile(argoK8sFile, cr.clusterName, cr.clusterFilePath); err != nil {
+	if err = argocd.DeleteK8sClusterFromRegistrationFile(argoK8sFile, cr.clusterName, cr.clusterFilePath); err != nil {
 		return errors.Wrap(err, "failed to remove cluster from registration file")
 	}
 
-	commitMsg := "Removing 	cluster: " + cr.cluster.ID
-	if err = cr.gitClient.Commit(cr.clusterFile, commitMsg, "Provisioner", logger); err != nil {
+	commitMsg := "Removing cluster: " + cr.cluster.ID
+	if err = cr.gitClient.Commit(cr.clusterFile, commitMsg, logger); err != nil {
 		return errors.Wrap(err, "failed to commit to repo")
 	}
 
 	if err = cr.gitClient.Push(logger); err != nil {
 		return errors.Wrap(err, "failed to push to repo")
 	}
-
-	defer cr.gitClient.Close(cr.tempDir, logger)
 
 	return nil
 }
