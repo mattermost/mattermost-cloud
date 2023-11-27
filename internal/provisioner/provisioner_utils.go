@@ -245,3 +245,15 @@ func ensureNamespaceExists(k8sClient *k8s.KubeClient, namespace string) error {
 	}
 	return nil
 }
+
+// checkCustomErrorPagesConfigMapExists checks if a ConfigMap with custom error pages exists.
+func checkCustomErrorPagesConfigMapExists(k8sClient *k8s.KubeClient, namespace string) (bool, error) {
+	_, err := k8sClient.Clientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(), "custom-error-pages", metav1.GetOptions{})
+	if k8sErrors.IsNotFound(err) {
+		return false, nil
+	} else if err != nil {
+		return false, errors.Wrap(err, "failed to get ConfigMap")
+	}
+
+	return true, nil
+}

@@ -292,9 +292,15 @@ func provisionCluster(
 		return errors.Wrap(err, "Error ensuring namespace exists")
 	}
 
-	err = createCustomErrorPagesConfigMap(k8sClient, nginxNamespace)
-	if err != nil {
-		return errors.Wrap(err, "Error creating custom error pages ConfigMap")
+	cm, error := checkCustomErrorPagesConfigMapExists(k8sClient, nginxNamespace)
+	if error != nil {
+		return errors.Wrap(error, "Error checking custom error pages ConfigMap exists")
+	}
+	if !cm {
+		err = createCustomErrorPagesConfigMap(k8sClient, nginxNamespace)
+		if err != nil {
+			return errors.Wrap(err, "Error creating custom error pages ConfigMap")
+		}
 	}
 	ugh, err := utility.NewUtilityGroupHandle(params.AllowCIDRRangeList, kubeconfigPath, cluster, awsClient, logger)
 	if err != nil {
