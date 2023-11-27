@@ -27,7 +27,8 @@ type Argock8sRegister struct {
 }
 
 // ReadArgoK8sRegistrationFile take a argocd cluster file and load it into Argock8sRegister struct
-func (a *Argock8sRegister) ReadArgoK8sRegistrationFile(clusterFile []byte) (*Argock8sRegister, error) {
+func ReadArgoK8sRegistrationFile(clusterFile []byte) (*Argock8sRegister, error) {
+	a := &Argock8sRegister{}
 
 	if err := yaml.Unmarshal(clusterFile, a); err != nil {
 		return nil, errors.Wrap(err, "Error unmarshaling Argo k8s cluster YAML definition")
@@ -36,10 +37,10 @@ func (a *Argock8sRegister) ReadArgoK8sRegistrationFile(clusterFile []byte) (*Arg
 }
 
 // UpdateK8sClusterRegistrationFile take a argocd cluster file and Add new Cluster spec
-func (a *Argock8sRegister) UpdateK8sClusterRegistrationFile(cluster *Argock8sRegister, newCluster ArgocdClusterRegisterParameters, filePath string) error {
+func UpdateK8sClusterRegistrationFile(cluster *Argock8sRegister, newCluster ArgocdClusterRegisterParameters, filePath string) error {
 	index := -1
-	for i, cluster := range cluster.Clusters {
-		if cluster.Name == newCluster.Name {
+	for i, clusterValue := range cluster.Clusters {
+		if clusterValue.Name == newCluster.Name {
 			index = i
 			break
 		}
@@ -64,7 +65,7 @@ func (a *Argock8sRegister) UpdateK8sClusterRegistrationFile(cluster *Argock8sReg
 }
 
 // DeleteK8sClusterFromRegistrationFile take a argocd cluster file and delete Cluster from spec
-func (a *Argock8sRegister) DeleteK8sClusterFromRegistrationFile(cluster *Argock8sRegister, clusterName string, filePath string) error {
+func DeleteK8sClusterFromRegistrationFile(cluster *Argock8sRegister, clusterName string, filePath string) error {
 	for k, v := range cluster.Clusters {
 		if v.Name == clusterName {
 			cluster.Clusters = append(cluster.Clusters[:k], cluster.Clusters[k+1:]...)

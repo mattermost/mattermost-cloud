@@ -99,8 +99,7 @@ func (suite *ArgoClusterRegisterTestSuite) TestReadArgoK8sRegistrationFile() {
 	if err != nil {
 		assert.Errorf(suite.T(), err, "failed to read cluster file")
 	}
-	var argo Argock8sRegister
-	readFile, err := argo.ReadArgoK8sRegistrationFile(clusteFile)
+	readFile, err := ReadArgoK8sRegistrationFile(clusteFile)
 	if err != nil {
 		assert.Errorf(suite.T(), err, "Error reading Cluster file")
 	}
@@ -109,14 +108,13 @@ func (suite *ArgoClusterRegisterTestSuite) TestReadArgoK8sRegistrationFile() {
 }
 
 func (suite *ArgoClusterRegisterTestSuite) TestUpdateK8sClusterRegistrationFile() {
-	var argo Argock8sRegister
-	argo.UpdateK8sClusterRegistrationFile(suite.argoK8sFile, *suite.newArgoK8sFile, suite.filePath)
+	UpdateK8sClusterRegistrationFile(suite.argoK8sFile, *suite.newArgoK8sFile, suite.filePath)
 
 	clusteFile, err := os.ReadFile(suite.filePath)
 	if err != nil {
 		assert.Errorf(suite.T(), err, "failed to read cluster file")
 	}
-	readFile, err := argo.ReadArgoK8sRegistrationFile(clusteFile)
+	readFile, err := ReadArgoK8sRegistrationFile(clusteFile)
 	if err != nil {
 		assert.Errorf(suite.T(), err, "Error reading Cluster file")
 	}
