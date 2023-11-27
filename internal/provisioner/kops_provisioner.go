@@ -88,7 +88,7 @@ func (provisioner *KopsProvisioner) getCachedKopsClient(name string, logger log.
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create kops wrapper")
 	}
-	err = kopsClient.ExportKubecfg(name, kopsClient.GetExportKubecfgTTL())
+	err = kopsClient.ExportKubecfg(name)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to export kubecfg")
 	}

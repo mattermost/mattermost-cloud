@@ -76,7 +76,7 @@ func executeWorkbenchClusterCmd(flags workbenchClusterFlag) error {
 		return err
 	}
 
-	if err = kopsClient.ExportKubecfg(cluster.ProvisionerMetadataKops.Name, kopsClient.GetExportKubecfgTTL()); err != nil {
+	if err = kopsClient.ExportKubecfg(cluster.ProvisionerMetadataKops.Name); err != nil {
 		return err
 	}
 
