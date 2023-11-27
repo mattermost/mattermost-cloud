@@ -8,25 +8,25 @@ import (
 type noopClient struct{}
 
 func (gt *noopClient) Checkout(branchName string, logger log.FieldLogger) error {
-	logger.Debug("Git client is not configured; skipping checkout repo")
+	logger.Debug("Git client is not configured; skipping checkout repository")
 
 	return nil
 }
 
-func (gt *noopClient) Commit(filePath, commitMsg, authorName string, logger log.FieldLogger) error {
-	logger.Debug("Git client is not configured; skipping checkout repo")
+func (gt *noopClient) Commit(filePath, commitMsg string, logger log.FieldLogger) error {
+	logger.Debug("Git client is not configured; skipping Commit to the repository")
 
 	return nil
 }
 
 func (gt *noopClient) Push(logger log.FieldLogger) error {
-	logger.Debug("Git client is not configured; skipping checkout repo")
+	logger.Debug("Git client is not configured; skipping Push to the repository")
 
 	return nil
 }
 
 func (gt *noopClient) Close(tempDir string, logger log.FieldLogger) error {
-	logger.Debug("Git client is not configured; skipping checkout repo")
+	logger.Debug("Git client is not configured; skipping Close the repository")
 
 	return nil
 }
