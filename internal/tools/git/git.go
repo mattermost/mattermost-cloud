@@ -66,7 +66,6 @@ func (g *Git) Push(logger log.FieldLogger) error {
 	err := g.repo.Push(&git.PushOptions{
 		Auth:     g.auth,
 		Progress: os.Stdout,
-		//Force:    true,
 	})
 
 	if err != nil {
