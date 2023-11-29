@@ -39,7 +39,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"rtcd":                  {Chart: "1.3.0", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.3.11", ValuesPath: ""},
 				"metrics-server":        {Chart: "3.10.0", ValuesPath: ""},
-				"velero":                {Chart: "3.1.2", ValuesPath: ""},
+				"velero":                {Chart: "5.1.5", ValuesPath: ""},
 				"cloudprober":           {Chart: "0.1.4", ValuesPath: ""},
 			},
 		}
@@ -109,7 +109,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"rtcd":                  {Chart: "1.3.0", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.3.11", ValuesPath: ""},
 				"metrics-server":        {Chart: "3.10.0", ValuesPath: ""},
-				"velero":                {Chart: "3.1.2", ValuesPath: ""},
+				"velero":                {Chart: "5.1.5", ValuesPath: ""},
 				"cloudprober":           {Chart: "0.1.4", ValuesPath: ""},
 			},
 		}, clusterRequest)
