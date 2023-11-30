@@ -91,14 +91,41 @@ func (sqlStore *SQLStore) getDNSRecordsForInstallations(db queryer, installation
 
 // SwitchPrimaryInstallationDomain sets given domain as primary reducing all others to non-primary.
 func (sqlStore *SQLStore) SwitchPrimaryInstallationDomain(installationID string, installationDNSID string) error {
-	query := sq.Update(installationDNSTable).
-		Set("IsPrimary",
-			sq.Case().When(sq.Expr("ID = ?", installationDNSID), "true").Else("false"),
-		).Where("InstallationID = ?", installationID)
+	tx, err := sqlStore.beginTransaction(sqlStore.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
 
-	_, err := sqlStore.execBuilder(sqlStore.db, query)
+	query := sq.Update(installationDNSTable).
+		Set("IsPrimary", "false").
+		Where("installationID = ?", installationID)
+
+	_, err = sqlStore.execBuilder(tx, query)
+	if err != nil {
+		return errors.Wrap(err, "failed to unset primary DNS for installation")
+	}
+
+	query = sq.Update(installationDNSTable).
+		Set("IsPrimary", "true").
+		Where("ID = ?", installationDNSID)
+
+	result, err := sqlStore.execBuilder(tx, query)
 	if err != nil {
 		return errors.Wrap(err, "failed to switch primary DNS")
+	}
+	// Perform validation that exactly one row was updated just in case.
+	count, err := result.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err, "failed to count rows affected on IsPrimary=true update")
+	}
+	if count != 1 {
+		return errors.Errorf("expected exactly 1 row update, but got %d", count)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit transaction")
 	}
 
 	return nil

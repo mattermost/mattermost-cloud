@@ -177,6 +177,17 @@ func TestInstallationDNS(t *testing.T) {
 	assert.Equal(t, true, records[2].IsPrimary)
 	assert.Equal(t, thirdRecord.ID, records[2].ID) // Sanity check
 
+	t.Run("no change when setting invalid DNS as primary", func(t *testing.T) {
+		err = sqlStore.SwitchPrimaryInstallationDomain(installation.ID, "invalid")
+		require.Error(t, err)
+		records, err = sqlStore.GetDNSRecordsForInstallation(installation.ID)
+		require.NoError(t, err)
+		assert.Equal(t, false, records[0].IsPrimary)
+		assert.Equal(t, false, records[1].IsPrimary)
+		assert.Equal(t, true, records[2].IsPrimary)
+		assert.Equal(t, thirdRecord.ID, records[2].ID) // Sanity check
+	})
+
 	record, err := sqlStore.GetInstallationDNS(thirdRecord.ID)
 	require.NoError(t, err)
 	assert.True(t, record.IsPrimary)

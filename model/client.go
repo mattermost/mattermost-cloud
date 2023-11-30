@@ -652,6 +652,22 @@ func (c *Client) SetInstallationDomainPrimary(installationID, installationDNSID 
 	}
 }
 
+// DeleteInstallationDNS deletes an existing DNS record for an installation.
+func (c *Client) DeleteInstallationDNS(installationID, installationDNSID string) (*InstallationDTO, error) {
+	resp, err := c.doDelete(c.buildURL("/api/installation/%s/dns/%s", installationID, installationDNSID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return DTOFromReader[InstallationDTO](resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // RestoreInstallationDatabase requests installation db restoration from the configured provisioning server.
 func (c *Client) RestoreInstallationDatabase(installationID, backupID string) (*InstallationDBRestorationOperation, error) {
 	resp, err := c.doPost(c.buildURL("/api/installations/operations/database/restorations"),

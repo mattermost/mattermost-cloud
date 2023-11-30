@@ -101,7 +101,7 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 		return errors.Wrap(err, "failed to fetch Zone ID from Cloudflare")
 	}
 
-	log := logger.WithFields(logrus.Fields{
+	logger = logger.WithFields(logrus.Fields{
 		"cloudflare-dns-value":    dnsName,
 		"cloudflare-dns-endpoint": dnsEndpoint,
 		"cloudflare-zone-id":      zoneID,
@@ -137,7 +137,7 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 			return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
 		}
 
-		log.Debugf("Cloudflare create DNS record response: %v", recordResp)
+		logger.WithField("cloudflare-response", recordResp).Debugf("New Cloudflare DNS record created for %s", dnsName)
 		return nil
 	}
 
@@ -156,7 +156,7 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 	}
 
 	if doUpdate {
-		err = c.updateDNSRecord(zoneID, recordToUpdate.ID, record, log)
+		err = c.updateDNSRecord(zoneID, recordToUpdate.ID, record, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to update existing DNS record at Cloudflare")
 		}
