@@ -96,7 +96,7 @@ func (v *velero) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (v *velero) newHelmDeployment(logger log.FieldLogger) *helmDeployment {
-	helmValueArguments := fmt.Sprintf("configuration.backupStorageLocation.prefix=%s", v.cluster.ID)
+	helmValueArguments := fmt.Sprintf("configuration.backupStorageLocation[0].prefix=%s", v.cluster.ID)
 
 	return newHelmDeployment(
 		"vmware-tanzu/velero",
