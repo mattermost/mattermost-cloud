@@ -863,7 +863,7 @@ spec:
       serviceAccountName: snapshot-controller
       containers:
         - name: snapshot-controller
-          image: registry.k8s.io/sig-storage/snapshot-controller:v6.3.2
+          image: registry.k8s.io/sig-storage/snapshot-controller:v6.1.0
           resources:
             limits:
               cpu: 100m
