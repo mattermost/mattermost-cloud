@@ -229,7 +229,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.11"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.10.0"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-5.1.5"},
-				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.3"},
+				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.4"},
 			},
 		},
 	}
