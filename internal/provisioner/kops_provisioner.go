@@ -297,7 +297,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 
-	err = terraformClient.ApplyTarget(fmt.Sprintf("aws_elb.api-%s-kops-k8s-local", cluster.ID))
+	err = terraformClient.ApplyTarget(fmt.Sprintf("aws_lb.api-%s-kops-k8s-local", cluster.ID))
 	if err != nil {
 		return err
 	}
