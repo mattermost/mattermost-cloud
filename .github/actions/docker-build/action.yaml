@@ -4,6 +4,8 @@ description: Reusable action to build repos' docker images
 runs:
   using: composite
   steps:
+    - name: ci/prepare-docker-environment
+      uses: ./.github/actions/docker-prepare
     - name: cd/build-docker
       run: make build-image
       shell: bash

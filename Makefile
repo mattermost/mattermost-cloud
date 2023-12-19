@@ -13,6 +13,7 @@ KOPS_VERSION=v1.27.2
 HELM_VERSION=v3.11.2
 KUBECTL_VERSION=v1.24.4
 POSTGRES_VERSION=14.8
+ARCH ?= amd64
 
 ## Docker Build Versions
 DOCKER_BUILD_IMAGE := golang:$(GOLANG_VERSION)
@@ -151,39 +152,58 @@ dist:	build
 
 .PHONY: build
 build: ## Build the mattermost-cloud
-	@echo Building Mattermost-Cloud
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/cloud  ./cmd/cloud
+	@echo Building Mattermost-Cloud for ARCH=$(ARCH)
+	@if [ "$(ARCH)" = "amd64" ]; then \
+		export GOARCH="amd64"; \
+	elif [ "$(ARCH)" = "arm64" ]; then \
+		export GOARCH="arm64"; \
+	elif [ "$(ARCH)" = "arm" ]; then \
+		export GOARCH="arm"; \
+	else \
+		echo "Unknown architecture $(ARCH)"; \
+		exit 1; \
+	fi; \
+	GOOS=linux CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/cloud-$$GOARCH ./cmd/cloud
 
 build-image:  ## Build the docker image for mattermost-cloud
 	@echo Building Mattermost-cloud Docker Image
-	docker build \
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+	--platform linux/amd64,linux/arm64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
 	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) \
-	--no-cache
+	--no-cache \
+	--push
 
 get-terraform: ## Download terraform only if it's not available. Used in the docker build
 	@if [ ! -f build/terraform ]; then \
-		curl -Lo build/terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip && cd build && unzip terraform.zip &&\
+		curl -Lo build/terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_$(ARCH).zip" &&\
+		echo "Downloaded file details:" && ls -l build/terraform.zip &&\
+		cd build && unzip terraform.zip &&\
 		chmod +x terraform && rm terraform.zip;\
 	fi
 
 get-kops: ## Download kops only if it's not available. Used in the docker build
 	@if [ ! -f build/kops ]; then \
-		curl -Lo build/kops https://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-linux-amd64 &&\
+		curl -Lo build/kops https://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-linux-$(ARCH) &&\
 		chmod +x build/kops;\
 	fi
 
 get-helm: ## Download helm only if it's not available. Used in the docker build
 	@if [ ! -f build/helm ]; then \
-		curl -Lo build/helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz &&\
+		curl -Lo build/helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-linux-$(ARCH).tar.gz &&\
 		cd build && tar -zxvf helm.tar.gz &&\
-		cp linux-amd64/helm helm && chmod +x helm && rm helm.tar.gz && rm -rf linux-amd64;\
+		cp linux-$(ARCH)/helm helm && chmod +x helm && rm helm.tar.gz && rm -rf linux-$(ARCH);\
 	fi
 
 get-kubectl: ## Download kubectl only if it's not available. Used in the docker build
 	@if [ ! -f build/kubectl ]; then \
-		curl -Lo build/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl &&\
+		curl -Lo build/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/$(ARCH)/kubectl &&\
 		chmod +x build/kubectl;\
 	fi
 

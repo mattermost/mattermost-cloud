@@ -5,7 +5,7 @@
 
 set -euox
 
-echo $DOCKERHUB_TOKEN | docker login --username $DOCKERHUB_USERNAME --password-stdin
+echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
 
 if [ "$TAG" = "" ]; then
     echo "TAG was not provided"
