@@ -12,6 +12,9 @@ if [ "$TAG" = "" ]; then
     exit 1
 fi
 
+#ensure that image exists locally
+docker pull mattermost/mattermost-cloud:test
+
 echo "Tagging images with SHA $TAG"
 
 docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
