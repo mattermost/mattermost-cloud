@@ -124,6 +124,11 @@ func executeServerCmd(flags serverFlags) error {
 		return errors.New("vpn-list-cidr must have at least one value")
 	}
 
+	if flags.utilitiesGitPath == "" {
+		return errors.New("utilities-git-path must be set")
+	}
+	model.SetGitopsRepoPath(flags.utilitiesGitPath)
+
 	if flags.utilitiesGitURL == "" {
 		return errors.New("utilities-git-url must be set")
 	}

@@ -45,12 +45,16 @@ const (
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
 	GitlabOAuthTokenKey = "GITLAB_OAUTH_TOKEN"
+	// GitOpsRepoPath is the name of the Environment Variable which
+	// contains the path to the gitops repo. e.g. /cloud/gitops.git
+	GitOpsRepoPath = "GITOPS_REPO_PATH"
 )
 
 // gitlabToken is the token that will be used for remote helm charts.
 var gitlabToken string
 
 var gitOpsRepoURL string
+var gitOpsRepoPath string
 
 // SetGitlabToken is used to define the gitlab token that will be used for remote
 // helm charts.
@@ -69,6 +73,14 @@ func SetGitopsRepoURL(gitopsUrl string) {
 
 func GetGitopsRepoURL() string {
 	return gitOpsRepoURL
+}
+
+func SetGitopsRepoPath(gitopsPath string) {
+	gitOpsRepoPath = gitopsPath
+}
+
+func GetGitopsRepoPath() string {
+	return gitOpsRepoPath
 }
 
 // DefaultUtilityVersions holds the default values for all the HelmUtilityVersions

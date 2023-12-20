@@ -17,7 +17,7 @@ import (
 
 const (
 	argocdClusterFileName = "cluster-values.yaml"
-	gitOpsRepoPath        = "/cloud-sre/kubernetes-workloads/gitops-sre.git"
+	//gitOpsRepoPath        = "/cloud-sre/kubernetes-workloads/gitops-sre.git"
 )
 
 type ClusterRegister struct {
@@ -44,6 +44,7 @@ func NewClusterRegisterHandle(cluster *model.Cluster, cloudEnvironmentName strin
 	}
 
 	gitOpsRepoURL := model.GetGitopsRepoURL()
+	gitOpsRepoPath := model.GetGitopsRepoPath()
 	argocdRepoURL := gitOpsRepoURL + gitOpsRepoPath
 	gitClient, err := git.NewGitClient(gitlabOAuthToken, tempDir, argocdRepoURL, "Provisioner")
 	if err != nil {
