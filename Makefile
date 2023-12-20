@@ -24,6 +24,7 @@ DOCKER_BASE_IMAGE = alpine:$(ALPINE_VERSION)
 GO ?= $(shell command -v go 2> /dev/null)
 PACKAGES=$(shell go list ./... | grep -v internal/mocks)
 MATTERMOST_CLOUD_IMAGE ?= mattermost/mattermost-cloud:test
+MATTERMOST_CLOUD_REPO ?= mattermost/mattermost-cloud
 MATTERMOST_CLOUD_E2E_IMAGE ?= mattermost/mattermost-cloud-e2e:test
 MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
@@ -179,6 +180,31 @@ build-image:  ## Build the docker image for mattermost-cloud
 	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) \
 	--no-cache \
 	--push
+
+build-image-with-tag:  ## Build the docker image for mattermost-cloud
+	@echo Building Mattermost-cloud Docker Image
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+	--platform linux/amd64,linux/arm64 \
+	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
+	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) -t $(MATTERMOST_CLOUD_REPO):${TAG} \
+	--no-cache \
+	--push
+
+.PHONY: push-image-pr
+push-image-pr:
+	@echo Push Image PR
+	./scripts/push-image-pr.sh
+
+.PHONY: push-image
+push-image:
+	@echo Push Image
+	./scripts/push-image.sh
 
 get-terraform: ## Download terraform only if it's not available. Used in the docker build
 	@if [ ! -f build/terraform ]; then \
