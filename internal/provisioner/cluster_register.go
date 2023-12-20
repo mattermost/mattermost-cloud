@@ -17,7 +17,6 @@ import (
 
 const (
 	argocdClusterFileName = "cluster-values.yaml"
-	//gitOpsRepoPath        = "/cloud-sre/kubernetes-workloads/gitops-sre.git"
 )
 
 type ClusterRegister struct {
