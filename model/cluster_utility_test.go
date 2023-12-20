@@ -150,7 +150,7 @@ func TestGetActualVersion(t *testing.T) {
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.1"},
-				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
+				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.15.3"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.11"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.10.0"},
@@ -179,7 +179,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "pgbouncer-1.2.1"}, version)
 
 	version = c.ActualUtilityVersion(PromtailCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "promtail-6.2.2"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "promtail-6.15.3"}, version)
 
 	version = c.ActualUtilityVersion(RtcdCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "rtcd-1.3.0"}, version)
@@ -224,7 +224,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-7.3.26"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.1"},
-				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
+				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.15.3"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.11"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.10.0"},
