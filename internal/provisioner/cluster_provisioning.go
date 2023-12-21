@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
@@ -359,14 +358,14 @@ func provisionCluster(
 		return errors.Wrap(err, "failed to upgrade all services in utility group")
 	}
 
-	prom, _ := k8sClient.GetNamespace(prometheus.Namespace)
+	// prom, _ := k8sClient.GetNamespace(prometheus.Namespace)
 
-	if prom != nil && prom.Name != "" {
-		err = prometheus.PrepareSloth(k8sClient, logger)
-		if err != nil {
-			return errors.Wrap(err, "failed to prepare Sloth")
-		}
-	}
+	// if prom != nil && prom.Name != "" {
+	// 	err = prometheus.PrepareSloth(k8sClient, logger)
+	// 	if err != nil {
+	// 		return errors.Wrap(err, "failed to prepare Sloth")
+	// 	}
+	// }
 
 	// Sync PGBouncer configmap if there is any change
 	var vpc string

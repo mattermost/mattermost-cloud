@@ -81,88 +81,88 @@ func NewUtilityGroupHandle(
 ) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
-	nginx, err := newNginxOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for NGINX")
-	}
+	// nginx, err := newNginxOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for NGINX")
+	// }
 
-	nginxInternal, err := newNginxInternalOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for NGINX INTERNAL")
-	}
+	// nginxInternal, err := newNginxInternalOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for NGINX INTERNAL")
+	// }
 
-	prometheusOperator, err := newPrometheusOperatorOrUnmanagedHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
-	}
+	// prometheusOperator, err := newPrometheusOperatorOrUnmanagedHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
+	// }
 
-	thanos, err := newThanosOrUnmanagedHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Thanos")
-	}
+	// thanos, err := newThanosOrUnmanagedHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for Thanos")
+	// }
 
-	fluentbit, err := newFluentbitOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
-	}
+	// fluentbit, err := newFluentbitOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
+	// }
 
-	teleport, err := newTeleportOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Teleport")
-	}
+	// teleport, err := newTeleportOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for Teleport")
+	// }
 
 	pgbouncer, err := newPgbouncerOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
-	promtail, err := newPromtailOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
-	}
+	// promtail, err := newPromtailOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
+	// }
 
-	rtcd, err := newRtcdOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for RTCD")
-	}
+	// rtcd, err := newRtcdOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for RTCD")
+	// }
 
-	nodeProblemDetector, err := newNodeProblemDetectorOrUnmanagedHandle(cluster, kubeconfigPath, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
-	}
+	// nodeProblemDetector, err := newNodeProblemDetectorOrUnmanagedHandle(cluster, kubeconfigPath, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
+	// }
 
-	metricsServer, err := newMetricsServerOrUnmanagedHandle(cluster, kubeconfigPath, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
-	}
+	// metricsServer, err := newMetricsServerOrUnmanagedHandle(cluster, kubeconfigPath, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
+	// }
 
-	velero, err := newVeleroOrUnmanagedHandle(cluster, kubeconfigPath, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Velero")
-	}
+	// velero, err := newVeleroOrUnmanagedHandle(cluster, kubeconfigPath, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for Velero")
+	// }
 
-	cloudprober, err := newCloudproberOrUnmanagedHandle(cluster, kubeconfigPath, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for cloudprober")
-	}
+	// cloudprober, err := newCloudproberOrUnmanagedHandle(cluster, kubeconfigPath, logger)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to get handle for cloudprober")
+	// }
 
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
 		utilities: []Utility{
-			nginx,
-			nginxInternal,
-			prometheusOperator,
-			thanos,
-			fluentbit,
-			teleport,
+			// nginx,
+			// nginxInternal,
+			// prometheusOperator,
+			// thanos,
+			// fluentbit,
+			// teleport,
 			pgbouncer,
-			promtail,
-			nodeProblemDetector,
-			rtcd,
-			metricsServer,
-			velero,
-			cloudprober,
+			// promtail,
+			// nodeProblemDetector,
+			// rtcd,
+			// metricsServer,
+			// velero,
+			// cloudprober,
 		},
 		logger:         logger,
 		cluster:        cluster,
