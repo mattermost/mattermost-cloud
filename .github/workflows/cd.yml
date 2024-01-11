@@ -21,6 +21,6 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
           REF_NAME: ${{ github.ref_name }}
-          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         uses: ./.github/actions/docker-build
