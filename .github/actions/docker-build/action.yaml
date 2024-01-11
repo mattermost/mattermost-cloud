@@ -4,8 +4,10 @@ description: Reusable action to build repos' docker images
 runs:
   using: composite
   steps:
-    - name: ci/prepare-docker-environment
-      uses: ./.github/actions/docker-prepare
+    - name: cd/build-docker
+      run: make build-image
+      shell: bash
+
     - name: cd/scan-docker-security
       uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
       with:
@@ -29,13 +31,5 @@ runs:
         severity: "CRITICAL"
 
     - name: cd/docker-push
-      run: ./scripts/push-docker-e2e.sh
+      run: ./scripts/push-docker.sh
       shell: bash
-    - name: cd/push-image-pr
-      run: "make push-image-pr"
-      shell: bash
-      if: "${{ inputs.is_pr }}"
-    - name: cd/push-image
-      run: "make push-image"
-      shell: bash
-      if: "${{ !inputs.is_pr }}"
