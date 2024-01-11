@@ -164,8 +164,7 @@ build: ## Build the mattermost-cloud
 		echo "Unknown architecture $(ARCH)"; \
 		exit 1; \
 	fi; \
-	GOOS=linux CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/cloud-$$GOARCH ./cmd/cloud
-
+	GOOS=linux CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o ./build/_output/bin/cloud ./cmd/cloud
 build-image:  ## Build the docker image for mattermost-cloud
 	@echo Building Mattermost-cloud Docker Image
 	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
