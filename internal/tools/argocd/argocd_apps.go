@@ -7,18 +7,20 @@ import (
 )
 
 type Application struct {
-	Name          string   `yaml:"name"`
-	Namespace     string   `yaml:"namespace"`
-	Repo          string   `yaml:"repo"`
-	Path          string   `yaml:"path"`
-	Revision      string   `yaml:"revision"`
-	Helm          Helm     `yaml:"helm"`
-	ClusterLabels []Labels `yaml:"cluster_labels"`
+	Name            string   `yaml:"name"`
+	Namespace       string   `yaml:"namespace"`
+	Repo            string   `yaml:"repo"`
+	Path            string   `yaml:"path"`
+	Revision        string   `yaml:"revision"`
+	Helm            Helm     `yaml:"helm"`
+	ServerSideApply bool     `yaml:"serverSideApply"`
+	Replace         bool     `yaml:"replace"`
+	ClusterLabels   []Labels `yaml:"cluster_labels"`
 }
 
 type Helm struct {
-	Enabled            bool     `yaml:"enabled"`
-	AddtionalManifests []string `yaml:"additionalManifests"`
+	Enabled             bool `yaml:"enabled"`
+	AdditionalManifests bool `yaml:"additionalManifests"`
 }
 
 type Labels struct {
