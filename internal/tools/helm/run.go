@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -38,8 +39,20 @@ func outputLogger(line string, logger log.FieldLogger) {
 func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.helmPath, arg...)
 
-	if os.Getenv("MM_CLOUD_VERBOSE_HELM_OUTPUT") != "" {
+	if os.Getenv(helmLoggingEnvironmentVariable) != "" {
 		return exechelper.RunWithEnv(cmd, c.logger, outputLogger)
 	}
 	return exechelper.RunWithEnv(cmd, c.logger, func(line string, logger log.FieldLogger) {})
+}
+
+func (c *Cmd) runSilent(arg ...string) ([]byte, []byte, error) {
+	cmd := exec.Command(c.helmPath, arg...)
+	return exechelper.Run(cmd, silentLogger(), func(string, log.FieldLogger) {})
+}
+
+func silentLogger() log.FieldLogger {
+	silentLogger := log.New()
+	silentLogger.Out = io.Discard
+
+	return silentLogger
 }
