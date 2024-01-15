@@ -1,0 +1,11 @@
+---
+name: 'docker-prepare'
+description: 'Install docker requirements'
+
+runs:
+  using: 'composite'
+  steps:
+  - name: ci/setup-buildx
+    uses: docker/setup-buildx-action@v3
+    with:
+      version: v0.12.0

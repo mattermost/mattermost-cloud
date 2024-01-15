@@ -3,14 +3,25 @@
 
 # Build the mattermost cloud
 ARG DOCKER_BUILD_IMAGE=golang:1.20
-ARG DOCKER_BASE_IMAGE=alpine:3.18.2
+ARG DOCKER_BASE_IMAGE=alpine:3.19
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /mattermost-cloud/
 COPY . /mattermost-cloud/
-RUN apt-get update -yq && apt-get install -yq unzip
-RUN make get-terraform get-kops get-helm get-kubectl
-RUN make build
+
+# Detect architecture and set ARCH
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        ARCH="amd64"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        ARCH="arm64"; \
+    elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then \
+        ARCH="arm"; \
+    fi && \
+    echo "ARCH=$ARCH" && \
+    apt-get update -yq && apt-get install -yq unzip && \
+    make get-terraform ARCH=$ARCH get-kops ARCH=$ARCH get-helm ARCH=$ARCH get-kubectl ARCH=$ARCH && \
+    make build ARCH=$ARCH
 
 # Final Image
 FROM ${DOCKER_BASE_IMAGE}
@@ -19,7 +30,7 @@ LABEL name="Mattermost Cloud" \
   maintainer="cloud-team@mattermost.com" \
   vendor="Mattermost" \
   distribution-scope="public" \
-  architecture="x86_64" \
+  architecture="x86_64, arm64" \
   url="https://mattermost.com" \
   io.k8s.description="Mattermost Cloud creates, configures and helps manage K8s Clusters and Mattermost installations on Kubernetes" \
   io.k8s.display-name="Mattermost Cloud"
