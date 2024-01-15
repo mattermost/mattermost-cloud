@@ -48,7 +48,7 @@ const (
 
 	// DefaultDatabaseMySQLVersion is the default version of MySQL used when
 	// creating databases.
-	DefaultDatabaseMySQLVersion = "5.7"
+	DefaultDatabaseMySQLVersion = "8.0"
 
 	// DefaultDatabasePostgresVersion is the default version of PostgreSQL used
 	// when creating databases.
