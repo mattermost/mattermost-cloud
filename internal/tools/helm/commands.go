@@ -37,3 +37,20 @@ func (c *Cmd) Version() (string, error) {
 
 	return trimmed, nil
 }
+
+// HelmChartFoundAndDeployed is a helper func that attempts to determine if a
+// given chart exists in the cluster and if it was successfully deployed.
+func (c *Cmd) HelmChartFoundAndDeployed(releaseName, kubeconfigPath string) (bool, bool) {
+	out, _, err := c.runSilent("status", releaseName, "--kubeconfig", kubeconfigPath)
+	if err == nil {
+		if strings.Contains(string(out), "STATUS: deployed") {
+			// found and deployed
+			return true, true
+		}
+		// found, but not successfully deployed
+		return true, false
+	}
+
+	// not found or deployed
+	return false, false
+}

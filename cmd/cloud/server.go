@@ -33,6 +33,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/grafana"
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/internal/tools/kubectl"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -513,16 +514,15 @@ func checkRequirements(logger logrus.FieldLogger) error {
 	}
 	logger.Infof("[startup-check] Using helm: %s", version)
 
-	// Check for extra tools that don't have a wrapper, but are still required.
-	extraTools := []string{
-		"kubectl",
+	kubectlClient, err := kubectl.New(silentLogger)
+	if err != nil {
+		return errors.Wrap(err, "failed kubectl client health check")
 	}
-	for _, extraTool := range extraTools {
-		_, err = exec.LookPath(extraTool)
-		if err != nil {
-			return errors.Errorf("failed to find %s on the PATH", extraTool)
-		}
+	version, err = kubectlClient.Version()
+	if err != nil {
+		return errors.Wrap(err, "failed to get kubectl version")
 	}
+	logger.Infof("[startup-check] Using kubectl: %s", version)
 
 	// Check for SSH keys.
 	homedir, err := os.UserHomeDir()
