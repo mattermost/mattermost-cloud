@@ -44,6 +44,7 @@ COPY --from=build /mattermost-cloud/build/terraform /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kops /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/helm /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kubectl /usr/local/bin/
+COPY --from=build /mattermost-cloud/helm-charts /mattermost-cloud/helm-charts
 COPY --from=build /mattermost-cloud/manifests /mattermost-cloud/manifests
 COPY --from=build /mattermost-cloud/build/_output/bin/cloud /mattermost-cloud/cloud
 COPY --from=build /mattermost-cloud/build/bin /usr/local/bin
