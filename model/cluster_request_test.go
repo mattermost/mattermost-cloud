@@ -7,6 +7,7 @@ package model_test
 import (
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -47,12 +48,12 @@ func TestUpgradeClusterRequestValid(t *testing.T) {
 		requireError bool
 	}{
 		{"empty payload", &model.PatchUpgradeClusterRequest{}, false},
-		{"valid version", &model.PatchUpgradeClusterRequest{Version: sToP("1.15.2")}, false},
-		{"invalid version", &model.PatchUpgradeClusterRequest{Version: sToP("invalid")}, true},
-		{"invalid KMS", &model.PatchUpgradeClusterRequest{KmsKeyId: sToP("invalid")}, true},
-		{"valid KMS", &model.PatchUpgradeClusterRequest{KmsKeyId: sToP("arn:aws:kms:us-east-1:8682519362148:key/01f0d25f-24b9-41b1-be98-927d486adf7d")}, false},
-		{"blank KMS", &model.PatchUpgradeClusterRequest{KmsKeyId: sToP("")}, true},
-		{"blank version", &model.PatchUpgradeClusterRequest{Version: sToP("")}, true},
+		{"valid version", &model.PatchUpgradeClusterRequest{Version: util.SToP("1.15.2")}, false},
+		{"invalid version", &model.PatchUpgradeClusterRequest{Version: util.SToP("invalid")}, true},
+		{"invalid KMS", &model.PatchUpgradeClusterRequest{KmsKeyId: util.SToP("invalid")}, true},
+		{"valid KMS", &model.PatchUpgradeClusterRequest{KmsKeyId: util.SToP("arn:aws:kms:us-east-1:8682519362148:key/01f0d25f-24b9-41b1-be98-927d486adf7d")}, false},
+		{"blank KMS", &model.PatchUpgradeClusterRequest{KmsKeyId: util.SToP("")}, true},
+		{"blank version", &model.PatchUpgradeClusterRequest{Version: util.SToP("")}, true},
 		{"max pods too low", &model.PatchUpgradeClusterRequest{MaxPodsPerNode: i64oP(1)}, true},
 	}
 
@@ -91,7 +92,7 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			"version only",
 			true,
 			&model.PatchUpgradeClusterRequest{
-				Version: sToP("version1"),
+				Version: util.SToP("version1"),
 			},
 			&model.KopsMetadata{
 				ChangeRequest: &model.KopsMetadataRequestedState{},
@@ -107,7 +108,7 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			"ami only",
 			true,
 			&model.PatchUpgradeClusterRequest{
-				AMI: sToP("image1"),
+				AMI: util.SToP("image1"),
 			},
 			&model.KopsMetadata{
 				ChangeRequest: &model.KopsMetadataRequestedState{},
@@ -139,8 +140,8 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			"version and ami",
 			true,
 			&model.PatchUpgradeClusterRequest{
-				Version: sToP("version1"),
-				AMI:     sToP("image1"),
+				Version: util.SToP("version1"),
+				AMI:     util.SToP("image1"),
 			},
 			&model.KopsMetadata{
 				Version:       "old-version",
@@ -159,8 +160,8 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			"kms and ami",
 			true,
 			&model.PatchUpgradeClusterRequest{
-				KmsKeyId: sToP("arn:aws:kms:us-east-1:8682519362148:key/01f0d25f-24b9-41b1-be98-927d486adf7d"),
-				AMI:      sToP("image1"),
+				KmsKeyId: util.SToP("arn:aws:kms:us-east-1:8682519362148:key/01f0d25f-24b9-41b1-be98-927d486adf7d"),
+				AMI:      util.SToP("image1"),
 			},
 			&model.KopsMetadata{
 				ChangeRequest: &model.KopsMetadataRequestedState{},
@@ -191,8 +192,8 @@ func TestResizeClusterRequestValid(t *testing.T) {
 		requireError bool
 	}{
 		{"empty payload", &model.PatchClusterSizeRequest{}, false},
-		{"valid", &model.PatchClusterSizeRequest{NodeInstanceType: sToP("m5.large")}, false},
-		{"blank node type", &model.PatchClusterSizeRequest{NodeInstanceType: sToP("")}, true},
+		{"valid", &model.PatchClusterSizeRequest{NodeInstanceType: util.SToP("m5.large")}, false},
+		{"blank node type", &model.PatchClusterSizeRequest{NodeInstanceType: util.SToP("")}, true},
 		{"zero nodes", &model.PatchClusterSizeRequest{NodeMinCount: i64oP(0), NodeMaxCount: i64oP(0)}, true},
 		{"max lower than min", &model.PatchClusterSizeRequest{NodeMinCount: i64oP(5), NodeMaxCount: i64oP(2)}, true},
 	}

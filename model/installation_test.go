@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +23,7 @@ func TestInstallationClone(t *testing.T) {
 		Name:     "test",
 		License:  "this_is_my_license",
 		Affinity: InstallationAffinityIsolated,
-		GroupID:  sToP("group_id"),
+		GroupID:  util.SToP("group_id"),
 		State:    InstallationStateStable,
 	}
 
@@ -30,7 +31,7 @@ func TestInstallationClone(t *testing.T) {
 	require.Equal(t, installation, clone)
 
 	// Verify changing pointers in the clone doesn't affect the original.
-	clone.GroupID = sToP("new_group_id")
+	clone.GroupID = util.SToP("new_group_id")
 	require.NotEqual(t, installation, clone)
 }
 
@@ -70,7 +71,7 @@ func TestInstallationFromReader(t *testing.T) {
 		require.Equal(t, &Installation{
 			ID:             "id",
 			OwnerID:        "owner",
-			GroupID:        sToP("group_id"),
+			GroupID:        util.SToP("group_id"),
 			Version:        "version",
 			Name:           "dns",
 			License:        "this_is_my_license",
@@ -138,7 +139,7 @@ func TestInstallationsFromReader(t *testing.T) {
 			{
 				ID:             "id1",
 				OwnerID:        "owner1",
-				GroupID:        sToP("group_id1"),
+				GroupID:        util.SToP("group_id1"),
 				Version:        "version1",
 				Name:           "dns1",
 				MattermostEnv:  EnvVarMap{"key1": {Value: "value1"}},
@@ -151,7 +152,7 @@ func TestInstallationsFromReader(t *testing.T) {
 			}, {
 				ID:             "id2",
 				OwnerID:        "owner2",
-				GroupID:        sToP("group_id2"),
+				GroupID:        util.SToP("group_id2"),
 				Version:        "version2",
 				Name:           "dns2",
 				License:        "this_is_my_license",
@@ -160,7 +161,7 @@ func TestInstallationsFromReader(t *testing.T) {
 				State:          "state2",
 				CreateAt:       30,
 				DeleteAt:       40,
-				LockAcquiredBy: sToP("tester"),
+				LockAcquiredBy: util.SToP("tester"),
 				LockAcquiredAt: 50,
 			},
 		}, installation)
@@ -191,7 +192,7 @@ func TestMergeWithGroup(t *testing.T) {
 			Name:     "test",
 			License:  "this_is_my_license",
 			Affinity: InstallationAffinityIsolated,
-			GroupID:  sToP("group_id"),
+			GroupID:  util.SToP("group_id"),
 			State:    InstallationStateStable,
 		}
 
@@ -219,7 +220,7 @@ func TestMergeWithGroup(t *testing.T) {
 			Name:     "test",
 			License:  "this_is_my_license",
 			Affinity: InstallationAffinityIsolated,
-			GroupID:  sToP("group_id"),
+			GroupID:  util.SToP("group_id"),
 			State:    InstallationStateStable,
 		}
 
@@ -248,7 +249,7 @@ func TestMergeWithGroup(t *testing.T) {
 			Name:     "test",
 			License:  "this_is_my_license",
 			Affinity: InstallationAffinityIsolated,
-			GroupID:  sToP("group_id"),
+			GroupID:  util.SToP("group_id"),
 			State:    InstallationStateStable,
 			MattermostEnv: EnvVarMap{
 				"key2": EnvVar{
@@ -285,8 +286,8 @@ func TestMergeWithGroup(t *testing.T) {
 			Name:          "test",
 			License:       "this_is_my_license",
 			Affinity:      InstallationAffinityIsolated,
-			GroupID:       sToP("group_id"),
-			GroupSequence: iToP(2),
+			GroupID:       util.SToP("group_id"),
+			GroupSequence: util.IToP(2),
 			State:         InstallationStateStable,
 		}
 
@@ -316,8 +317,8 @@ func TestMergeWithGroup(t *testing.T) {
 			Name:          "test",
 			License:       "this_is_my_license",
 			Affinity:      InstallationAffinityIsolated,
-			GroupID:       sToP("group_id"),
-			GroupSequence: iToP(1),
+			GroupID:       util.SToP("group_id"),
+			GroupSequence: util.IToP(1),
 			State:         InstallationStateStable,
 		}
 

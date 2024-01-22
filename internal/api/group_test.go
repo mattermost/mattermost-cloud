@@ -17,6 +17,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -353,7 +354,7 @@ func TestUpdateGroup(t *testing.T) {
 	t.Run("partial update", func(t *testing.T) {
 		updateResponseGroup, errTest := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:      group1.ID,
-			Version: sToP("version2"),
+			Version: util.SToP("version2"),
 		})
 		require.NoError(t, errTest)
 
@@ -370,9 +371,9 @@ func TestUpdateGroup(t *testing.T) {
 	t.Run("full update", func(t *testing.T) {
 		updateResponseGroup, errTest := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:            group1.ID,
-			Name:          sToP("name2"),
-			Description:   sToP("description2"),
-			Version:       sToP("version2"),
+			Name:          util.SToP("name2"),
+			Description:   util.SToP("description2"),
+			Version:       util.SToP("version2"),
 			MattermostEnv: mattermostEnvBarBaz,
 		})
 		require.NoError(t, errTest)

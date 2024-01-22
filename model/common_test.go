@@ -4,10 +4,14 @@
 
 package model
 
-func sToP(s string) *string {
+func SToP(s string) *string {
 	return &s
 }
 
-func iToP(i int64) *int64 {
+func IToP(i int64) *int64 {
 	return &i
+}
+
+func BToP(b bool) *bool {
+	return &b
 }
