@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -13,20 +14,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/exechelper"
 	log "github.com/sirupsen/logrus"
 )
-
-const helmLoggingEnvironmentVariable string = "MM_CLOUD_VERBOSE_HELM_OUTPUT"
-
-// SetVerboseHelmLogging controls an environment variable which
-// signals whether or not the stdout output from Helm should be
-// included as DEBUG level logs or not. True turns them on, false
-// turns them off.
-func SetVerboseHelmLogging(enable bool) {
-	if enable {
-		os.Setenv(helmLoggingEnvironmentVariable, "true")
-	} else {
-		os.Setenv(helmLoggingEnvironmentVariable, "")
-	}
-}
 
 func outputLogger(line string, logger log.FieldLogger) {
 	line = strings.TrimSpace(line)
@@ -38,15 +25,21 @@ func outputLogger(line string, logger log.FieldLogger) {
 
 func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.helmPath, arg...)
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("KUBECONFIG=%s", c.kubeconfig),
+	)
 
-	if os.Getenv(helmLoggingEnvironmentVariable) != "" {
-		return exechelper.RunWithEnv(cmd, c.logger, outputLogger)
-	}
-	return exechelper.RunWithEnv(cmd, c.logger, func(line string, logger log.FieldLogger) {})
+	return exechelper.RunWithEnv(cmd, c.logger, outputLogger)
 }
 
 func (c *Cmd) runSilent(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.helmPath, arg...)
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("KUBECONFIG=%s", c.kubeconfig),
+	)
+
 	return exechelper.Run(cmd, silentLogger(), func(string, log.FieldLogger) {})
 }
 

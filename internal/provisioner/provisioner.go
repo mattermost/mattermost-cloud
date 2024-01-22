@@ -29,19 +29,20 @@ func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supe
 
 // ProvisioningParams represent configuration used during various provisioning operations.
 type ProvisioningParams struct {
-	S3StateStore            string
-	AllowCIDRRangeList      []string
-	VpnCIDRList             []string
-	Owner                   string
-	UseExistingAWSResources bool
-	DeployMysqlOperator     bool
-	DeployMinioOperator     bool
-	NdotsValue              string
-	InternalIPRanges        []string
-	PGBouncerConfig         *model.PGBouncerConfig
-	SLOInstallationGroups   []string
-	SLOEnterpriseGroups     []string
-	EtcdManagerEnv          map[string]string
+	S3StateStore                  string
+	AllowCIDRRangeList            []string
+	VpnCIDRList                   []string
+	Owner                         string
+	UseExistingAWSResources       bool
+	DeployMysqlOperator           bool
+	DeployMinioOperator           bool
+	DeployLocalMattermostOperator bool
+	NdotsValue                    string
+	InternalIPRanges              []string
+	PGBouncerConfig               *model.PGBouncerConfig
+	SLOInstallationGroups         []string
+	SLOEnterpriseGroups           []string
+	EtcdManagerEnv                map[string]string
 }
 
 type Provisioner struct {

@@ -6,6 +6,7 @@ package utility
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -51,9 +52,10 @@ type Utility interface {
 // thought  of as  a handle  to the  real group  of utilities  running
 // inside of the cluster
 type utilityGroup struct {
-	utilities []Utility
-	logger    log.FieldLogger
-	cluster   *model.Cluster
+	utilities      []Utility
+	logger         log.FieldLogger
+	cluster        *model.Cluster
+	kubeconfigPath string
 }
 
 // List of repos to add during helm setup
@@ -162,8 +164,9 @@ func NewUtilityGroupHandle(
 			velero,
 			cloudprober,
 		},
-		logger:  logger,
-		cluster: cluster,
+		logger:         logger,
+		cluster:        cluster,
+		kubeconfigPath: kubeconfigPath,
 	}, nil
 
 }
@@ -190,13 +193,24 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 // ProvisionUtilityGroup reapplies the chart for the UtilityGroup. This will cause services to upgrade to a new version, if one is available.
 func (group utilityGroup) ProvisionUtilityGroup() error {
 	logger := group.logger.WithField("utility-group", "UpgradeManifests")
+	helmClient, err := helm.New(group.kubeconfigPath, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create helm client")
+	}
 
-	logger.Info("Adding new Helm repos.")
+	logger.Info("Ensuring all Helm repos are added")
 	for repoName, repoURL := range helmRepos {
-		err := AddRepo(repoName, repoURL, logger)
+		logger.Infof("Adding helm repo %s", repoName)
+		err = helmClient.RepoAdd(repoName, repoURL)
 		if err != nil {
 			return errors.Wrap(err, "unable to add helm repos")
 		}
+	}
+
+	logger.Info("Updating Helm repos")
+	err = helmClient.RepoUpdate()
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure helm repos are updated")
 	}
 
 	for _, utility := range group.utilities {

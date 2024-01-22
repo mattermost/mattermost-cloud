@@ -73,17 +73,16 @@ func provisionCluster(
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
 	}
-	helmClient, err := helm.New(logger)
+	helmClient, err := helm.New(kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create a new helm client")
 	}
-	found, _ := helmClient.HelmChartFoundAndDeployed("mattermost-operator", kubeconfigPath)
+	found, _ := helmClient.HelmChartFoundAndDeployed("mattermost-operator", "mattermost-operator")
 	if !found {
 		logger.Info("Performing first-time Mattermost Operator helm chart installation")
 
 		err = helmClient.RunGenericCommand(
 			"repo", "add", "mattermost", "https://helm.mattermost.com",
-			"--kubeconfig", kubeconfigPath,
 		)
 		if err != nil {
 			return errors.Wrap(err, "failed to add mattermost helm repo")
@@ -93,7 +92,6 @@ func provisionCluster(
 			"-n", "mattermost-operator",
 			"-f", "helm-charts/mattermost-operator.yaml",
 			"--create-namespace",
-			"--kubeconfig", kubeconfigPath,
 		)
 		if err != nil {
 			return errors.Wrap(err, "failed to install mattermost operator chart")
@@ -251,14 +249,24 @@ func provisionCluster(
 		return err
 	}
 
-	err = helmClient.RunGenericCommand(
-		"upgrade", "mattermost-operator", "mattermost/mattermost-operator",
-		"-n", "mattermost-operator",
-		"-f", "helm-charts/mattermost-operator.yaml",
-		"--kubeconfig", kubeconfigPath,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to upgrade mattermost helm chart")
+	if params.DeployLocalMattermostOperator {
+		logger.Debugf("Upgrading Mattermost Operator helm chart from local chart %s", helm.LocalMattermostOperatorHelmDir)
+
+		err = helmClient.FullyUpgradeLocalChart("mattermost-operator", helm.LocalMattermostOperatorHelmDir, "mattermost-operator", "helm-charts/mattermost-operator.yaml")
+		if err != nil {
+			return errors.Wrap(err, "failed to upgrade local mattermost helm chart")
+		}
+	} else {
+		logger.Debug("Upgrading Mattermost Operator helm chart")
+
+		err = helmClient.RunGenericCommand(
+			"upgrade", "mattermost-operator", "mattermost/mattermost-operator",
+			"-n", "mattermost-operator",
+			"-f", "helm-charts/mattermost-operator.yaml",
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to upgrade mattermost helm chart")
+		}
 	}
 
 	// change the waiting time because creation can take more time
@@ -392,12 +400,12 @@ func migrateMattermostOperatorToHelm(kubeconfigPath string, logger logrus.FieldL
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
 	}
-	helmClient, err := helm.New(logger)
+	helmClient, err := helm.New(kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create a new helm client")
 	}
 
-	_, deployed := helmClient.HelmChartFoundAndDeployed("mattermost-operator", kubeconfigPath)
+	_, deployed := helmClient.HelmChartFoundAndDeployed("mattermost-operator", "mattermost-operator")
 	if deployed {
 		logger.Info("Mattermost Operator helm chart is already deployed; skipping migration process")
 		return nil

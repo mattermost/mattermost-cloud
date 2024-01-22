@@ -5,6 +5,8 @@
 package kubectl
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -22,5 +24,10 @@ func outputLogger(line string, logger log.FieldLogger) {
 
 func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.kubectlPath, arg...)
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("KUBECONFIG=%s", c.kubeconfig),
+	)
+
 	return exechelper.RunWithEnv(cmd, c.logger, outputLogger)
 }
