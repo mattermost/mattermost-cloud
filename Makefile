@@ -176,7 +176,7 @@ build-image:  ## Build the docker image for mattermost-cloud
 	--platform linux/amd64,linux/arm64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
-	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) -t $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME) \
+	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) \
 	--no-cache \
 	--push
 
