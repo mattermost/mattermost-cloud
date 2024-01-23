@@ -124,10 +124,10 @@ func executeServerCmd(flags serverFlags) error {
 	}
 	model.SetUtilityDefaults(flags.utilitiesGitURL)
 
-	if flags.deployLocalMattermostOperator {
-		_, err := os.Stat(helm.LocalMattermostOperatorHelmDir)
+	if flags.mattermostOperatorHelmDir != "" {
+		_, err := os.Stat(flags.mattermostOperatorHelmDir)
 		if err != nil {
-			return errors.Wrapf(err, "failed to ensure directory %s exists; disable server flag deploy-local-mattermost-operator or ensure directory exists", helm.LocalMattermostOperatorHelmDir)
+			return errors.Wrap(err, "failed to ensure local operator helm directory exists; check your mattermost-operator-helm-dir flag value")
 		}
 	}
 
@@ -268,20 +268,20 @@ func executeServerCmd(flags serverFlags) error {
 	}
 
 	provisioningParams := provisioner.ProvisioningParams{
-		S3StateStore:                  flags.s3StateStore,
-		AllowCIDRRangeList:            flags.allowListCIDRRange,
-		VpnCIDRList:                   flags.vpnListCIDR,
-		Owner:                         owner,
-		UseExistingAWSResources:       flags.useExistingResources,
-		DeployMysqlOperator:           flags.deployMySQLOperator,
-		DeployMinioOperator:           flags.deployMinioOperator,
-		DeployLocalMattermostOperator: flags.deployLocalMattermostOperator,
-		NdotsValue:                    flags.ndotsDefaultValue,
-		InternalIPRanges:              flags.internalIPRanges,
-		PGBouncerConfig:               pgbouncerConfig,
-		SLOInstallationGroups:         flags.sloInstallationGroups,
-		SLOEnterpriseGroups:           flags.sloEnterpriseGroups,
-		EtcdManagerEnv:                etcdManagerEnv,
+		S3StateStore:              flags.s3StateStore,
+		AllowCIDRRangeList:        flags.allowListCIDRRange,
+		VpnCIDRList:               flags.vpnListCIDR,
+		Owner:                     owner,
+		UseExistingAWSResources:   flags.useExistingResources,
+		DeployMysqlOperator:       flags.deployMySQLOperator,
+		DeployMinioOperator:       flags.deployMinioOperator,
+		MattermostOperatorHelmDir: flags.mattermostOperatorHelmDir,
+		NdotsValue:                flags.ndotsDefaultValue,
+		InternalIPRanges:          flags.internalIPRanges,
+		PGBouncerConfig:           pgbouncerConfig,
+		SLOInstallationGroups:     flags.sloInstallationGroups,
+		SLOEnterpriseGroups:       flags.sloEnterpriseGroups,
+		EtcdManagerEnv:            etcdManagerEnv,
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck, flags.enableS3Versioning)

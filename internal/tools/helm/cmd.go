@@ -11,10 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// LocalMattermostOperatorHelmDir is the directory used for local helm chart
-// lookup for the Mattermost Operator. Primary use is helm chart testing.
-const LocalMattermostOperatorHelmDir = "helm-charts/mattermost-operator"
-
 // Cmd is the helm command to execute.
 type Cmd struct {
 	helmPath   string

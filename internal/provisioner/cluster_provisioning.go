@@ -249,10 +249,10 @@ func provisionCluster(
 		return err
 	}
 
-	if params.DeployLocalMattermostOperator {
-		logger.Debugf("Upgrading Mattermost Operator helm chart from local chart %s", helm.LocalMattermostOperatorHelmDir)
+	if params.MattermostOperatorHelmDir != "" {
+		logger.Debugf("Upgrading Mattermost Operator helm chart from local chart %s", params.MattermostOperatorHelmDir)
 
-		err = helmClient.FullyUpgradeLocalChart("mattermost-operator", helm.LocalMattermostOperatorHelmDir, "mattermost-operator", "helm-charts/mattermost-operator.yaml")
+		err = helmClient.FullyUpgradeLocalChart("mattermost-operator", params.MattermostOperatorHelmDir, "mattermost-operator", "helm-charts/mattermost-operator.yaml")
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade local mattermost helm chart")
 		}
