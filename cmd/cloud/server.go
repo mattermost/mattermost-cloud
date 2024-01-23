@@ -57,7 +57,7 @@ func newCmdServer() *cobra.Command {
 		},
 		PreRun: func(command *cobra.Command, args []string) {
 			flags.serverFlagChanged.addFlags(command) // To populate flag change variables.
-			deprecationWarnings(logger, command)
+			deprecationWarnings(logger, flags)
 
 			if flags.enableLogStacktrace {
 				enableLogStacktrace()
@@ -74,14 +74,8 @@ func newCmdServer() *cobra.Command {
 }
 
 func executeServerCmd(flags serverFlags) error {
-	if flags.devMode {
+	if flags.devMode || flags.debug {
 		logger.SetLevel(logrus.DebugLevel)
-		helm.SetVerboseHelmLogging(true)
-	} else {
-		if flags.debug {
-			logger.SetLevel(logrus.DebugLevel)
-		}
-		helm.SetVerboseHelmLogging(flags.debugHelm)
 	}
 
 	if flags.enableLogFilesPerCluster && flags.logFilesPerClusterPath == "" {
@@ -129,6 +123,13 @@ func executeServerCmd(flags serverFlags) error {
 		return errors.New("utilities-git-url must be set")
 	}
 	model.SetUtilityDefaults(flags.utilitiesGitURL)
+
+	if flags.mattermostOperatorHelmDir != "" {
+		_, err := os.Stat(flags.mattermostOperatorHelmDir)
+		if err != nil {
+			return errors.Wrap(err, "failed to ensure local operator helm directory exists; check your mattermost-operator-helm-dir flag value")
+		}
+	}
 
 	logger := logger.WithField("instance", instanceID)
 
@@ -267,19 +268,20 @@ func executeServerCmd(flags serverFlags) error {
 	}
 
 	provisioningParams := provisioner.ProvisioningParams{
-		S3StateStore:            flags.s3StateStore,
-		AllowCIDRRangeList:      flags.allowListCIDRRange,
-		VpnCIDRList:             flags.vpnListCIDR,
-		Owner:                   owner,
-		UseExistingAWSResources: flags.useExistingResources,
-		DeployMysqlOperator:     flags.deployMySQLOperator,
-		DeployMinioOperator:     flags.deployMinioOperator,
-		NdotsValue:              flags.ndotsDefaultValue,
-		InternalIPRanges:        flags.internalIPRanges,
-		PGBouncerConfig:         pgbouncerConfig,
-		SLOInstallationGroups:   flags.sloInstallationGroups,
-		SLOEnterpriseGroups:     flags.sloEnterpriseGroups,
-		EtcdManagerEnv:          etcdManagerEnv,
+		S3StateStore:              flags.s3StateStore,
+		AllowCIDRRangeList:        flags.allowListCIDRRange,
+		VpnCIDRList:               flags.vpnListCIDR,
+		Owner:                     owner,
+		UseExistingAWSResources:   flags.useExistingResources,
+		DeployMysqlOperator:       flags.deployMySQLOperator,
+		DeployMinioOperator:       flags.deployMinioOperator,
+		MattermostOperatorHelmDir: flags.mattermostOperatorHelmDir,
+		NdotsValue:                flags.ndotsDefaultValue,
+		InternalIPRanges:          flags.internalIPRanges,
+		PGBouncerConfig:           pgbouncerConfig,
+		SLOInstallationGroups:     flags.sloInstallationGroups,
+		SLOEnterpriseGroups:       flags.sloEnterpriseGroups,
+		EtcdManagerEnv:            etcdManagerEnv,
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck, flags.enableS3Versioning)
@@ -504,7 +506,7 @@ func checkRequirements(logger logrus.FieldLogger) error {
 	}
 	logger.Infof("[startup-check] Using kops: %s", version)
 
-	helmClient, err := helm.New(silentLogger)
+	helmClient, err := helm.New("dummy-config-path", silentLogger)
 	if err != nil {
 		return errors.Wrap(err, "failed helm client health check")
 	}
@@ -514,7 +516,7 @@ func checkRequirements(logger logrus.FieldLogger) error {
 	}
 	logger.Infof("[startup-check] Using helm: %s", version)
 
-	kubectlClient, err := kubectl.New(silentLogger)
+	kubectlClient, err := kubectl.New("dummy-config-path", silentLogger)
 	if err != nil {
 		return errors.Wrap(err, "failed kubectl client health check")
 	}
@@ -564,8 +566,10 @@ func checkRequirements(logger logrus.FieldLogger) error {
 
 // deprecationWarnings performs all checks for deprecated settings and warns if
 // any are found.
-func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
-	// Add deprecation logic here.
+func deprecationWarnings(logger logrus.FieldLogger, flags serverFlags) {
+	if flags.debugHelm {
+		logger.Warn("The debug-helm flag has been deprecated")
+	}
 }
 
 // getHumanReadableID  represents  a  best  effort  attempt  to  retrieve  an

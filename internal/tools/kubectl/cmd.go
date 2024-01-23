@@ -14,11 +14,12 @@ import (
 // Cmd is the kubectl command to execute.
 type Cmd struct {
 	kubectlPath string
+	kubeconfig  string
 	logger      log.FieldLogger
 }
 
 // New creates a new instance of Cmd through which to execute kubectl.
-func New(logger log.FieldLogger) (*Cmd, error) {
+func New(kubeconfigPath string, logger log.FieldLogger) (*Cmd, error) {
 	kubectlPath, err := exec.LookPath("kubectl")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find kubectl installed on your PATH")
@@ -26,7 +27,8 @@ func New(logger log.FieldLogger) (*Cmd, error) {
 
 	return &Cmd{
 		kubectlPath: kubectlPath,
-		logger:      logger,
+		kubeconfig:  kubeconfigPath,
+		logger:      logger.WithField("kubeconfig", kubeconfigPath),
 	}, nil
 }
 

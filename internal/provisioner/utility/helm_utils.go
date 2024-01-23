@@ -102,51 +102,6 @@ func (d *helmDeployment) Exists() (bool, error) {
 	return false, nil
 }
 
-// AddRepo adds new helm repos
-func AddRepo(repoName, repoURL string, logger log.FieldLogger) error {
-	logger.Infof("Adding helm repo %s", repoName)
-	arguments := []string{
-		"repo",
-		"add",
-		repoName,
-		repoURL,
-	}
-
-	helmClient, err := helm.New(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to create helm wrapper")
-	}
-	defer helmClient.Close()
-
-	err = helmClient.RunGenericCommand(arguments...)
-	if err != nil {
-		return errors.Wrapf(err, "unable to add repo %s", repoName)
-	}
-
-	return helmRepoUpdate(logger)
-}
-
-// helmRepoUpdate updates the helm repos to get latest available charts
-func helmRepoUpdate(logger log.FieldLogger) error {
-	arguments := []string{
-		"repo",
-		"update",
-	}
-
-	helmClient, err := helm.New(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to create helm wrapper")
-	}
-	defer helmClient.Close()
-
-	err = helmClient.RunGenericCommand(arguments...)
-	if err != nil {
-		return errors.Wrap(err, "unable to update helm repos")
-	}
-
-	return nil
-}
-
 // upgradeHelmChart is used to upgrade Helm deployments.
 func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
 	if chart.desiredVersion == nil || chart.desiredVersion.Version() == "" {
@@ -181,7 +136,6 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		"upgrade",
 		chart.chartDeploymentName,
 		chart.chartName,
-		"--kubeconfig", configPath,
 		"-f", chart.desiredVersion.Values(),
 		"--namespace", chart.namespace,
 		"--install",
@@ -196,7 +150,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		arguments = append(arguments, "--version", chart.desiredVersion.Version())
 	}
 
-	helmClient, err := helm.New(logger)
+	helmClient, err := helm.New(configPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -215,13 +169,12 @@ func deleteHelmChart(chart helmDeployment, configPath string, logger log.FieldLo
 	arguments := []string{
 		"uninstall",
 		chart.chartDeploymentName,
-		"--kubeconfig", configPath,
 		"--namespace", chart.namespace,
 		"--wait",
 		"--debug",
 	}
 
-	helmClient, err := helm.New(logger)
+	helmClient, err := helm.New(configPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -260,7 +213,6 @@ func (l HelmListOutput) asListOutput() *HelmListOutput {
 func (d *helmDeployment) List() (*HelmListOutput, error) {
 	arguments := []string{
 		"list",
-		"--kubeconfig", d.kubeconfigPath,
 		"--output", "json",
 		"--all-namespaces",
 	}
@@ -269,7 +221,7 @@ func (d *helmDeployment) List() (*HelmListOutput, error) {
 		"cmd": "helm3",
 	})
 
-	helmClient, err := helm.New(logger)
+	helmClient, err := helm.New(d.kubeconfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create helm wrapper")
 	}

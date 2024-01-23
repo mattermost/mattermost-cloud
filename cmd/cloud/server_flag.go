@@ -68,15 +68,16 @@ func (flags *schedulingOptions) addFlags(command *cobra.Command) {
 }
 
 type provisioningParams struct {
-	s3StateStore          string
-	allowListCIDRRange    []string
-	sloInstallationGroups []string
-	sloEnterpriseGroups   []string
-	vpnListCIDR           []string
-	useExistingResources  bool
-	deployMySQLOperator   bool
-	deployMinioOperator   bool
-	ndotsDefaultValue     string
+	s3StateStore              string
+	allowListCIDRRange        []string
+	sloInstallationGroups     []string
+	sloEnterpriseGroups       []string
+	vpnListCIDR               []string
+	useExistingResources      bool
+	deployMySQLOperator       bool
+	deployMinioOperator       bool
+	mattermostOperatorHelmDir string
+	ndotsDefaultValue         string
 
 	backupJobTTL           int32
 	backupRestoreToolImage string
@@ -94,6 +95,7 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.useExistingResources, "use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	command.Flags().BoolVar(&flags.deployMySQLOperator, "deploy-mysql-operator", false, "Whether to deploy the mysql operator.")
 	command.Flags().BoolVar(&flags.deployMinioOperator, "deploy-minio-operator", false, "Whether to deploy the minio operator.")
+	command.Flags().StringVar(&flags.mattermostOperatorHelmDir, "mattermost-operator-helm-dir", "", "Provide a directory location where a local mattermost operator helm chart will be deployed instead of from the standard repo")
 	command.Flags().StringVar(&flags.ndotsDefaultValue, "ndots-value", "5", "The default ndots value for installations.")
 
 	command.Flags().Int32Var(&flags.backupJobTTL, "backup-job-ttl-seconds", 3600, "Number of seconds after which finished backup jobs will be cleaned up. Set to negative value to not cleanup or 0 to cleanup immediately.")
