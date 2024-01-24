@@ -2,21 +2,23 @@ package git
 
 import (
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type Client interface {
-	Checkout(branchName string, logger log.FieldLogger) error
+	// Checkout(branchName string, logger log.FieldLogger) error
 	Commit(filePath, commitMsg string, logger log.FieldLogger) error
-	Push(logger log.FieldLogger) error
+	Push(branchName string, logger log.FieldLogger) error
 	Close(tempDir string, logger log.FieldLogger) error
+	Pull(logger log.FieldLogger) error
 }
 
 // Git is a wrapper around go-git to provide a simple interface for interacting with git.
 // TODO: Handle concurrent access to the repo.
-func NewGitClient(oauthToken, tempDir, remoteURL, authorName string) (Client, error) {
+func NewGitClient(oauthToken, tempDir, remoteURL, authorName, branchName string) (Client, error) {
 	if len(oauthToken) == 0 {
 		return &noopClient{}, errors.New("no git token provided")
 	}
@@ -26,8 +28,9 @@ func NewGitClient(oauthToken, tempDir, remoteURL, authorName string) (Client, er
 	}
 
 	repo, err := git.PlainClone(tempDir, false, &git.CloneOptions{
-		URL:  remoteURL,
-		Auth: auth,
+		URL:           remoteURL,
+		ReferenceName: plumbing.ReferenceName("refs/heads/" + branchName),
+		Auth:          auth,
 	})
 
 	if err != nil {
@@ -38,5 +41,6 @@ func NewGitClient(oauthToken, tempDir, remoteURL, authorName string) (Client, er
 		auth:       auth,
 		repo:       repo,
 		authorName: authorName,
+		branchName: branchName,
 	}, nil
 }
