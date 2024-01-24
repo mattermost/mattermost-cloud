@@ -8,27 +8,34 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type velero struct {
+	awsClient      aws.AWS
+	gitClient      git.Client
+	argocdClient   argocd.Client
 	cluster        *model.Cluster
 	kubeconfigPath string
 	logger         log.FieldLogger
 	actualVersion  *model.HelmUtilityVersion
 	desiredVersion *model.HelmUtilityVersion
+	tempDir        string
 }
 
-func newVeleroOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (Utility, error) {
+func newVeleroOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.VeleroCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.VeleroCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.VeleroCanonicalName, logger), nil
+		return newUnmanagedHandle(model.VeleroCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
 	}
-	velero := newVeleroHandle(desired, cluster, kubeconfigPath, logger)
+	velero := newVeleroHandle(desired, cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
 	err := velero.validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "teleport utility config is invalid")
@@ -37,13 +44,17 @@ func newVeleroOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, l
 	return velero, nil
 }
 
-func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) *velero {
+func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) *velero {
 	return &velero{
+		awsClient:      awsClient,
+		gitClient:      gitClient,
+		argocdClient:   argocdClient,
 		cluster:        cluster,
 		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.VeleroCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Velero,
+		tempDir:        tempDir,
 	}
 }
 
@@ -57,15 +68,19 @@ func (v *velero) validate() error {
 
 func (v *velero) CreateOrUpgrade() error {
 	logger := v.logger.WithField("velero-action", "upgrade")
-	h := v.newHelmDeployment(logger)
-
-	err := h.Update()
-	if err != nil {
-		return err
+	if err := ProvisionUtilityArgocd(v.Name(), v.tempDir, v.cluster.ID, []string{}, v.awsClient, v.gitClient, v.argocdClient, logger); err != nil {
+		return errors.Wrap(err, "failed to provision velero utility")
 	}
+	// h := v.newHelmDeployment(logger)
 
-	err = v.updateVersion(h)
-	return err
+	// err := h.Update()
+	// if err != nil {
+	// 	return err
+	// }
+
+	// err = v.updateVersion(h)
+	// return err
+	return nil
 }
 
 func (v *velero) Name() string {

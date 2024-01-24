@@ -24,8 +24,11 @@ func newCloudproberOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath stri
 	desired := cluster.DesiredUtilityVersion(model.CloudproberCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.CloudproberCanonicalName)
 
+	// if model.UtilityIsUnmanaged(desired, actual) {
+	// 	return newUnmanagedHandle(model.CloudproberCanonicalName, logger), nil
+	// }
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.CloudproberCanonicalName, logger), nil
+		return nil, nil
 	}
 	cloudprober := newCloudproberHandle(desired, cluster, kubeconfigPath, logger)
 	err := cloudprober.validate()

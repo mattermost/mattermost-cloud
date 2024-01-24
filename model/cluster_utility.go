@@ -23,7 +23,7 @@ const (
 	// FluentbitCanonicalName is the canonical string representation of fluentbit
 	FluentbitCanonicalName = "fluentbit"
 	// TeleportCanonicalName is the canonical string representation of teleport
-	TeleportCanonicalName = "teleport-kube-agent"
+	TeleportCanonicalName = "teleport"
 	// PgbouncerCanonicalName is the canonical string representation of pgbouncer
 	PgbouncerCanonicalName = "pgbouncer"
 	// PromtailCanonicalName is the canonical string representation of promtail

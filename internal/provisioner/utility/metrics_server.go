@@ -24,8 +24,11 @@ func newMetricsServerOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath st
 	desired := cluster.DesiredUtilityVersion(model.MetricsServerCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.MetricsServerCanonicalName)
 
+	// if model.UtilityIsUnmanaged(desired, actual) {
+	// 	return newUnmanagedHandle(model.MetricsServerCanonicalName, logger), nil
+	// }
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.MetricsServerCanonicalName, logger), nil
+		return nil, nil
 	}
 	metricsServer := newMetricsServerHandle(desired, cluster, kubeconfigPath, logger)
 	err := metricsServer.validate()

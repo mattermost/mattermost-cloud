@@ -23,8 +23,11 @@ func newNodeProblemDetectorOrUnmanagedHandle(cluster *model.Cluster, kubeconfigP
 	desired := cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.NodeProblemDetectorCanonicalName)
 
+	// if model.UtilityIsUnmanaged(desired, actual) {
+	// 	return newUnmanagedHandle(model.NodeProblemDetectorCanonicalName, logger), nil
+	// }
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.NodeProblemDetectorCanonicalName, logger), nil
+		return nil, nil
 	}
 	nodeProblemDetector := newNodeProblemDetectorHandle(desired, cluster, kubeconfigPath, logger)
 	err := nodeProblemDetector.validate()

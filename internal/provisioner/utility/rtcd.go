@@ -26,8 +26,11 @@ func newRtcdOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, aws
 	desired := cluster.DesiredUtilityVersion(model.RtcdCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.RtcdCanonicalName)
 
+	// if model.UtilityIsUnmanaged(desired, actual) {
+	// 	return newUnmanagedHandle(model.RtcdCanonicalName, logger), nil
+	// }
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.RtcdCanonicalName, logger), nil
+		return nil, nil
 	}
 	rtcd := newRtcdHandle(cluster, desired, kubeconfigPath, awsClient, logger)
 	err := rtcd.validate()

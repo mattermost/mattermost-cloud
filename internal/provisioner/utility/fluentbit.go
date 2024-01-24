@@ -25,8 +25,11 @@ func newFluentbitOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string
 	desired := cluster.DesiredUtilityVersion(model.FluentbitCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.FluentbitCanonicalName)
 
+	// if model.UtilityIsUnmanaged(desired, actual) {
+	// 	return newUnmanagedHandle(model.FluentbitCanonicalName, logger), nil
+	// }
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.FluentbitCanonicalName, logger), nil
+		return nil, nil
 	}
 	fluentbit := newFluentbitHandle(cluster, desired, kubeconfigPath, awsClient, logger)
 	err := fluentbit.validate()

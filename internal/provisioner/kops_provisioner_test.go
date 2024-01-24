@@ -19,7 +19,7 @@ import (
 
 func TestGetCachedKopsClient(t *testing.T) {
 	logger := testlib.MakeLogger(t)
-	provisioner := NewKopsProvisioner(ProvisioningParams{}, nil, nil, logger)
+	provisioner := NewKopsProvisioner(ProvisioningParams{}, nil, nil, logger, "")
 
 	// Using &kops.Cmd{} here because kops.New() checks for the binary in your
 	// PATH which isn't needed for the test and fails in CI/CD.

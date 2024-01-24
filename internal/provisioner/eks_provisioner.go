@@ -38,6 +38,7 @@ type EKSProvisioner struct {
 	clusterUpdateStore clusterUpdateStore
 	store              model.InstallationDatabaseStoreInterface
 	logger             log.FieldLogger
+	tempDir            string
 }
 
 var _ supervisor.ClusterProvisioner = (*EKSProvisioner)(nil)
@@ -422,7 +423,7 @@ func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster) erro
 		return errors.Wrap(err, "failed to get kubeconfig file path")
 	}
 
-	return provisionCluster(cluster, kubeConfigPath, provisioner.awsClient, provisioner.params, provisioner.store, logger)
+	return provisionCluster(cluster, kubeConfigPath, provisioner.tempDir, provisioner.awsClient, nil, provisioner.params, provisioner.store, logger)
 }
 
 // UpgradeCluster upgrades EKS cluster - not implemented.
@@ -663,7 +664,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 		return errors.Wrap(err, "failed to get kubeconfig file path")
 	}
 
-	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kubeConfigPath, cluster, provisioner.awsClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kubeConfigPath, provisioner.tempDir, cluster, provisioner.awsClient, nil, logger)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}

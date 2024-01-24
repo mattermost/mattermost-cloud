@@ -31,24 +31,7 @@ type ClusterRegister struct {
 }
 
 // NewClusterRegisterHandle returns a new ClusterRegister for register cluster into argocd
-func NewClusterRegisterHandle(cluster *model.Cluster, cloudEnvironmentName string, logger log.FieldLogger) (*ClusterRegister, error) {
-	gitlabOAuthToken := os.Getenv(model.GitlabOAuthTokenKey)
-	if len(gitlabOAuthToken) == 0 {
-		return nil, errors.Errorf("The %s env was empty; unable to register cluster into argocd", model.GitlabOAuthTokenKey)
-	}
-
-	tempDir, err := os.MkdirTemp("", "cluster-register-")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create temporary directory")
-	}
-
-	gitOpsRepoURL := model.GetGitopsRepoURL()
-	gitOpsRepoPath := model.GetGitopsRepoPath()
-	argocdRepoURL := gitOpsRepoURL + gitOpsRepoPath
-	gitClient, err := git.NewGitClient(gitlabOAuthToken, tempDir, argocdRepoURL, "Provisioner")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create new git client")
-	}
+func NewClusterRegisterHandle(cluster *model.Cluster, gitClient git.Client, cloudEnvironmentName, tempDir string, logger log.FieldLogger) (*ClusterRegister, error) {
 
 	clusterRegister := &ClusterRegister{
 		cluster:              cluster,
@@ -66,15 +49,14 @@ func NewClusterRegisterHandle(cluster *model.Cluster, cloudEnvironmentName strin
 func (cr *ClusterRegister) clusterRegister(s3StateStore string) error {
 	logger := cr.logger.WithField("cluster", cr.cluster.ID)
 
-	defer cr.gitClient.Close(cr.tempDir, logger)
-
 	clusterCreds, err := cr.getClusterCreds(s3StateStore)
 	if err != nil {
 		return errors.Wrap(err, "failed to get cluster credentials")
 	}
 
-	if err = cr.gitClient.Checkout("main", logger); err != nil {
-		return errors.Wrap(err, "failed to checkout repo")
+	err = cr.gitClient.Pull(logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to pull from argocd repo")
 	}
 
 	if err = cr.updateClusterFile(clusterCreds); err != nil {
@@ -86,7 +68,7 @@ func (cr *ClusterRegister) clusterRegister(s3StateStore string) error {
 		return errors.Wrap(err, "failed to commit to repo")
 	}
 
-	if err = cr.gitClient.Push(logger); err != nil {
+	if err = cr.gitClient.Push("feat-CLD-5708", logger); err != nil {
 		return errors.Wrap(err, "failed to push to repo")
 	}
 
@@ -144,12 +126,6 @@ func (cr *ClusterRegister) getClusterCreds(s3StateStore string) (*k8s.Kubeconfig
 func (cr *ClusterRegister) deregisterClusterFromArgocd() error {
 	logger := cr.logger.WithField("cluster", cr.cluster.ID)
 
-	defer cr.gitClient.Close(cr.tempDir, logger)
-
-	if err := cr.gitClient.Checkout("main", logger); err != nil {
-		return errors.Wrap(err, "failed to checkout repo")
-	}
-
 	clusteFile, err := os.ReadFile(cr.clusterFilePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to read cluster file")
@@ -169,9 +145,11 @@ func (cr *ClusterRegister) deregisterClusterFromArgocd() error {
 		return errors.Wrap(err, "failed to commit to repo")
 	}
 
-	if err = cr.gitClient.Push(logger); err != nil {
+	if err = cr.gitClient.Push("feat-CLD-5708", logger); err != nil {
 		return errors.Wrap(err, "failed to push to repo")
 	}
+
+	//TODO sync application after removing cluster from argocd
 
 	return nil
 }
