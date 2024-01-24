@@ -297,6 +297,7 @@ func executeServerCmd(flags serverFlags) error {
 		awsClient,
 		sqlStore,
 		logger,
+		gitlabOAuthToken,
 	)
 
 	eksProvisioner := provisioner.NewEKSProvisioner(
