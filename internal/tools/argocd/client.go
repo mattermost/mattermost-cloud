@@ -1,6 +1,9 @@
 package argocd
 
 import (
+	"sync"
+	"time"
+
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient"
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
 	argoappv1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
@@ -8,8 +11,8 @@ import (
 )
 
 type Client interface {
-	SyncApplication(appName string) (*argoappv1.Application, error)
-	// WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeout time.Duration)
+	SyncApplication(gitopsAppName, appName string) (*argoappv1.Application, error)
+	WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeout time.Duration)
 }
 
 type Connection struct {

@@ -13,8 +13,8 @@ type Application struct {
 	Path            string   `yaml:"path"`
 	Revision        string   `yaml:"revision"`
 	Helm            Helm     `yaml:"helm"`
-	ServerSideApply bool     `yaml:"serverSideApply"`
-	Replace         bool     `yaml:"replace"`
+	ServerSideApply bool     `yaml:"serverSideApply,omitempty"`
+	Replace         bool     `yaml:"replace,omitempty"`
 	ClusterLabels   []Labels `yaml:"cluster_labels"`
 }
 
