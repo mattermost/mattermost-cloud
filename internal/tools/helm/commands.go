@@ -5,6 +5,8 @@
 package helm
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -26,6 +28,11 @@ func (c *Cmd) RunGenericCommand(arg ...string) error {
 // RunCommandRaw runs any given helm command returning raw output.
 func (c *Cmd) RunCommandRaw(arg ...string) ([]byte, error) {
 	cmd := exec.Command(c.helmPath, arg...)
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("KUBECONFIG=%s", c.kubeconfig),
+	)
+
 	return cmd.Output()
 }
 
