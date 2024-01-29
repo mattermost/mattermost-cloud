@@ -16,6 +16,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -257,7 +258,7 @@ func TestUpdateMultitenantDatabase(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		databaseUpdate, errTest := client.UpdateMultitenantDatabase(database1.ID,
 			&model.PatchMultitenantDatabaseRequest{
-				MaxInstallationsPerLogicalDatabase: iToP(10),
+				MaxInstallationsPerLogicalDatabase: util.IToP(10),
 			})
 		require.NoError(t, errTest)
 		assert.Equal(t, int64(10), databaseUpdate.MaxInstallationsPerLogicalDatabase)

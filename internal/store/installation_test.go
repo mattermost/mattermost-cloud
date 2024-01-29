@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
@@ -363,7 +364,7 @@ func TestInstallations(t *testing.T) {
 			"deletion locked true",
 			&model.InstallationFilter{
 				Paging:         model.AllPagesNotDeleted(),
-				DeletionLocked: bToP(true),
+				DeletionLocked: util.BToP(true),
 			},
 			[]*model.Installation{installation1},
 		},
@@ -371,7 +372,7 @@ func TestInstallations(t *testing.T) {
 			"deletion locked falise",
 			&model.InstallationFilter{
 				Paging:         model.AllPagesNotDeleted(),
-				DeletionLocked: bToP(false),
+				DeletionLocked: util.BToP(false),
 			},
 			[]*model.Installation{installation2, installation3},
 		},
@@ -1308,8 +1309,4 @@ func fixDNSRecords(num int) []*model.InstallationDNS {
 	return []*model.InstallationDNS{
 		{DomainName: fmt.Sprintf("dns-%d.example.com", num)},
 	}
-}
-
-func bToP(b bool) *bool {
-	return &b
 }

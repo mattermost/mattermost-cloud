@@ -17,6 +17,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -311,7 +312,7 @@ func TestGetInstallations(t *testing.T) {
 					"filter by deletion-locked true",
 					&model.GetInstallationsRequest{
 						Paging:         model.AllPagesNotDeleted(),
-						DeletionLocked: bToP(true),
+						DeletionLocked: util.BToP(true),
 					},
 					[]*model.Installation{installation2},
 				},
@@ -319,7 +320,7 @@ func TestGetInstallations(t *testing.T) {
 					"filter by deletion-locked false",
 					&model.GetInstallationsRequest{
 						Paging:         model.AllPagesNotDeleted(),
-						DeletionLocked: bToP(false),
+						DeletionLocked: util.BToP(false),
 					},
 					[]*model.Installation{installation1, installation3},
 				},
@@ -915,8 +916,8 @@ func TestUpdateInstallation(t *testing.T) {
 
 	t.Run("unknown installation", func(t *testing.T) {
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationReponse, errTest := client.UpdateInstallation(model.NewID(), upgradeRequest)
 		require.EqualError(t, errTest, "failed with status code 404")
@@ -940,8 +941,8 @@ func TestUpdateInstallation(t *testing.T) {
 		}()
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationReponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, errTest, "failed with status code 409")
@@ -953,8 +954,8 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, errTest, "failed with status code 403")
@@ -970,8 +971,8 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, errTest)
@@ -991,8 +992,8 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, errTest)
@@ -1010,8 +1011,8 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, errTest)
@@ -1029,8 +1030,8 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, errTest, "failed with status code 400")
@@ -1043,8 +1044,8 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, errTest, "failed with status code 400")
@@ -1057,8 +1058,8 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP("mattermost/mattermost-enterprise:v5.12"),
-			License: sToP(model.NewID()),
+			Version: util.SToP("mattermost/mattermost-enterprise:v5.12"),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, errTest)
@@ -1076,7 +1077,7 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Size: sToP(model.NewID()),
+			Size: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, errTest, "failed with status code 400")
@@ -1089,9 +1090,9 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
-			Size:    sToP("miniSingleton"),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
+			Size:    util.SToP("miniSingleton"),
 		}
 		installationResponse, errTest := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, errTest)
@@ -1424,8 +1425,8 @@ func TestWakeUpInstallation(t *testing.T) {
 		}()
 
 		patch := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationReponse, errTest := client.WakeupInstallation(installation1.ID, patch)
 		require.EqualError(t, errTest, "failed with status code 409")
@@ -1437,8 +1438,8 @@ func TestWakeUpInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		patch := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.WakeupInstallation(installation1.ID, patch)
 		require.EqualError(t, errTest, "failed with status code 403")
@@ -1454,8 +1455,8 @@ func TestWakeUpInstallation(t *testing.T) {
 		require.NoError(t, errTest)
 
 		patch := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, errTest := client.WakeupInstallation(installation1.ID, patch)
 		require.EqualError(t, errTest, "failed with status code 400")
@@ -1479,9 +1480,9 @@ func TestWakeUpInstallation(t *testing.T) {
 		require.NoError(t, err)
 
 		patch := &model.PatchInstallationRequest{
-			Image:   sToP(model.NewID()),
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
+			Image:   util.SToP(model.NewID()),
+			Version: util.SToP(model.NewID()),
+			License: util.SToP(model.NewID()),
 		}
 		installationResponse, err := client.WakeupInstallation(installation1.ID, patch)
 		require.NoError(t, err)

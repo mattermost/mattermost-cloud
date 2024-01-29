@@ -70,15 +70,3 @@ func (s *mockProvisioner) ExecMattermostCLI(*model.Cluster, *model.ClusterInstal
 func (s *mockProvisioner) GetClusterResources(*model.Cluster, bool, log.FieldLogger) (*k8s.ClusterResources, error) {
 	return nil, nil
 }
-
-func sToP(s string) *string {
-	return &s
-}
-
-func iToP(i int64) *int64 {
-	return &i
-}
-
-func bToP(b bool) *bool {
-	return &b
-}
