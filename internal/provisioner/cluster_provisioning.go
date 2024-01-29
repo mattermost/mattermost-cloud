@@ -81,9 +81,7 @@ func provisionCluster(
 	if !found {
 		logger.Info("Performing first-time Mattermost Operator helm chart installation")
 
-		err = helmClient.RunGenericCommand(
-			"repo", "add", "mattermost", "https://helm.mattermost.com",
-		)
+		err = helmClient.RepoAdd("mattermost", "https://helm.mattermost.com")
 		if err != nil {
 			return errors.Wrap(err, "failed to add mattermost helm repo")
 		}
@@ -258,6 +256,16 @@ func provisionCluster(
 		}
 	} else {
 		logger.Debug("Upgrading Mattermost Operator helm chart")
+
+		err = helmClient.RepoAdd("mattermost", "https://helm.mattermost.com")
+		if err != nil {
+			return errors.Wrap(err, "failed to add mattermost helm repo")
+		}
+
+		err = helmClient.RepoUpdate()
+		if err != nil {
+			return errors.Wrap(err, "failed to ensure helm repos are updated")
+		}
 
 		err = helmClient.RunGenericCommand(
 			"upgrade", "mattermost-operator", "mattermost/mattermost-operator",
