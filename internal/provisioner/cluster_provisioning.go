@@ -308,8 +308,8 @@ func provisionCluster(
 	// due container download / init / container creation / volume allocation
 	wait = 240
 	appsWithDeployment := map[string]string{
-		//"mattermost-operator": mattermostOperatorNamespace,
-		//"bifrost":             bifrostNamespace,
+		"mattermost-operator": mattermostOperatorNamespace,
+		"bifrost":             bifrostNamespace,
 	}
 	if cluster.Provisioner == model.ProvisionerKops {
 		if (cluster.ProvisionerMetadataKops != nil && cluster.ProvisionerMetadataKops.Networking == "calico") ||
