@@ -71,6 +71,11 @@ func (u *unmanaged) CreateOrUpgrade() error {
 	// 	}
 	// }
 
+	privateDomainName, err := u.awsClient.GetPrivateZoneDomainName(u.logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to lookup private zone name")
+	}
+
 	k8sClient, err := k8s.NewFromFile(u.kubeconfigPath, u.logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to set up the k8s client")
@@ -91,12 +96,12 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		if err != nil {
 			return err
 		}
-		if err := ProvisionUtilityArgocd(u.Name(), u.tempDir, u.cluster.ID, u.allowCIDRRangeList, u.awsClient, u.gitClient, u.argocdClient, u.logger); err != nil {
+		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
 			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
 		}
 
 	case model.NginxCanonicalName, model.NginxInternalCanonicalName:
-		if err := ProvisionUtilityArgocd(u.Name(), u.tempDir, u.cluster.ID, u.allowCIDRRangeList, u.awsClient, u.gitClient, u.argocdClient, u.logger); err != nil {
+		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
 			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
 		}
 
@@ -111,6 +116,11 @@ func (u *unmanaged) CreateOrUpgrade() error {
 
 	case model.PrometheusOperatorCanonicalName:
 		logger := u.logger.WithField("prometheus-action", "create")
+
+		_, err = k8sClient.CreateOrUpdateNamespace(prometheus.Namespace)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create the prometheus namespace")
+		}
 
 		secretData := map[string]interface{}{
 			"type": "s3",
@@ -138,22 +148,13 @@ func (u *unmanaged) CreateOrUpgrade() error {
 			},
 		}
 
-		// _, err = k8sClient.CreateOrUpdateNamespace(prometheus.Namespace)
-		// if err != nil {
-		// 	return errors.Wrapf(err, "failed to create the prometheus namespace")
-		// }
-		if err := ProvisionUtilityArgocd(u.Name(), u.tempDir, u.cluster.ID, u.allowCIDRRangeList, u.awsClient, u.gitClient, u.argocdClient, u.logger); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
-		}
-
 		_, err = k8sClient.CreateOrUpdateSecret(prometheus.Namespace, thanosObjStoreSecret)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create the Thanos object storage secret")
 		}
 
-		privateDomainName, err := u.awsClient.GetPrivateZoneDomainName(logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to lookup private zone name")
+		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
 		}
 
 		app := "prometheus"
@@ -182,11 +183,6 @@ func (u *unmanaged) CreateOrUpgrade() error {
 	case model.ThanosCanonicalName:
 		logger := u.logger.WithField("thanos-action", "create")
 
-		privateDomainName, err := u.awsClient.GetPrivateZoneDomainName(logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to lookup private zone name")
-		}
-
 		app := "thanos"
 		dns := fmt.Sprintf("%s.%s.%s", u.cluster.ID, app, privateDomainName)
 		grpcDNS := fmt.Sprintf("%s-grpc.%s.%s", u.cluster.ID, app, privateDomainName)
@@ -210,6 +206,10 @@ func (u *unmanaged) CreateOrUpgrade() error {
 			}
 		}
 
+		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+		}
+
 		if u.awsClient.IsProvisionedPrivateCNAME(grpcDNS, logger) {
 			logger.Debugln("GRPC CNAME was already provisioned for thanos")
 		} else {
@@ -227,9 +227,6 @@ func (u *unmanaged) CreateOrUpgrade() error {
 			if err != nil {
 				return errors.Wrap(err, "failed to create a CNAME to point to Thanos GRPC")
 			}
-		}
-		if err := ProvisionUtilityArgocd(u.Name(), u.tempDir, u.cluster.ID, u.allowCIDRRangeList, u.awsClient, u.gitClient, u.argocdClient, u.logger); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
 		}
 	}
 
@@ -293,4 +290,11 @@ func (u *unmanaged) DesiredVersion() *model.HelmUtilityVersion {
 
 func (u *unmanaged) ActualVersion() *model.HelmUtilityVersion {
 	return &model.HelmUtilityVersion{Chart: model.UnmanagedUtilityVersion}
+}
+
+func (u *unmanaged) utiliyArgocdDeploy(utilityName string) error {
+	if err := ProvisionUtilityArgocd(utilityName, u.tempDir, u.cluster.ID, u.allowCIDRRangeList, u.awsClient, u.gitClient, u.argocdClient, u.logger); err != nil {
+		return errors.Wrapf(err, "failed to provision %s utility", utilityName)
+	}
+	return nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
@@ -30,6 +31,7 @@ func provisionCluster(
 	tempDir string,
 	awsClient aws.AWS,
 	gitClient git.Client,
+	argocdClient argocd.Client,
 	params ProvisioningParams,
 	store model.ClusterUtilityDatabaseStoreInterface,
 	logger logrus.FieldLogger) error {
@@ -376,7 +378,7 @@ func provisionCluster(
 		}
 	}
 
-	ugh, err := utility.NewUtilityGroupHandle(params.AllowCIDRRangeList, kubeconfigPath, tempDir, cluster, awsClient, gitClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(params.AllowCIDRRangeList, kubeconfigPath, tempDir, cluster, awsClient, gitClient, argocdClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}

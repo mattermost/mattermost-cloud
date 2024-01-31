@@ -12,6 +12,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -36,6 +37,7 @@ type KopsProvisioner struct {
 	logger           log.FieldLogger
 	kopsCache        map[string]*kops.Cmd
 	gitlabOAuthToken string
+	argocdApiToken   string
 }
 
 var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
@@ -47,6 +49,7 @@ func NewKopsProvisioner(
 	store model.InstallationDatabaseStoreInterface,
 	logger log.FieldLogger,
 	gitlabOAuthToken string,
+	argocdApiToken string,
 ) *KopsProvisioner {
 
 	logger = logger.WithField("provisioner", "kops")
@@ -58,6 +61,7 @@ func NewKopsProvisioner(
 		logger:           logger,
 		kopsCache:        make(map[string]*kops.Cmd),
 		gitlabOAuthToken: gitlabOAuthToken,
+		argocdApiToken:   argocdApiToken,
 	}
 }
 
@@ -439,7 +443,15 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	}
 	defer gitClient.Close(argocdRepoTempDir, logger)
 
-	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kops.GetKubeConfigPath(), argocdRepoTempDir, cluster, provisioner.awsClient, gitClient, logger)
+	argocdClient, err := argocd.NewClient(&argocd.Connection{
+		Address: "argocd-prod.internal.mattermost.com",
+		Token:   provisioner.argocdApiToken,
+	}, logger)
+	if err != nil {
+		logger.WithError(err).Debug("failed to create new argocd client")
+	}
+
+	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kops.GetKubeConfigPath(), argocdRepoTempDir, cluster, provisioner.awsClient, gitClient, argocdClient, logger)
 	if err != nil {
 		return err
 	}
@@ -494,6 +506,14 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) err
 	}
 	defer gitClient.Close(argocdRepoTempDir, logger)
 
+	argocdClient, err := argocd.NewClient(&argocd.Connection{
+		Address: "argocd-prod.internal.mattermost.com",
+		Token:   provisioner.argocdApiToken,
+	}, logger)
+	if err != nil {
+		logger.WithError(err).Debug("failed to create new argocd client")
+	}
+
 	logger.Info("Provisioning cluster")
 	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
@@ -501,7 +521,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) err
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return provisionCluster(cluster, kopsClient.GetKubeConfigPath(), argocdRepoTempDir, provisioner.awsClient, gitClient, provisioner.params, provisioner.store, logger)
+	return provisionCluster(cluster, kopsClient.GetKubeConfigPath(), argocdRepoTempDir, provisioner.awsClient, gitClient, argocdClient, provisioner.params, provisioner.store, logger)
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
@@ -856,6 +876,14 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool,
 	}
 	defer gitClient.Close(argocdRepoTempDir, logger)
 
+	argocdClient, err := argocd.NewClient(&argocd.Connection{
+		Address: "argocd-prod.internal.mattermost.com",
+		Token:   provisioner.argocdApiToken,
+	}, logger)
+	if err != nil {
+		logger.WithError(err).Debug("failed to create new argocd client")
+	}
+
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	logger.Info("Deleting cluster")
@@ -865,7 +893,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool,
 		return false, errors.Wrap(err, "failed to check if kops cluster exists")
 	}
 	if exists {
-		err = provisioner.cleanupCluster(cluster, argocdRepoTempDir, gitClient, logger)
+		err = provisioner.cleanupCluster(cluster, argocdRepoTempDir, gitClient, argocdClient, logger)
 		if err != nil {
 			return false, errors.Wrap(err, "failed to delete kops cluster")
 		}
@@ -896,7 +924,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool,
 }
 
 // cleanupCluster cleans up Kops cluster. Make sure cluster exists before calling this method.
-func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempDir string, gitClient git.Client, logger log.FieldLogger) error {
+func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempDir string, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) error {
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	kopsClient, err := provisioner.getCachedKopsClient(kopsMetadata.Name, logger)
@@ -905,7 +933,7 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, kopsMetadata.Name, logger)
 
-	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kopsClient.GetKubeConfigPath(), tempDir, cluster, provisioner.awsClient, gitClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kopsClient.GetKubeConfigPath(), tempDir, cluster, provisioner.awsClient, gitClient, argocdClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}

@@ -87,18 +87,10 @@ func NewUtilityGroupHandle(
 	cluster *model.Cluster,
 	awsClient aws.AWS,
 	gitClient git.Client,
+	argocdClient argocd.Client,
 	parentLogger log.FieldLogger,
 ) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
-
-	argocdClient, err := argocd.NewClient(&argocd.Connection{
-		Address: "argocd-prod.internal.mattermost.com",
-		//TODO make it env variable
-		Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhcmdvY2QiLCJzdWIiOiJwcm92aXNpb25lcjphcGlLZXkiLCJuYmYiOjE3MDQ3NDM2MjIsImlhdCI6MTcwNDc0MzYyMiwianRpIjoiYjllYWUyNTYtZGRkNi00YTVhLWI0ODQtOTYzZTdiYWRmZGQ5In0.u3nCeoGSbLox2msk-RvPspn1hmbswwONzh9yUdg_51Q",
-	}, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create new argocd client")
-	}
 
 	pgbouncer, err := newPgbouncerOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
 	if err != nil {
@@ -125,10 +117,10 @@ func NewUtilityGroupHandle(
 		return nil, errors.Wrap(err, "failed to get handle for Thanos")
 	}
 
-	// fluentbit, err := newFluentbitOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
-	// }
+	fluentbit, err := newFluentbitOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
+	}
 
 	teleport, err := newTeleportOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
 	if err != nil {
@@ -140,30 +132,30 @@ func NewUtilityGroupHandle(
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
-	// rtcd, err := newRtcdOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to get handle for RTCD")
-	// }
+	rtcd, err := newRtcdOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for RTCD")
+	}
 
-	// nodeProblemDetector, err := newNodeProblemDetectorOrUnmanagedHandle(cluster, kubeconfigPath, logger)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
-	// }
+	nodeProblemDetector, err := newNodeProblemDetectorOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
+	}
 
-	// metricsServer, err := newMetricsServerOrUnmanagedHandle(cluster, kubeconfigPath, logger)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
-	// }
+	metricsServer, err := newMetricsServerOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
+	}
 
 	velero, err := newVeleroOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Velero")
 	}
 
-	// cloudprober, err := newCloudproberOrUnmanagedHandle(cluster, kubeconfigPath, logger)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to get handle for cloudprober")
-	// }
+	cloudprober, err := newCloudproberOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for cloudprober")
+	}
 
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
@@ -174,14 +166,14 @@ func NewUtilityGroupHandle(
 			nginxInternal,
 			prometheusOperator,
 			thanos,
-			// fluentbit,
+			fluentbit,
 			teleport,
 			promtail,
-			// nodeProblemDetector,
-			// rtcd,
-			// metricsServer,
+			nodeProblemDetector,
+			rtcd,
+			metricsServer,
 			velero,
-			// cloudprober,
+			cloudprober,
 		},
 		logger:             logger,
 		cluster:            cluster,

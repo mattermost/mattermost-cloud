@@ -7,6 +7,9 @@ package utility
 import (
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -20,16 +23,14 @@ type metricsServer struct {
 	provisioner    string
 }
 
-func newMetricsServerOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (Utility, error) {
+func newMetricsServerOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.MetricsServerCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.MetricsServerCanonicalName)
 
-	// if model.UtilityIsUnmanaged(desired, actual) {
-	// 	return newUnmanagedHandle(model.MetricsServerCanonicalName, logger), nil
-	// }
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return nil, nil
+		return newUnmanagedHandle(model.MetricsServerCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
 	}
+
 	metricsServer := newMetricsServerHandle(desired, cluster, kubeconfigPath, logger)
 	err := metricsServer.validate()
 	if err != nil {

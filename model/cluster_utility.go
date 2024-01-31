@@ -48,10 +48,16 @@ const (
 	// GitOpsRepoPath is the name of the Environment Variable which
 	// contains the path to the gitops repo. e.g. /cloud/gitops.git
 	GitOpsRepoPath = "GITOPS_REPO_PATH"
+	// ArgocdApiToken is the name of the Environment Variable which
+	// contains the token for accessing the ArgoCD API
+	ArgocdApiToken = "ARGOCD_API_TOKEN"
 )
 
 // gitlabToken is the token that will be used for remote helm charts.
 var gitlabToken string
+
+// argocdApiToken is the token that will be used for accessing the ArgoCD API.
+var argocdApiToken string
 
 var gitOpsRepoURL string
 var gitOpsRepoPath string
@@ -65,6 +71,17 @@ func SetGitlabToken(val string) {
 // GetGitlabToken returns the value of gitlabToken.
 func GetGitlabToken() string {
 	return gitlabToken
+}
+
+// SetArgocdApiToken is used to define the argocd token that will be used for
+// accessing the ArgoCD API.
+func SetArgocdApiToken(val string) {
+	argocdApiToken = val
+}
+
+// GetArgocdApiToken returns the value of argocdApiToken.
+func GetArgocdApiToken() string {
+	return argocdApiToken
 }
 
 func SetGitopsRepoURL(gitopsUrl string) {
