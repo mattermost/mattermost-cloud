@@ -85,7 +85,7 @@ func (t *thanos) CreateOrUpgrade() error {
 	dns := fmt.Sprintf("%s.%s.%s", t.cluster.ID, app, privateDomainName)
 	grpcDNS := fmt.Sprintf("%s-grpc.%s.%s", t.cluster.ID, app, privateDomainName)
 
-	h := t.newHelmDeployment(dns, grpcDNS)
+	h := t.newHelmDeployment(dns)
 
 	err = h.Update()
 	if err != nil {
@@ -162,7 +162,7 @@ func (t *thanos) Destroy() error {
 
 	t.actualVersion = nil
 
-	helm := t.newHelmDeployment(dns, grpcDNS)
+	helm := t.newHelmDeployment(dns)
 	return helm.Delete()
 }
 
@@ -170,8 +170,8 @@ func (t *thanos) Migrate() error {
 	return nil
 }
 
-func (t *thanos) newHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeployment {
-	helmValueArguments := fmt.Sprintf("query.ingress.hostname=%s,query.ingress.grpc.hostname=%s,query.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, thanosDNSGRPC, strings.Join(t.allowCIDRRangeList, "\\,"))
+func (t *thanos) newHelmDeployment(thanosDNS string) *helmDeployment {
+	helmValueArguments := fmt.Sprintf("query.ingress.hostname=%s,query.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, strings.Join(t.allowCIDRRangeList, "\\,"))
 
 	return newHelmDeployment(
 		"bitnami/thanos",
