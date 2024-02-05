@@ -16,6 +16,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	ArgocdAppsFile = "/application-values-customer.yaml"
+)
+
 func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRangeList []string, awsClient aws.AWS,
 	gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) error {
 	// Pull the latest changes from the repo
@@ -26,7 +30,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 
 	//TODO: Skip provision utility if it is already provisioned
 
-	appsFile, err := os.ReadFile(tempDir + "/apps/dev/application-values.yaml")
+	appsFile, err := os.ReadFile(tempDir + "/apps/" + awsClient.GetCloudEnvironmentName() + ArgocdAppsFile)
 	if err != nil {
 		return errors.Wrap(err, "failed to read cluster file")
 	}
@@ -39,7 +43,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal argo application file")
 	}
-	if err = os.WriteFile(tempDir+"/apps/"+awsClient.GetCloudEnvironmentName()+"/application-values.yaml", modifiedYAML, 0644); err != nil {
+	if err = os.WriteFile(tempDir+"/apps/"+awsClient.GetCloudEnvironmentName()+ArgocdAppsFile, modifiedYAML, 0644); err != nil {
 		return errors.Wrap(err, "failed to write argo application file")
 	}
 
@@ -119,7 +123,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 }
 
 func (group utilityGroup) RemoveUtilityFromArgocd() error {
-	appsFile, err := os.ReadFile(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + "/application-values.yaml")
+	appsFile, err := os.ReadFile(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + ArgocdAppsFile)
 	if err != nil {
 		return errors.Wrap(err, "failed to read cluster file")
 	}
@@ -134,7 +138,7 @@ func (group utilityGroup) RemoveUtilityFromArgocd() error {
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal argo application file")
 		}
-		if err = os.WriteFile(group.tempDir+"/apps/"+group.awsClient.GetCloudEnvironmentName()+"/application-values.yaml", modifiedYAML, 0644); err != nil {
+		if err = os.WriteFile(group.tempDir+"/apps/"+group.awsClient.GetCloudEnvironmentName()+ArgocdAppsFile, modifiedYAML, 0644); err != nil {
 			return errors.Wrap(err, "failed to write argo application file")
 		}
 	}
