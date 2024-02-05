@@ -6,13 +6,14 @@ import (
 
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient"
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
+	"github.com/argoproj/argo-cd/v2/pkg/apiclient/cluster"
 	argoappv1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
 
 type Client interface {
-	SyncApplication(gitopsAppName, appName string) (*argoappv1.Application, error)
-	WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeout time.Duration)
+	SyncApplication(gitopsAppName string) (*argoappv1.Application, error)
+	WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeout time.Duration) error
 }
 
 type Connection struct {
@@ -20,12 +21,13 @@ type Connection struct {
 	Token   string
 }
 
-type AppClient struct {
-	appClient application.ApplicationServiceClient
-	logger    log.FieldLogger
+type ApiClient struct {
+	appClient     application.ApplicationServiceClient
+	clusterClient cluster.ClusterServiceClient
+	logger        log.FieldLogger
 }
 
-func NewClient(c *Connection, logger log.FieldLogger) (*AppClient, error) {
+func NewClient(c *Connection, logger log.FieldLogger) (*ApiClient, error) {
 	apiClient, err := apiclient.NewClient(&apiclient.ClientOptions{
 		ServerAddr: c.Address,
 		Insecure:   true,
@@ -41,8 +43,14 @@ func NewClient(c *Connection, logger log.FieldLogger) (*AppClient, error) {
 		return nil, err
 	}
 
-	return &AppClient{
-		appClient: appClient,
-		logger:    logger,
+	_, clusterClient, err := apiClient.NewClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	return &ApiClient{
+		appClient:     appClient,
+		clusterClient: clusterClient,
+		logger:        logger,
 	}, nil
 }

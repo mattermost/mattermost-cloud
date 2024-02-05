@@ -12,7 +12,7 @@ import (
 	"github.com/argoproj/gitops-engine/pkg/health"
 )
 
-func (c *AppClient) SyncApplication(gitopsAppName, appName string) (*argoappv1.Application, error) {
+func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Application, error) {
 	app, err := c.appClient.Sync(context.Background(), &application.ApplicationSyncRequest{
 		Name: &gitopsAppName,
 	})
@@ -26,17 +26,18 @@ func (c *AppClient) SyncApplication(gitopsAppName, appName string) (*argoappv1.A
 	go c.waitForSyncCompletion(gitopsAppName, &wg, timeout)
 	wg.Wait()
 
-	c.logger.Debugf("Successfully synced application %s", appName)
+	c.logger.Debugf("Successfully synced application %s", gitopsAppName)
 
-	c.logger.Infof("Waiting for application %s to be synced...", appName)
 	// This time is needed for the application to be available in the ArgoCD.
-	time.Sleep(time.Second * 30)
+	// time.Sleep(time.Second * 10)
 
 	return app, nil
 }
 
-func (c *AppClient) WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeout time.Duration) { //TODO return error
+func (c *ApiClient) WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeout time.Duration) error { //TODO return error
 	defer wg.Done()
+
+	c.logger.Infof("Waiting for application %s to be synced...", appName)
 
 	startTime := time.Now()
 	refresh := "true"
@@ -48,7 +49,7 @@ func (c *AppClient) WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeou
 		})
 		if err != nil {
 			c.logger.Errorf("failed to get application %s: %v", appName, err)
-			errors.Wrap(err, "failed to get application.")
+			return errors.Wrap(err, "failed to get application.")
 		}
 
 		if app.Status.Health.Status == health.HealthStatusHealthy {
@@ -58,14 +59,15 @@ func (c *AppClient) WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeou
 		// Check for timeout
 		if time.Since(startTime) >= timeout {
 			c.logger.Errorf("timed out waiting for application %s to be healthy", appName)
-			return
+			return errors.New("timed out waiting for application to be healthy")
 		}
 
 		time.Sleep(time.Millisecond * 100)
 	}
+	return nil
 }
 
-func (c *AppClient) waitForSyncCompletion(appName string, wg *sync.WaitGroup, timeout time.Duration) {
+func (c *ApiClient) waitForSyncCompletion(appName string, wg *sync.WaitGroup, timeout time.Duration) {
 	defer wg.Done()
 
 	startTime := time.Now()
