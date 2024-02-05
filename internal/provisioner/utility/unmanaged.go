@@ -56,20 +56,7 @@ func (u *unmanaged) ValuesPath() string {
 }
 
 func (u *unmanaged) CreateOrUpgrade() error {
-	u.logger.WithField("unmanaged-action", "create").Info("Utility is unmanaged; skippping...")
-
-	// switch u.Name() {
-	// case model.FluentbitCanonicalName, model.NodeProblemDetectorCanonicalName,
-	// 	model.RtcdCanonicalName, model.MetricsServerCanonicalName, model.CloudproberCanonicalName:
-	// 	u.logger.WithFields(log.Fields{
-	// 		"unmanaged-action": "skip",
-	// 		"utility":          u.Name(),
-	// 	}).Info("Utility has already defined in argocd; skippping...")
-	// default:
-	// 	if err := ProvisionUtilityArgocd(u.Name(), u.tempDir, u.cluster.ID, u.allowCIDRRangeList, u.awsClient, u.gitClient, u.argocdClient, u.logger); err != nil {
-	// 		return errors.Wrapf(err, "failed to provision %s utility", u.Name())
-	// 	}
-	// }
+	u.logger.WithField("unmanaged-action", "create").Info("Utility is unmanaged; deploying with argocd...")
 
 	privateDomainName, err := u.awsClient.GetPrivateZoneDomainName(u.logger)
 	if err != nil {
@@ -81,17 +68,8 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
 
-	fmt.Printf("BEFORE SWITCH UTILITY NAME: %s\n", u.Name())
 	switch u.Name() {
-	case model.FluentbitCanonicalName, model.NodeProblemDetectorCanonicalName,
-		model.RtcdCanonicalName, model.MetricsServerCanonicalName, model.CloudproberCanonicalName:
-		u.logger.WithFields(log.Fields{
-			"unmanaged-action": "skip",
-			"utility":          u.Name(),
-		}).Info("Utility has already defined in argocd; skippping...")
-
 	case model.PgbouncerCanonicalName:
-		fmt.Printf("DEPLOYING PGBOUNCER MANIFESTS: %s\n", u.Name())
 		err := deployManifests(k8sClient, u.logger)
 		if err != nil {
 			return err
@@ -228,6 +206,11 @@ func (u *unmanaged) CreateOrUpgrade() error {
 				return errors.Wrap(err, "failed to create a CNAME to point to Thanos GRPC")
 			}
 		}
+	default:
+		u.logger.WithFields(log.Fields{
+			"unmanaged-action": "skip",
+			"utility":          u.Name(),
+		}).Info("Utility has already defined in argocd; skippping...")
 	}
 
 	return nil

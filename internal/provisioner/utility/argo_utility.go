@@ -101,7 +101,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 
 	appName := utilityName + "-sre-" + awsClient.GetCloudEnvironmentName() + "-" + clusterID
 	gitopsAppName := "gitops-sre-" + awsClient.GetCloudEnvironmentName()
-	app, err := argocdClient.SyncApplication(gitopsAppName, appName)
+	app, err := argocdClient.SyncApplication(gitopsAppName)
 	if err != nil {
 		return errors.Wrap(err, "failed to sync application")
 	}
@@ -137,6 +137,14 @@ func (group utilityGroup) RemoveUtilityFromArgocd() error {
 		if err = os.WriteFile(group.tempDir+"/apps/"+group.awsClient.GetCloudEnvironmentName()+"/application-values.yaml", modifiedYAML, 0644); err != nil {
 			return errors.Wrap(err, "failed to write argo application file")
 		}
+
+		appName := "gitops-sre-" + group.awsClient.GetCloudEnvironmentName()
+		var wg sync.WaitGroup
+
+		wg.Add(1)
+		go group.argocdClient.SyncApplication(appName) //TODO: return error
+		wg.Wait()
+
 	}
 
 	if os.RemoveAll(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + "/helm-values/" + group.cluster.ID); err != nil {

@@ -61,6 +61,7 @@ type utilityGroup struct {
 	logger             log.FieldLogger
 	cluster            *model.Cluster
 	awsClient          aws.AWS
+	argocdClient       argocd.Client
 	kubeconfigPath     string
 	tempDir            string
 	allowCIDRRangeList []string
@@ -178,6 +179,7 @@ func NewUtilityGroupHandle(
 		logger:             logger,
 		cluster:            cluster,
 		awsClient:          awsClient,
+		argocdClient:       argocdClient,
 		kubeconfigPath:     kubeconfigPath,
 		tempDir:            tempDir,
 		allowCIDRRangeList: allowCIDRRangeList,
