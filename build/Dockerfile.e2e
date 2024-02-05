@@ -5,7 +5,7 @@
 ARG DOCKER_BUILD_IMAGE=golang:1.20
 ARG DOCKER_BASE_IMAGE=alpine:3.19
 
-FROM ${DOCKER_BUILD_IMAGE} AS build
+FROM --platform=${TARGETPLATFORM} ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /mattermost-cloud-e2e/
 COPY go.mod .
 COPY go.sum .
@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 go test -tags=e2e -c -ldflags="-s -w" -o mattermost-cloud-e2e-
 RUN CGO_ENABLED=0 go test -tags=e2e -c -ldflags="-s -w" -o mattermost-cloud-e2e-installation-tests ./e2e/tests/installation
 
 # Final Image
-FROM ${DOCKER_BASE_IMAGE}
+FROM --platform=${TARGETPLATFORM} ${DOCKER_BASE_IMAGE}
 
 RUN addgroup -S app-group && adduser -S app-user -G app-group
 USER app-user
@@ -25,7 +25,7 @@ LABEL name="Mattermost Cloud E2E" \
   maintainer="cloud-team@mattermost.com" \
   vendor="Mattermost" \
   distribution-scope="public" \
-  architecture="x86_64" \
+  architecture="x86_64, arm64" \
   url="https://mattermost.com"
 
 WORKDIR /mattermost-cloud-e2e/
