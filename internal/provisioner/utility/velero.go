@@ -67,20 +67,15 @@ func (v *velero) validate() error {
 }
 
 func (v *velero) CreateOrUpgrade() error {
-	logger := v.logger.WithField("velero-action", "upgrade")
-	if err := ProvisionUtilityArgocd(v.Name(), v.tempDir, v.cluster.ID, []string{}, v.awsClient, v.gitClient, v.argocdClient, logger); err != nil {
-		return errors.Wrap(err, "failed to provision velero utility")
+	h := v.newHelmDeployment(v.logger)
+
+	err := h.Update()
+	if err != nil {
+		return err
 	}
-	// h := v.newHelmDeployment(logger)
 
-	// err := h.Update()
-	// if err != nil {
-	// 	return err
-	// }
-
-	// err = v.updateVersion(h)
-	// return err
-	return nil
+	err = v.updateVersion(h)
+	return err
 }
 
 func (v *velero) Name() string {

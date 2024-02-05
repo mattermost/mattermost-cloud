@@ -206,6 +206,18 @@ func (u *unmanaged) CreateOrUpgrade() error {
 				return errors.Wrap(err, "failed to create a CNAME to point to Thanos GRPC")
 			}
 		}
+	case model.TeleportCanonicalName:
+		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+		}
+	case model.PromtailCanonicalName:
+		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+		}
+	case model.VeleroCanonicalName:
+		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+		}
 	default:
 		u.logger.WithFields(log.Fields{
 			"unmanaged-action": "skip",
