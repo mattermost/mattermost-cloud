@@ -918,6 +918,13 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool,
 		return false, errors.Wrap(err, "failed to remove cluster from Argocd")
 	}
 
+	// Sync the gitops-sre-dev application to remove it from argocd
+	appName := "gitops-sre-" + provisioner.awsClient.GetCloudEnvironmentName()
+	_, err = argocdClient.SyncApplication(appName)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to sync argocd application")
+	}
+
 	logger.Info("Successfully deleted Kops cluster")
 
 	return true, nil
