@@ -29,7 +29,7 @@ func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Applicatio
 	c.logger.Debugf("Successfully synced application %s", gitopsAppName)
 
 	// This time is needed for the application to be available in the ArgoCD.
-	// time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 10)
 
 	return app, nil
 }
@@ -73,6 +73,7 @@ func (c *ApiClient) waitForSyncCompletion(appName string, wg *sync.WaitGroup, ti
 	startTime := time.Now()
 	refresh := "true"
 
+	c.logger.Infof("Waiting for application %s to be synced...\n", appName)
 	for {
 
 		syncStatus, err := c.appClient.Get(context.Background(), &application.ApplicationQuery{
@@ -86,8 +87,6 @@ func (c *ApiClient) waitForSyncCompletion(appName string, wg *sync.WaitGroup, ti
 		if syncStatus.Status.OperationState.Phase != "Running" {
 			break
 		}
-
-		c.logger.Infof("Waiting for application %s to be synced... STATUS: %s\n", appName, syncStatus.Status.OperationState.Phase)
 
 		// Check for timeout
 		if time.Since(startTime) >= timeout {
