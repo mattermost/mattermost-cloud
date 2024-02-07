@@ -33,6 +33,10 @@ func (suite *ArgoClusterRegisterTestSuite) SetupSuite() {
 		ClusterID:    "1234567",
 	}
 
+	caData := base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCTUCgR5+EsitNh-----END PRIVATE KEY-----"))
+	certData := base64.StdEncoding.EncodeToString([]byte("-----BEGIN CERTIFICATE-----MIIDGTCCAgGgAwIBAgIUHqQQpkxCJ/xg6G/PVyFFEYrBPjswDQYJKoZIhvcNAQEL-----END CERTIFICATE-----"))
+	keyData := base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDNPAqO0X1O7gw-----END PRIVATE KEY-----"))
+
 	suite.argoK8sFile = &Argock8sRegister{
 		Clusters: []ArgocdClusterRegisterParameters{
 			{
@@ -40,9 +44,9 @@ func (suite *ArgoClusterRegisterTestSuite) SetupSuite() {
 				Type:      "kops",
 				Labels:    newClusterLabels,
 				APIServer: "cluster1.test.com",
-				CaData:    base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCTUCgR5+EsitNh-----END PRIVATE KEY-----")),
-				CertData:  base64.StdEncoding.EncodeToString([]byte("-----BEGIN CERTIFICATE-----MIIDGTCCAgGgAwIBAgIUHqQQpkxCJ/xg6G/PVyFFEYrBPjswDQYJKoZIhvcNAQEL-----END CERTIFICATE-----")),
-				KeyData:   base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDNPAqO0X1O7gw-----END PRIVATE KEY-----")),
+				CaData:    caData,
+				CertData:  certData,
+				KeyData:   keyData,
 			},
 		},
 	}
@@ -51,9 +55,9 @@ func (suite *ArgoClusterRegisterTestSuite) SetupSuite() {
 		Type:      "kops",
 		Labels:    newClusterLabels,
 		APIServer: "cluster2.test.com",
-		CaData:    base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCTUCgR5+EsitNh-----END PRIVATE KEY-----")),
-		CertData:  base64.StdEncoding.EncodeToString([]byte("-----BEGIN CERTIFICATE-----MIIDGTCCAgGgAwIBAgIUHqQQpkxCJ/xg6G/PVyFFEYrBPjswDQYJKoZIhvcNAQEL-----END CERTIFICATE-----")),
-		KeyData:   base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDNPAqO0X1O7gw-----END PRIVATE KEY-----")),
+		CaData:    caData,
+		CertData:  certData,
+		KeyData:   keyData,
 	}
 
 	suite.updatedArgok8sFile = &Argock8sRegister{
@@ -63,18 +67,18 @@ func (suite *ArgoClusterRegisterTestSuite) SetupSuite() {
 				Type:      "kops",
 				Labels:    newClusterLabels,
 				APIServer: "cluster1.test.com",
-				CaData:    base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCTUCgR5+EsitNh-----END PRIVATE KEY-----")),
-				CertData:  base64.StdEncoding.EncodeToString([]byte("-----BEGIN CERTIFICATE-----MIIDGTCCAgGgAwIBAgIUHqQQpkxCJ/xg6G/PVyFFEYrBPjswDQYJKoZIhvcNAQEL-----END CERTIFICATE-----")),
-				KeyData:   base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDNPAqO0X1O7gw-----END PRIVATE KEY-----")),
+				CaData:    caData,
+				CertData:  certData,
+				KeyData:   keyData,
 			},
 			{
 				Name:      "cluster2",
 				Type:      "kops",
 				Labels:    newClusterLabels,
 				APIServer: "cluster2.test.com",
-				CaData:    base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCTUCgR5+EsitNh-----END PRIVATE KEY-----")),
-				CertData:  base64.StdEncoding.EncodeToString([]byte("-----BEGIN CERTIFICATE-----MIIDGTCCAgGgAwIBAgIUHqQQpkxCJ/xg6G/PVyFFEYrBPjswDQYJKoZIhvcNAQEL-----END CERTIFICATE-----")),
-				KeyData:   base64.StdEncoding.EncodeToString([]byte("-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDNPAqO0X1O7gw-----END PRIVATE KEY-----")),
+				CaData:    caData,
+				CertData:  certData,
+				KeyData:   keyData,
 			},
 		},
 	}
