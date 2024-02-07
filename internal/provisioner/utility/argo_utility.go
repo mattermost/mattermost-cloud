@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ArgocdAppsFile = "/application-values-customer.yaml"
+	ArgocdAppsFile = "/application-values.yaml"
 )
 
 func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRangeList []string, awsClient aws.AWS,
@@ -142,14 +142,6 @@ func (group utilityGroup) RemoveUtilityFromArgocd() error {
 			return errors.Wrap(err, "failed to write argo application file")
 		}
 	}
-
-	//FIXME: This is a temporary fix to remove the utility from the cluster. This will be replaced with a proper implementation
-	// appName := "gitops-sre-" + group.awsClient.GetCloudEnvironmentName()
-	// var wg sync.WaitGroup
-
-	// wg.Add(1)
-	// go group.argocdClient.SyncApplication(appName) //TODO: return error
-	// wg.Wait()
 
 	if os.RemoveAll(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + "/helm-values/" + group.cluster.ID); err != nil {
 		return errors.Wrap(err, "failed to remove helm values directory")
