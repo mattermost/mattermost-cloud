@@ -428,28 +428,12 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
 
-	argocdRepoTempDir, err := os.MkdirTemp("", "create-")
+	argocdRepoTempDir, gitClient, argocdClient, err := provisioner.prepareArgoCDRepo(cluster, "create")
 	if err != nil {
-		logger.WithError(err).Debug("Failed to create temporary directory")
+		return err
 	}
 
-	gitOpsRepoURL := model.GetGitopsRepoURL()
-	gitOpsRepoPath := model.GetGitopsRepoPath()
-	argocdRepoURL := gitOpsRepoURL + gitOpsRepoPath
-
-	gitClient, err := git.NewGitClient(provisioner.gitlabOAuthToken, argocdRepoTempDir, argocdRepoURL, "Provisioner", "feat-CLD-5708")
-	if err != nil {
-		logger.WithError(err).Debug("Failed to create new git client")
-	}
-	defer gitClient.Close(argocdRepoTempDir, logger)
-
-	argocdClient, err := argocd.NewClient(&argocd.Connection{
-		Address: "argocd-prod.internal.mattermost.com",
-		Token:   provisioner.argocdApiToken,
-	}, logger)
-	if err != nil {
-		logger.WithError(err).Debug("failed to create new argocd client")
-	}
+	defer gitClient.Close(argocdRepoTempDir, provisioner.logger)
 
 	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kops.GetKubeConfigPath(), argocdRepoTempDir, cluster, provisioner.awsClient, gitClient, argocdClient, logger)
 	if err != nil {
@@ -491,28 +475,12 @@ func (provisioner *KopsProvisioner) DeleteNodegroups(cluster *model.Cluster) err
 func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	argocdRepoTempDir, err := os.MkdirTemp("", "provision-")
+	argocdRepoTempDir, gitClient, argocdClient, err := provisioner.prepareArgoCDRepo(cluster, "provision")
 	if err != nil {
-		logger.WithError(err).Debug("Failed to create temporary directory")
+		return err
 	}
 
-	gitOpsRepoURL := model.GetGitopsRepoURL()
-	gitOpsRepoPath := model.GetGitopsRepoPath()
-	argocdRepoURL := gitOpsRepoURL + gitOpsRepoPath
-
-	gitClient, err := git.NewGitClient(provisioner.gitlabOAuthToken, argocdRepoTempDir, argocdRepoURL, "Provisioner", "feat-CLD-5708")
-	if err != nil {
-		logger.WithError(err).Debug("Failed to create new git client")
-	}
-	defer gitClient.Close(argocdRepoTempDir, logger)
-
-	argocdClient, err := argocd.NewClient(&argocd.Connection{
-		Address: "argocd-prod.internal.mattermost.com",
-		Token:   provisioner.argocdApiToken,
-	}, logger)
-	if err != nil {
-		logger.WithError(err).Debug("failed to create new argocd client")
-	}
+	defer gitClient.Close(argocdRepoTempDir, provisioner.logger)
 
 	logger.Info("Provisioning cluster")
 	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
@@ -861,28 +829,12 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	argocdRepoTempDir, err := os.MkdirTemp("", "delete-")
+	argocdRepoTempDir, gitClient, argocdClient, err := provisioner.prepareArgoCDRepo(cluster, "delete")
 	if err != nil {
-		logger.WithError(err).Debug("Failed to create temporary directory")
+		return false, errors.Wrap(err, "failed to prepare argocd repo")
 	}
 
-	gitOpsRepoURL := model.GetGitopsRepoURL()
-	gitOpsRepoPath := model.GetGitopsRepoPath()
-	argocdRepoURL := gitOpsRepoURL + gitOpsRepoPath
-
-	gitClient, err := git.NewGitClient(provisioner.gitlabOAuthToken, argocdRepoTempDir, argocdRepoURL, "Provisioner", "feat-CLD-5708")
-	if err != nil {
-		logger.WithError(err).Debug("Failed to create new git client")
-	}
-	defer gitClient.Close(argocdRepoTempDir, logger)
-
-	argocdClient, err := argocd.NewClient(&argocd.Connection{
-		Address: "argocd-prod.internal.mattermost.com",
-		Token:   provisioner.argocdApiToken,
-	}, logger)
-	if err != nil {
-		logger.WithError(err).Debug("failed to create new argocd client")
-	}
+	defer gitClient.Close(argocdRepoTempDir, provisioner.logger)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
@@ -1081,4 +1033,32 @@ func (provisioner *KopsProvisioner) RefreshClusterMetadata(cluster *model.Cluste
 	}
 
 	return provisioner.refreshKopsMetadata(cluster)
+}
+
+func (provisioner *KopsProvisioner) prepareArgoCDRepo(cluster *model.Cluster, phase string) (string, git.Client, argocd.Client, error) {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	argocdRepoTempDir, err := os.MkdirTemp("", fmt.Sprintf("%s-", phase))
+	if err != nil {
+		logger.WithError(err).Debug("Failed to create temporary directory")
+	}
+
+	gitOpsRepoURL := model.GetGitopsRepoURL()
+	gitOpsRepoPath := model.GetGitopsRepoPath()
+	argocdRepoURL := gitOpsRepoURL + gitOpsRepoPath
+
+	gitClient, err := git.NewGitClient(provisioner.gitlabOAuthToken, argocdRepoTempDir, argocdRepoURL, "Provisioner", "feat-CLD-5708")
+	if err != nil {
+		return "", nil, nil, errors.Wrap(err, "failed to create new git client")
+	}
+
+	argocdClient, err := argocd.NewClient(&argocd.Connection{
+		Address: "argocd-prod.internal.mattermost.com",
+		Token:   provisioner.argocdApiToken,
+	}, logger)
+	if err != nil {
+		return "", nil, nil, errors.Wrap(err, "failed to create new argocd client")
+	}
+
+	return argocdRepoTempDir, gitClient, argocdClient, nil
 }
