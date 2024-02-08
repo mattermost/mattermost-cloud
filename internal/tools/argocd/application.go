@@ -94,6 +94,6 @@ func (c *ApiClient) waitForSyncCompletion(appName string, wg *sync.WaitGroup, ti
 			return
 		}
 
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 100) //TODO: check if this is needed
 	}
 }
