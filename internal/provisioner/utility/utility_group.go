@@ -219,7 +219,7 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	_, err = os.Stat(group.tempDir + "/apps/dev/helm-values/" + group.cluster.ID)
 	if os.IsNotExist(err) {
 		// Create the cluster directory
-		if err := os.Mkdir(group.tempDir+"/apps/dev/helm-values/"+group.cluster.ID, 0755); err != nil {
+		if err = os.Mkdir(group.tempDir+"/apps/dev/helm-values/"+group.cluster.ID, 0755); err != nil {
 			return errors.Wrap(err, "failed to create cluster directory for helm values")
 		}
 	}
@@ -245,7 +245,7 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 		if utility.DesiredVersion().IsEmpty() {
 			logger.WithField("utility", utility.Name()).Info("Skipping reprovision")
 		} else {
-			err := utility.CreateOrUpgrade()
+			err = utility.CreateOrUpgrade()
 			if err != nil {
 				return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
 			}

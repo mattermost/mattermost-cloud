@@ -95,11 +95,11 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	}
 
 	commitMsg := "Adding: utility:" + utilityName + " to cluster: " + clusterID
-	if err := gitClient.Commit(tempDir+"/apps", commitMsg, logger); err != nil {
+	if err = gitClient.Commit(tempDir+"/apps", commitMsg, logger); err != nil {
 		return errors.Wrap(err, "failed to commit to repo")
 	}
 
-	if err := gitClient.Push("feat-CLD-5708", logger); err != nil {
+	if err = gitClient.Push("feat-CLD-5708", logger); err != nil {
 		return errors.Wrap(err, "failed to push to repo")
 	}
 
@@ -143,7 +143,7 @@ func (group utilityGroup) RemoveUtilityFromArgocd() error {
 		}
 	}
 
-	if os.RemoveAll(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + "/helm-values/" + group.cluster.ID); err != nil {
+	if err = os.RemoveAll(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + "/helm-values/" + group.cluster.ID); err != nil {
 		return errors.Wrap(err, "failed to remove helm values directory")
 	}
 

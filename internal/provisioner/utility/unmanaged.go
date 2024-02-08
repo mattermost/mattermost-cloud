@@ -70,7 +70,7 @@ func (u *unmanaged) CreateOrUpgrade() error {
 
 	switch u.Name() {
 	case model.PgbouncerCanonicalName:
-		err := deployManifests(k8sClient, u.logger)
+		err = deployManifests(k8sClient, u.logger)
 		if err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		}
 
 	case model.NginxCanonicalName, model.NginxInternalCanonicalName:
-		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+		if err = u.utiliyArgocdDeploy(u.Name()); err != nil {
 			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
 		}
 
@@ -131,7 +131,7 @@ func (u *unmanaged) CreateOrUpgrade() error {
 			return errors.Wrapf(err, "failed to create the Thanos object storage secret")
 		}
 
-		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+		if err = u.utiliyArgocdDeploy(u.Name()); err != nil {
 			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
 		}
 

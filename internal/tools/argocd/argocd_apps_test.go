@@ -39,7 +39,7 @@ applications:
     cluster_labels:
       - cluster-type: cnc
 `)
-	if _, err := tmpfile.Write(testYAML); err != nil {
+	if _, err = tmpfile.Write(testYAML); err != nil {
 		t.Fatalf("Error writing to temporary YAML file: %v", err)
 	}
 
@@ -133,7 +133,7 @@ applications:
       - cluster-type: cnc
       - cluster-id: cluster1
 `)
-	if _, err := tmpfile.Write(testYAML); err != nil {
+	if _, err = tmpfile.Write(testYAML); err != nil {
 		t.Fatalf("Error writing to temporary YAML file: %v", err)
 	}
 
@@ -226,7 +226,7 @@ applications:
       - cluster-type: cnc
       - cluster-id: cluster1
 `)
-	if _, err := tmpfile.Write(testYAML); err != nil {
+	if _, err = tmpfile.Write(testYAML); err != nil {
 		t.Fatalf("Error writing to temporary YAML file: %v", err)
 	}
 
