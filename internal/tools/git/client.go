@@ -9,7 +9,6 @@ import (
 )
 
 type Client interface {
-	// Checkout(branchName string, logger log.FieldLogger) error
 	Commit(filePath, commitMsg string, logger log.FieldLogger) error
 	Push(branchName string, logger log.FieldLogger) error
 	Close(tempDir string, logger log.FieldLogger) error
@@ -20,7 +19,7 @@ type Client interface {
 // TODO: Handle concurrent access to the repo.
 func NewGitClient(oauthToken, tempDir, remoteURL, authorName, branchName string) (Client, error) {
 	if len(oauthToken) == 0 {
-		return &noopClient{}, errors.New("no git token provided")
+		return &NoOpClient{}, errors.New("no git token provided")
 	}
 	auth := &http.BasicAuth{
 		Username: "provisioner",
