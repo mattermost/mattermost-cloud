@@ -358,6 +358,15 @@ func TestCreateCluster(t *testing.T) {
 		// TODO: more fields...
 	})
 
+	t.Run("invalid argo register", func(t *testing.T) {
+		_, errTest := client.CreateCluster(&model.CreateClusterRequest{
+			Provider:              model.ProviderAWS,
+			Zones:                 []string{"zone"},
+			ArgocdClusterRegister: map[string]string{"type": "customer"},
+		})
+		require.EqualError(t, errTest, "failed with status code 400")
+	})
+
 	t.Run("handle annotations", func(t *testing.T) {
 		annotations := []*model.Annotation{
 			{ID: "", Name: "multi-tenant"},

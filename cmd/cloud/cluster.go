@@ -115,6 +115,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		Networking:             flags.networking,
 		VPC:                    flags.vpc,
 		Provisioner:            model.ProvisionerKops,
+		ArgocdClusterRegister:  flags.argocdRegister,
 	}
 
 	if flags.useEKS {
@@ -224,6 +225,7 @@ func executeClusterProvisionCmd(flags clusterProvisionFlags) error {
 	request := &model.ProvisionClusterRequest{
 		Force:                  flags.reprovisionAllUtilities,
 		DesiredUtilityVersions: processUtilityFlags(flags.utilityFlags),
+		ArgocdClusterRegister:  flags.argocdRegister,
 	}
 
 	if flags.dryRun {

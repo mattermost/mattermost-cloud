@@ -81,6 +81,7 @@ type utilityFlags struct {
 	veleroValues               string
 	cloudproberVersion         string
 	cloudproberValues          string
+	argocdRegister             map[string]string
 }
 
 func (flags *utilityFlags) addFlags(command *cobra.Command) {
@@ -110,6 +111,7 @@ func (flags *utilityFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.veleroValues, "velero-values", "", "The full Git URL of the desired chart value file's version for Velero")
 	command.Flags().StringVar(&flags.cloudproberVersion, "cloudprober-version", "", "The version of Cloudprober. Use 'stable' to provision the latest stable version published upstream.")
 	command.Flags().StringVar(&flags.cloudproberValues, "cloudprober-values", "", "The full Git URL of the desired chart value file's version for Cloudprober")
+	command.Flags().StringToStringVarP(&flags.argocdRegister, "argocd-register", "", nil, "Register a cluster into Argocd format: cluster-type=customer,force=true")
 }
 
 type sizeOptions struct {
