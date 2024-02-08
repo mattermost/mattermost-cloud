@@ -6,7 +6,6 @@ import (
 
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient"
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
-	"github.com/argoproj/argo-cd/v2/pkg/apiclient/cluster"
 	argoappv1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
@@ -22,9 +21,8 @@ type Connection struct {
 }
 
 type ApiClient struct {
-	appClient     application.ApplicationServiceClient
-	clusterClient cluster.ClusterServiceClient
-	logger        log.FieldLogger
+	appClient application.ApplicationServiceClient
+	logger    log.FieldLogger
 }
 
 func NewClient(c *Connection, logger log.FieldLogger) (*ApiClient, error) {
@@ -43,14 +41,8 @@ func NewClient(c *Connection, logger log.FieldLogger) (*ApiClient, error) {
 		return nil, err
 	}
 
-	_, clusterClient, err := apiClient.NewClusterClient()
-	if err != nil {
-		return nil, err
-	}
-
 	return &ApiClient{
-		appClient:     appClient,
-		clusterClient: clusterClient,
-		logger:        logger,
+		appClient: appClient,
+		logger:    logger,
 	}, nil
 }
