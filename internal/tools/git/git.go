@@ -20,35 +20,6 @@ type Git struct {
 	branchName string
 }
 
-// func (g *Git) Checkout(branchName string, logger log.FieldLogger) error {
-// 	err := g.repo.Fetch(&git.FetchOptions{
-// 		RefSpecs: []config.RefSpec{
-// 			config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/remotes/origin/%s", branchName, branchName)),
-// 		},
-// 		Auth: g.auth,
-// 	})
-// 	if err != nil && err != git.NoErrAlreadyUpToDate {
-// 		return errors.Wrapf(err, "unable to fetch branch %s", branchName)
-// 	}
-
-// 	w, err := g.repo.Worktree()
-// 	if err != nil {
-// 		return errors.Wrap(err, "unable to create worktree")
-// 	}
-
-// 	err = w.Checkout(&git.CheckoutOptions{
-// 		Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branchName)),
-// 		Create: true,
-// 		Force:  true,
-// 	})
-// 	if err != nil {
-// 		return errors.Wrapf(err, "unable to checkout repository to branch: %v", branchName)
-// 	}
-// 	logger.Debugf("Checkout branch %s successfully", branchName)
-
-// 	return nil
-// }
-
 func (g *Git) Pull(logger log.FieldLogger) error {
 	w, err := g.repo.Worktree()
 	if err != nil {
