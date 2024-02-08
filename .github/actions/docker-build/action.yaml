@@ -34,8 +34,8 @@ runs:
     - name: cd/push-image-pr
       run: "make push-image-pr"
       shell: bash
-      if: "${{ inputs.is_pr }}"
+      if: github.event_name == 'pull_request'
     - name: cd/push-image
       run: "make push-image"
       shell: bash
-      if: "${{ !inputs.is_pr }}"
+      if: github.event_name != 'pull_request'
