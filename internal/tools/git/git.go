@@ -81,8 +81,7 @@ func (g *Git) Push(branchName string, logger log.FieldLogger) error {
 	})
 
 	if err != nil {
-		//return errors.Wrapf(err, "unable to push changes to the repository")
-		logger.Warnf("Unable to push changes to the repository: %v", err)
+		return errors.Wrapf(err, "unable to push changes to the repository")
 	}
 	logger.Debug("Push to repository successfully")
 
