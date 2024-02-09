@@ -29,7 +29,8 @@ func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Applicatio
 	c.logger.Debugf("Successfully synced application %s", gitopsAppName)
 
 	// This time is needed for the application to be available in the ArgoCD.
-	time.Sleep(time.Second * 10)
+	c.logger.Debugf("Waiting for application %s to be available in the ArgoCD ...", gitopsAppName)
+	time.Sleep(time.Second * 5)
 
 	return app, nil
 }
@@ -37,7 +38,7 @@ func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Applicatio
 func (c *ApiClient) WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeout time.Duration) error { //TODO return error
 	defer wg.Done()
 
-	c.logger.Infof("Waiting for application %s to be synced...", appName)
+	c.logger.Infof("Waiting for application %s to be healthy ...", appName)
 
 	startTime := time.Now()
 	refresh := "true"
@@ -48,8 +49,7 @@ func (c *ApiClient) WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeou
 			Refresh: &refresh,
 		})
 		if err != nil {
-			c.logger.Errorf("failed to get application %s: %v", appName, err)
-			return errors.Wrap(err, "failed to get application.")
+			return errors.Wrapf(err, "failed to get application %s", appName)
 		}
 
 		if app.Status.Health.Status == health.HealthStatusHealthy {
@@ -58,11 +58,11 @@ func (c *ApiClient) WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeou
 
 		// Check for timeout
 		if time.Since(startTime) >= timeout {
-			c.logger.Errorf("timed out waiting for application %s to be healthy", appName)
 			return errors.New("timed out waiting for application to be healthy")
 		}
 
-		time.Sleep(time.Millisecond * 100)
+		//Add a small delay to reduce CPU usage and avoid too_many_pings error.
+		time.Sleep(time.Second * 1)
 	}
 	return nil
 }
@@ -90,10 +90,11 @@ func (c *ApiClient) waitForSyncCompletion(appName string, wg *sync.WaitGroup, ti
 
 		// Check for timeout
 		if time.Since(startTime) >= timeout {
-			c.logger.Errorf("timed out waiting for application %s to be healthy", appName)
+			c.logger.Errorf("timed out waiting for application %s to be synced", appName)
 			return
 		}
 
-		time.Sleep(time.Millisecond * 100) //TODO: check if this is needed
+		//Add a small delay to reduce CPU usage and avoid too_many_pings error.
+		time.Sleep(time.Second * 1)
 	}
 }
