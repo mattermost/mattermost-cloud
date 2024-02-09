@@ -74,7 +74,7 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		if err != nil {
 			return err
 		}
-		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+		if err = u.utiliyArgocdDeploy(u.Name()); err != nil {
 			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
 		}
 
@@ -83,9 +83,9 @@ func (u *unmanaged) CreateOrUpgrade() error {
 			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
 		}
 
-		endpoint, elbType, err := getElasticLoadBalancerInfo(u.Name(), u.logger, u.kubeconfigPath)
-		if err != nil {
-			return errors.Wrap(err, "couldn't get the loadbalancer endpoint (nginx-internal)")
+		endpoint, elbType, elbErr := getElasticLoadBalancerInfo(u.Name(), u.logger, u.kubeconfigPath)
+		if elbErr != nil {
+			return errors.Wrap(elbErr, "couldn't get the loadbalancer endpoint (nginx-internal)")
 		}
 
 		if err := addLoadBalancerNameTag(u.awsClient.GetLoadBalancerAPIByType(elbType), endpoint); err != nil {

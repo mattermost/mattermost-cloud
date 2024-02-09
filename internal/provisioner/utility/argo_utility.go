@@ -123,6 +123,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 }
 
 func (group utilityGroup) RemoveUtilityFromArgocd() error {
+
 	appsFile, err := os.ReadFile(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + ArgocdAppsFile)
 	if err != nil {
 		return errors.Wrap(err, "failed to read cluster file")
@@ -134,7 +135,9 @@ func (group utilityGroup) RemoveUtilityFromArgocd() error {
 
 	for _, utility := range group.utilities {
 		argocd.RemoveClusterIDLabel(argoAppFile, utility.Name(), group.cluster.ID, group.logger)
-		modifiedYAML, err := yaml.Marshal(argoAppFile)
+
+		var modifiedYAML []byte
+		modifiedYAML, err = yaml.Marshal(argoAppFile)
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal argo application file")
 		}

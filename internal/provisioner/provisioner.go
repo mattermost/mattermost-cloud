@@ -9,7 +9,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -50,7 +49,6 @@ type Provisioner struct {
 	ClusterProvisionerOption
 	params         ProvisioningParams
 	awsClient      aws.AWS
-	gitClient      git.Client
 	resourceUtil   *utils.ResourceUtil
 	backupOperator *BackupOperator
 	store          *store.SQLStore
