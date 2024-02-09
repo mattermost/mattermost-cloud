@@ -149,7 +149,5 @@ func (cr *ClusterRegister) deregisterClusterFromArgocd() error {
 		return errors.Wrap(err, "failed to push to repo")
 	}
 
-	//TODO sync application after removing cluster from argocd
-
 	return nil
 }
