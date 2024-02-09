@@ -88,7 +88,7 @@ func (u *unmanaged) CreateOrUpgrade() error {
 			return errors.Wrap(elbErr, "couldn't get the loadbalancer endpoint (nginx-internal)")
 		}
 
-		if err := addLoadBalancerNameTag(u.awsClient.GetLoadBalancerAPIByType(elbType), endpoint); err != nil {
+		if err = addLoadBalancerNameTag(u.awsClient.GetLoadBalancerAPIByType(elbType), endpoint); err != nil {
 			return errors.Wrapf(err, "failed to add loadbalancer name tag (%s)", u.Name())
 		}
 
