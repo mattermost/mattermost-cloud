@@ -134,6 +134,7 @@ type installationOptions struct {
 	requireAnnotatedInstallations bool
 	gitlabOAuthToken              string
 	argocdApiToken                string
+	argocdServerApi               string
 	forceCRUpgrade                bool
 	utilitiesGitURL               string
 	utilitiesGitPath              string
@@ -146,6 +147,7 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.keepFileStoreData, "keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	command.Flags().BoolVar(&flags.requireAnnotatedInstallations, "require-annotated-installations", false, "Require new installations to have at least one annotation.")
 	command.Flags().StringVar(&flags.gitlabOAuthToken, "gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
+	command.Flags().StringVar(&flags.argocdServerApi, "argocd-server-api", "", "The API endpoint to use for ArgoCD.")
 	command.Flags().StringVar(&flags.argocdApiToken, "argocd-api-token", "", "The API token to use for ArgoCD.")
 	command.Flags().BoolVar(&flags.forceCRUpgrade, "force-cr-upgrade", false, "If specified installation CRVersions will be updated to the latest version when supervised.")
 	command.Flags().StringVar(&flags.utilitiesGitURL, "utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")

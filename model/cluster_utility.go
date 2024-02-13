@@ -51,6 +51,9 @@ const (
 	// ArgocdApiToken is the name of the Environment Variable which
 	// contains the token for accessing the ArgoCD API
 	ArgocdApiToken = "ARGOCD_API_TOKEN"
+	// argocdServerApi is the name of the Environment Variable which
+	// contains the address of the ArgoCD API
+	ArgocdServerApi = "ARGOCD_API_ADDRESS"
 )
 
 // gitlabToken is the token that will be used for remote helm charts.
@@ -58,6 +61,9 @@ var gitlabToken string
 
 // argocdApiToken is the token that will be used for accessing the ArgoCD API.
 var argocdApiToken string
+
+// argocdServerApi is the address of the ArgoCD API.
+var argocdServerApi string
 
 var gitOpsRepoURL string
 var gitOpsRepoPath string
@@ -84,20 +90,28 @@ func GetArgocdApiToken() string {
 	return argocdApiToken
 }
 
-func SetGitopsRepoURL(gitopsUrl string) {
-	gitOpsRepoURL = gitopsUrl
+func SetGitopsRepoURL(val string) {
+	gitOpsRepoURL = val
 }
 
 func GetGitopsRepoURL() string {
 	return gitOpsRepoURL
 }
 
-func SetGitopsRepoPath(gitopsPath string) {
-	gitOpsRepoPath = gitopsPath
+func SetGitopsRepoPath(val string) {
+	gitOpsRepoPath = val
 }
 
 func GetGitopsRepoPath() string {
 	return gitOpsRepoPath
+}
+
+func SetArgocdServerApi(val string) {
+	argocdServerApi = val
+}
+
+func GetArgocdServerApi() string {
+	return argocdServerApi
 }
 
 // DefaultUtilityVersions holds the default values for all the HelmUtilityVersions

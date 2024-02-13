@@ -67,7 +67,8 @@ func (v *velero) validate() error {
 }
 
 func (v *velero) CreateOrUpgrade() error {
-	h := v.newHelmDeployment(v.logger)
+	logger := v.logger.WithField("velero-action", "upgrade")
+	h := v.newHelmDeployment(logger)
 
 	err := h.Update()
 	if err != nil {

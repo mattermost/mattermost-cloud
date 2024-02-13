@@ -110,7 +110,15 @@ func executeServerCmd(flags serverFlags) error {
 	}
 	model.SetArgocdApiToken(ArgocdApiToken)
 	if len(model.GetArgocdApiToken()) == 0 {
-		logger.Warnf("The argocd-api-token flag and %s were empty; using local helm charts", model.ArgocdApiToken)
+		logger.Warnf("The argocd-api-token flag and %s were empty; using managed utilities", model.ArgocdApiToken)
+	}
+	ArgocdServerApi := flags.argocdServerApi
+	if len(ArgocdServerApi) == 0 {
+		ArgocdServerApi = os.Getenv(model.ArgocdServerApi)
+	}
+	model.SetArgocdServerApi(ArgocdServerApi)
+	if len(model.GetArgocdServerApi()) == 0 {
+		logger.Warnf("The argocd-server-api flag and %s were empty; using managed utilities", model.ArgocdServerApi)
 	}
 
 	if flags.machineLogs {

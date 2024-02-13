@@ -1052,8 +1052,9 @@ func (provisioner *KopsProvisioner) prepareArgoCDRepo(cluster *model.Cluster, ph
 		return "", nil, nil, errors.Wrap(err, "failed to create new git client")
 	}
 
+	argocdApiAddress := model.GetArgocdServerApi()
 	argocdClient, err := argocd.NewClient(&argocd.Connection{
-		Address: "argocd-prod.internal.mattermost.com",
+		Address: argocdApiAddress,
 		Token:   provisioner.argocdApiToken,
 	}, logger)
 	if err != nil {
