@@ -7,6 +7,7 @@ package model_test
 import (
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -79,14 +80,14 @@ func TestPatchGroupRequestValid(t *testing.T) {
 			"version only",
 			false,
 			&model.PatchGroupRequest{
-				Name: sToP("group1"),
+				Name: util.SToP("group1"),
 			},
 		},
 		{
 			"invalid name only",
 			true,
 			&model.PatchGroupRequest{
-				Name: sToP(""),
+				Name: util.SToP(""),
 			},
 		},
 		{
@@ -145,7 +146,7 @@ func TestPatchGroupRequestApply(t *testing.T) {
 			"name only",
 			true,
 			&model.PatchGroupRequest{
-				Name: sToP("group1"),
+				Name: util.SToP("group1"),
 			},
 			&model.Group{},
 			&model.Group{
@@ -156,7 +157,7 @@ func TestPatchGroupRequestApply(t *testing.T) {
 			"description only",
 			true,
 			&model.PatchGroupRequest{
-				Description: sToP("group1 description"),
+				Description: util.SToP("group1 description"),
 			},
 			&model.Group{},
 			&model.Group{
@@ -167,7 +168,7 @@ func TestPatchGroupRequestApply(t *testing.T) {
 			"version only",
 			true,
 			&model.PatchGroupRequest{
-				Version: sToP("version1"),
+				Version: util.SToP("version1"),
 			},
 			&model.Group{},
 			&model.Group{
@@ -178,7 +179,7 @@ func TestPatchGroupRequestApply(t *testing.T) {
 			"image only",
 			true,
 			&model.PatchGroupRequest{
-				Image: sToP("image1"),
+				Image: util.SToP("image1"),
 			},
 			&model.Group{},
 			&model.Group{
@@ -273,7 +274,7 @@ func TestPatchGroupRequestApply(t *testing.T) {
 			"complex",
 			true,
 			&model.PatchGroupRequest{
-				Version: sToP("patch-version"),
+				Version: util.SToP("patch-version"),
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
 					"key3": {Value: "patch-value-3"},

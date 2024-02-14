@@ -17,6 +17,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -357,6 +358,15 @@ func TestCreateCluster(t *testing.T) {
 		// TODO: more fields...
 	})
 
+	t.Run("invalid argo register", func(t *testing.T) {
+		_, errTest := client.CreateCluster(&model.CreateClusterRequest{
+			Provider:              model.ProviderAWS,
+			Zones:                 []string{"zone"},
+			ArgocdClusterRegister: map[string]string{"type": "customer"},
+		})
+		require.EqualError(t, errTest, "failed with status code 400")
+	})
+
 	t.Run("handle annotations", func(t *testing.T) {
 		annotations := []*model.Annotation{
 			{ID: "", Name: "multi-tenant"},
@@ -653,7 +663,7 @@ func TestUpgradeCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		clusterResp, errTest := client.UpgradeCluster(model.NewID(), &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
+		clusterResp, errTest := client.UpgradeCluster(model.NewID(), &model.PatchUpgradeClusterRequest{Version: util.SToP("latest")})
 		require.EqualError(t, errTest, "failed with status code 404")
 		assert.Nil(t, clusterResp)
 	})
@@ -674,7 +684,7 @@ func TestUpgradeCluster(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: util.SToP("latest")})
 		require.EqualError(t, errTest, "failed with status code 409")
 		assert.Nil(t, clusterResp)
 	})
@@ -766,7 +776,7 @@ func TestUpgradeCluster(t *testing.T) {
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, errTest)
 
-		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("invalid")})
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: util.SToP("invalid")})
 		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
@@ -793,7 +803,7 @@ func TestUpgradeCluster(t *testing.T) {
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, errTest)
 
-		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{KmsKeyId: sToP("invalid")})
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{KmsKeyId: util.SToP("invalid")})
 		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
@@ -824,7 +834,7 @@ func TestUpgradeCluster(t *testing.T) {
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, errTest)
 
-		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: util.SToP("latest")})
 		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
@@ -978,7 +988,7 @@ func TestResizeCluster(t *testing.T) {
 		errTest := sqlStore.LockClusterAPI(cluster1.ID)
 		require.NoError(t, errTest)
 
-		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test1")})
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: util.SToP("test1")})
 		require.EqualError(t, errTest, "failed with status code 403")
 		assert.Nil(t, clusterResp)
 
@@ -991,7 +1001,7 @@ func TestResizeCluster(t *testing.T) {
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, errTest)
 
-		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test1")})
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: util.SToP("test1")})
 		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
@@ -1007,7 +1017,7 @@ func TestResizeCluster(t *testing.T) {
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, errTest)
 
-		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test2")})
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: util.SToP("test2")})
 		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
@@ -1022,7 +1032,7 @@ func TestResizeCluster(t *testing.T) {
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, errTest)
 
-		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test3")})
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: util.SToP("test3")})
 		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
@@ -1081,7 +1091,7 @@ func TestResizeCluster(t *testing.T) {
 		require.NoError(t, errTest)
 
 		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{
-			MasterInstanceType: sToP("test4"),
+			MasterInstanceType: util.SToP("test4"),
 		})
 
 		require.EqualError(t, errTest, "failed with status code 400")

@@ -13,6 +13,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -44,7 +45,7 @@ func provisionCluster(
 		// the necessary resources created for Perseus. If the necessary resources are
 		// not available then warnings will be logged and Perseus won't be deployed.
 		// TODO: revisit this after perseus testing is complete.
-		logger.WithError(err).Debug("Failed to generate perseus secret; skipping perseus utility deployment")
+		logger.Debug(errors.Wrap(err, "Failed to generate perseus secret; skipping perseus utility deployment").Error())
 		deployPerseus = false
 	}
 
@@ -53,19 +54,53 @@ func provisionCluster(
 		return errors.Wrap(err, "failed to generate bifrost secret")
 	}
 
+	// Mattermost Operator Helm Migration
+	// There are three possible states that a cluster can be in when
+	// provisioning happens:
+	// 1. New cluster with Mattermost Operator not installed
+	// 2. Existing cluster with "old" resources manually installed
+	// 3. Existing cluster with "new" helm chart installed
+	// The migration process checks if the cluster is in state `2` and prepares
+	// it to be migrated. Once all clusters have been migrated then the
+	// migration check can be removed.
+	err = migrateMattermostOperatorToHelm(kubeconfigPath, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate operator to helm")
+	}
+
 	// Begin deploying the mattermost operator.
 	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
 	}
+	helmClient, err := helm.New(kubeconfigPath, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create a new helm client")
+	}
+	found, _ := helmClient.HelmChartFoundAndDeployed("mattermost-operator", "mattermost-operator")
+	if !found {
+		logger.Info("Performing first-time Mattermost Operator helm chart installation")
 
+		err = helmClient.RepoAdd("mattermost", "https://helm.mattermost.com")
+		if err != nil {
+			return errors.Wrap(err, "failed to add mattermost helm repo")
+		}
+		err = helmClient.RunGenericCommand(
+			"install", "mattermost-operator", "mattermost/mattermost-operator",
+			"-n", "mattermost-operator",
+			"-f", "helm-charts/mattermost-operator.yaml",
+			"--create-namespace",
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to install mattermost operator chart")
+		}
+	}
+
+	mattermostOperatorNamespace := "mattermost-operator"
 	mysqlOperatorNamespace := "mysql-operator"
 	minioOperatorNamespace := "minio-operator"
-	mattermostOperatorNamespace := "mattermost-operator"
 
-	namespaces := []string{
-		mattermostOperatorNamespace,
-	}
+	namespaces := []string{}
 	if params.DeployMysqlOperator {
 		namespaces = append(namespaces, mysqlOperatorNamespace)
 	}
@@ -73,7 +108,7 @@ func provisionCluster(
 		namespaces = append(namespaces, minioOperatorNamespace)
 	}
 
-	// Remove all previously-installed operator namespaces and resources.
+	// Remove previously-installed operator namespaces and resources.
 	ctx := context.TODO()
 	for _, namespace := range namespaces {
 		logger.Infof("Cleaning up namespace %s", namespace)
@@ -122,8 +157,17 @@ func provisionCluster(
 		return errors.Wrap(err, "failed to create bifrost secret")
 	}
 
-	// TODO: determine if we want to hard-code the k8s resource objects in code.
-	// For now, we will ingest manifest files to deploy the mattermost operator.
+	// Notes about the Mattermost Operator CRDs:
+	//
+	// The Mattermost Helm chart will install the Mattermost CRDs if they are
+	// missing on a given k8s cluster, but it will not upgrade them. This follows
+	// the general helm documentation for CRDs:
+	// https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations
+	//
+	// For now, we will update the CRDs the same way we did before by updating
+	// them from manifest files in this repo. We may want to change this in the
+	// future. Perhaps we should follow how nginx does it?
+	// https://github.com/nginxinc/kubernetes-ingress/tree/main/charts/nginx-ingress#upgrading-the-crds
 	files := []k8s.ManifestFile{
 		{
 			Path:            "manifests/operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
@@ -133,18 +177,6 @@ func provisionCluster(
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
 			Path:            "manifests/operator-manifests/mattermost/crds/mm_mattermost_crd.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/service_account.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/role.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/role_binding.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/operator.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
 			Path:            "manifests/bifrost/bifrost.yaml",
@@ -213,6 +245,36 @@ func provisionCluster(
 	err = k8sClient.CreateFromFiles(manifestFiles)
 	if err != nil {
 		return err
+	}
+
+	if params.MattermostOperatorHelmDir != "" {
+		logger.Debugf("Upgrading Mattermost Operator helm chart from local chart %s", params.MattermostOperatorHelmDir)
+
+		err = helmClient.FullyUpgradeLocalChart("mattermost-operator", params.MattermostOperatorHelmDir, "mattermost-operator", "helm-charts/mattermost-operator.yaml")
+		if err != nil {
+			return errors.Wrap(err, "failed to upgrade local mattermost helm chart")
+		}
+	} else {
+		logger.Debug("Upgrading Mattermost Operator helm chart")
+
+		err = helmClient.RepoAdd("mattermost", "https://helm.mattermost.com")
+		if err != nil {
+			return errors.Wrap(err, "failed to add mattermost helm repo")
+		}
+
+		err = helmClient.RepoUpdate()
+		if err != nil {
+			return errors.Wrap(err, "failed to ensure helm repos are updated")
+		}
+
+		err = helmClient.RunGenericCommand(
+			"upgrade", "mattermost-operator", "mattermost/mattermost-operator",
+			"-n", "mattermost-operator",
+			"-f", "helm-charts/mattermost-operator.yaml",
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to upgrade mattermost helm chart")
+		}
 	}
 
 	// change the waiting time because creation can take more time
@@ -330,7 +392,142 @@ func provisionCluster(
 		clusterName = cluster.ProvisionerMetadataEKS.Name
 	}
 
+	// Register cluster in argocd
+	switch {
+	case cluster.UtilityMetadata.ManagedByArgocd:
+		switch {
+		case !cluster.UtilityMetadata.ArgocdClusterRegister.Registered:
+			logger.Debug("Starting argocd cluster registration")
+			clusterRegister, err := NewClusterRegisterHandle(cluster, awsClient.GetCloudEnvironmentName(), logger)
+			if err != nil {
+				return errors.Wrap(err, "Failed to create new cluster register handle")
+			}
+			if err = clusterRegister.clusterRegister(params.S3StateStore); err != nil {
+				return errors.Wrap(err, "failed to register cluster in argocd")
+			}
+
+			cluster.UtilityMetadata.ArgocdClusterRegister.Registered = true
+			logger.Infof("Cluster: %s successfully registered in argocd", cluster.ID)
+
+		default:
+			logger.Info("Cluster already registered, skipping argocd cluster register")
+		}
+	default:
+		logger.Info("ManagedByArgocd is false, skipping argocd cluster registration")
+	}
+
 	logger.WithField("name", clusterName).Info("Successfully provisioned cluster")
+
+	return nil
+}
+
+// migrateMattermostOperatorToHelm performs the migration steps needed to move
+// the Mattermost operator deployment over to helm.
+// TODO: this can be removed once all migrations are complete.
+func migrateMattermostOperatorToHelm(kubeconfigPath string, logger logrus.FieldLogger) error {
+	logger = logger.WithField("helm-migration", "mattermost-operator")
+	logger.Info("Checking status of Mattermost Operator helm migration...")
+
+	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
+	}
+	helmClient, err := helm.New(kubeconfigPath, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create a new helm client")
+	}
+
+	_, deployed := helmClient.HelmChartFoundAndDeployed("mattermost-operator", "mattermost-operator")
+	if deployed {
+		logger.Info("Mattermost Operator helm chart is already deployed; skipping migration process")
+		return nil
+	}
+
+	logger.Info("Checking if this is an unprovisioned cluster...")
+	ctx := context.TODO()
+	_, err = k8sClient.Clientset.AppsV1().Deployments("mattermost-operator").Get(ctx, "mattermost-operator", metav1.GetOptions{})
+	if err != nil && k8sErrors.IsNotFound(err) {
+		logger.Info("No Mattermost Operator deployment found; proceeding as if this is a new cluster")
+		return nil
+	}
+	if err != nil {
+		return errors.Wrap(err, "encountered unexpected error try to retrieve Mattermost Operator deployment")
+	}
+
+	logger.Info("Beginning helm adoption process for the Mattermost Operator resources")
+
+	// Some resources must be "adopted" via specifc metadata changes:
+	// https://github.com/helm/helm/pull/7649
+	err = applyHelmMigrationMetadata(k8sClient)
+	if err != nil {
+		return errors.Wrap(err, "prepare mattermost-operator resources for helm migration")
+	}
+
+	logger.Info("Metadata migration complete; starting namespace cleanup...")
+
+	// The remaining operator resources exist in the Mattermost operator
+	// namespace. Some of these resources need to have fields updated that
+	// are immutable. To get around this we will delete all of the resources
+	// and let the helm chart recreate them.
+	namespace := "mattermost-operator"
+	logger.Infof("Cleaning up namespace %s", namespace)
+	ctx = context.TODO()
+	err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Infof("Namespace %s not found; skipping...", namespace)
+	} else if err != nil {
+		return errors.Wrapf(err, "failed to delete namespace %s", namespace)
+	}
+
+	wait := 60
+	logger.Infof("Waiting up to %d seconds for namespaces to be terminated...", wait)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	err = waitForNamespacesDeleted(ctx, []string{namespace}, k8sClient)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func applyHelmMigrationMetadata(k8sClient *k8s.KubeClient) error {
+	ctx := context.TODO()
+	clusterRole, err := k8sClient.Clientset.RbacV1().ClusterRoles().Get(ctx, "mattermost-operator", metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get mattermost-operator clusterrole")
+	}
+	if clusterRole.Annotations == nil {
+		clusterRole.Annotations = make(map[string]string)
+	}
+	if clusterRole.Labels == nil {
+		clusterRole.Labels = make(map[string]string)
+	}
+	clusterRole.Annotations["meta.helm.sh/release-name"] = "mattermost-operator"
+	clusterRole.Annotations["meta.helm.sh/release-namespace"] = "mattermost-operator"
+	clusterRole.Labels["app.kubernetes.io/managed-by"] = "Helm"
+	_, err = k8sClient.Clientset.RbacV1().ClusterRoles().Update(ctx, clusterRole, metav1.UpdateOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to update mattermost-operator clusterrole")
+	}
+
+	clusterRoleBinding, err := k8sClient.Clientset.RbacV1().ClusterRoleBindings().Get(ctx, "mattermost-operator", metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get mattermost-operator clusterrolebinding")
+	}
+	if clusterRoleBinding.Annotations == nil {
+		clusterRoleBinding.Annotations = make(map[string]string)
+	}
+	if clusterRoleBinding.Labels == nil {
+		clusterRoleBinding.Labels = make(map[string]string)
+	}
+	clusterRoleBinding.Annotations["meta.helm.sh/release-name"] = "mattermost-operator"
+	clusterRoleBinding.Annotations["meta.helm.sh/release-namespace"] = "mattermost-operator"
+	clusterRoleBinding.Labels["app.kubernetes.io/managed-by"] = "Helm"
+	_, err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Update(ctx, clusterRoleBinding, metav1.UpdateOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to update mattermost-operator clusterrolebinding")
+	}
 
 	return nil
 }

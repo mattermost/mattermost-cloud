@@ -13,6 +13,7 @@ import (
 
 	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -410,49 +411,49 @@ func TestPatchInstallationRequestValid(t *testing.T) {
 			"version only",
 			false,
 			&model.PatchInstallationRequest{
-				Version: sToP("version1"),
+				Version: util.SToP("version1"),
 			},
 		},
 		{
 			"invalid version only",
 			true,
 			&model.PatchInstallationRequest{
-				Version: sToP(""),
+				Version: util.SToP(""),
 			},
 		},
 		{
 			"image only",
 			false,
 			&model.PatchInstallationRequest{
-				Image: sToP("image1"),
+				Image: util.SToP("image1"),
 			},
 		},
 		{
 			"invalid image only",
 			true,
 			&model.PatchInstallationRequest{
-				Image: sToP(""),
+				Image: util.SToP(""),
 			},
 		},
 		{
 			"invalid size",
 			true,
 			&model.PatchInstallationRequest{
-				Size: sToP("some-size"),
+				Size: util.SToP("some-size"),
 			},
 		},
 		{
 			"valid Operator size",
 			false,
 			&model.PatchInstallationRequest{
-				Size: sToP(v1alpha1.Size5000String),
+				Size: util.SToP(v1alpha1.Size5000String),
 			},
 		},
 		{
 			"valid Provisioner size",
 			false,
 			&model.PatchInstallationRequest{
-				Size: sToP(fmt.Sprintf("%s-10", model.SizeProvisionerXL)),
+				Size: util.SToP(fmt.Sprintf("%s-10", model.SizeProvisionerXL)),
 			},
 		},
 	}
@@ -544,7 +545,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			"ownerID only",
 			true,
 			&model.PatchInstallationRequest{
-				OwnerID: sToP("new-owner"),
+				OwnerID: util.SToP("new-owner"),
 			},
 			&model.Installation{},
 			&model.Installation{
@@ -555,7 +556,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			"version only",
 			true,
 			&model.PatchInstallationRequest{
-				Version: sToP("version1"),
+				Version: util.SToP("version1"),
 			},
 			&model.Installation{},
 			&model.Installation{
@@ -566,7 +567,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			"image only",
 			true,
 			&model.PatchInstallationRequest{
-				Image: sToP("image1"),
+				Image: util.SToP("image1"),
 			},
 			&model.Installation{},
 			&model.Installation{
@@ -577,7 +578,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			"size only",
 			true,
 			&model.PatchInstallationRequest{
-				Size: sToP("miniSingleton"),
+				Size: util.SToP("miniSingleton"),
 			},
 			&model.Installation{},
 			&model.Installation{
@@ -588,7 +589,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			"license only",
 			true,
 			&model.PatchInstallationRequest{
-				License: sToP("license1"),
+				License: util.SToP("license1"),
 			},
 			&model.Installation{},
 			&model.Installation{
@@ -676,7 +677,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
 					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
 				},
-				OverrideIPRanges: bToP(true),
+				OverrideIPRanges: util.BToP(true),
 			},
 			&model.Installation{
 				AllowedIPRanges: &model.AllowedIPRanges{
@@ -716,9 +717,9 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			"complex should apply",
 			true,
 			&model.PatchInstallationRequest{
-				OwnerID: sToP("new-owner"),
-				Version: sToP("patch-version"),
-				Size:    sToP("miniSingleton"),
+				OwnerID: util.SToP("new-owner"),
+				Version: util.SToP("patch-version"),
+				Size:    util.SToP("miniSingleton"),
 				AllowedIPRanges: &model.AllowedIPRanges{
 					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
 					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
@@ -808,8 +809,8 @@ func TestNewPatchInstallationRequestFromReader(t *testing.T) {
 		require.NoError(t, err)
 
 		expected := &model.PatchInstallationRequest{
-			Version:       sToP("version"),
-			License:       sToP("this_is_my_license"),
+			Version:       util.SToP("version"),
+			License:       util.SToP("this_is_my_license"),
 			MattermostEnv: model.EnvVarMap{"key1": {Value: "value1"}},
 		}
 		require.Equal(t, expected, request)
@@ -832,8 +833,8 @@ func TestNewPatchInstallationRequestFromReader(t *testing.T) {
 		require.NoError(t, err)
 
 		expected := &model.PatchInstallationRequest{
-			Version: sToP("version"),
-			License: sToP("this_is_my_license"),
+			Version: util.SToP("version"),
+			License: util.SToP("this_is_my_license"),
 			AllowedIPRanges: &model.AllowedIPRanges{
 				model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
 				model.AllowedIPRange{CIDRBlock: "192.168.1.0/24"},
@@ -859,21 +860,21 @@ func TestPatchInstallationDeletionRequestValid(t *testing.T) {
 			"deletion expiry only, valid with current time",
 			false,
 			&model.PatchInstallationDeletionRequest{
-				DeletionPendingExpiry: iToP(model.GetMillis()),
+				DeletionPendingExpiry: util.IToP(model.GetMillis()),
 			},
 		},
 		{
 			"deletion expiry only, valid with future time",
 			false,
 			&model.PatchInstallationDeletionRequest{
-				DeletionPendingExpiry: iToP(model.GetMillisAtTime(time.Now().Add(999999 * time.Hour))),
+				DeletionPendingExpiry: util.IToP(model.GetMillisAtTime(time.Now().Add(999999 * time.Hour))),
 			},
 		},
 		{
 			"deletion expiry only, invalid",
 			true,
 			&model.PatchInstallationDeletionRequest{
-				DeletionPendingExpiry: iToP(model.GetMillisAtTime(time.Now().Add(-time.Hour))),
+				DeletionPendingExpiry: util.IToP(model.GetMillisAtTime(time.Now().Add(-time.Hour))),
 			},
 		},
 	}
@@ -909,7 +910,7 @@ func TestPatchInstallationDeletionRequestApply(t *testing.T) {
 			"deletion expiry only",
 			true,
 			&model.PatchInstallationDeletionRequest{
-				DeletionPendingExpiry: iToP(999),
+				DeletionPendingExpiry: util.IToP(999),
 			},
 			&model.Installation{},
 			&model.Installation{
@@ -920,7 +921,7 @@ func TestPatchInstallationDeletionRequestApply(t *testing.T) {
 			"deletion expiry only, same value",
 			false,
 			&model.PatchInstallationDeletionRequest{
-				DeletionPendingExpiry: iToP(999),
+				DeletionPendingExpiry: util.IToP(999),
 			},
 			&model.Installation{
 				DeletionPendingExpiry: 999,
@@ -968,16 +969,4 @@ func TestNewAssignInstallationGroupFromReader(t *testing.T) {
 		}
 		require.Equal(t, expected, request)
 	})
-}
-
-func sToP(s string) *string {
-	return &s
-}
-
-func iToP(i int64) *int64 {
-	return &i
-}
-
-func bToP(b bool) *bool {
-	return &b
 }

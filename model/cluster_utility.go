@@ -45,10 +45,16 @@ const (
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
 	GitlabOAuthTokenKey = "GITLAB_OAUTH_TOKEN"
+	// GitOpsRepoPath is the name of the Environment Variable which
+	// contains the path to the gitops repo. e.g. /cloud/gitops.git
+	GitOpsRepoPath = "GITOPS_REPO_PATH"
 )
 
 // gitlabToken is the token that will be used for remote helm charts.
 var gitlabToken string
+
+var gitOpsRepoURL string
+var gitOpsRepoPath string
 
 // SetGitlabToken is used to define the gitlab token that will be used for remote
 // helm charts.
@@ -59,6 +65,22 @@ func SetGitlabToken(val string) {
 // GetGitlabToken returns the value of gitlabToken.
 func GetGitlabToken() string {
 	return gitlabToken
+}
+
+func SetGitopsRepoURL(gitopsUrl string) {
+	gitOpsRepoURL = gitopsUrl
+}
+
+func GetGitopsRepoURL() string {
+	return gitOpsRepoURL
+}
+
+func SetGitopsRepoPath(gitopsPath string) {
+	gitOpsRepoPath = gitopsPath
+}
+
+func GetGitopsRepoPath() string {
+	return gitOpsRepoPath
 }
 
 // DefaultUtilityVersions holds the default values for all the HelmUtilityVersions
@@ -74,7 +96,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// FluentbitCanonicalName defines the default version and values path for the Helm chart
 	FluentbitCanonicalName: {Chart: "0.31.0", ValuesPath: ""},
 	// TeleportCanonicalName defines the default version and values path for the Helm chart
-	TeleportCanonicalName: {Chart: "7.3.26", ValuesPath: ""},
+	TeleportCanonicalName: {Chart: "9.3.26", ValuesPath: ""},
 	// PgbouncerCanonicalName defines the default version and values path for the Helm chart
 	PgbouncerCanonicalName: {Chart: "1.2.1", ValuesPath: ""},
 	// PromtailCanonicalName defines the default version and values path for the Helm chart
@@ -152,6 +174,11 @@ type UtilityGroupVersions struct {
 	Cloudprober         *HelmUtilityVersion
 }
 
+type UtilityArgocdClusterRegister struct {
+	ClusterType string `json:"ClusterType,omitempty"`
+	Registered  bool   `json:"Registered,omitempty"`
+}
+
 // AsMap returns the UtilityGroupVersion represented as a map with the
 // canonical names for each utility as the keys and the members of the
 // struct making up the values
@@ -176,8 +203,10 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 // UtilityMetadata is a container struct for any metadata related to
 // cluster utilities that needs to be persisted in the database
 type UtilityMetadata struct {
-	DesiredVersions UtilityGroupVersions
-	ActualVersions  UtilityGroupVersions
+	DesiredVersions       UtilityGroupVersions
+	ActualVersions        UtilityGroupVersions
+	ManagedByArgocd       bool
+	ArgocdClusterRegister UtilityArgocdClusterRegister
 }
 
 // NewUtilityMetadata creates an instance of UtilityMetadata given the raw
@@ -374,4 +403,23 @@ func UtilityIsUnmanaged(desired *HelmUtilityVersion, actual *HelmUtilityVersion)
 	}
 
 	return false
+}
+
+func (c *Cluster) SetManagedByArgocd(clusterValues map[string]string) {
+	if _, ok := clusterValues["force"]; ok {
+		c.UtilityMetadata.ArgocdClusterRegister.Registered = false
+	}
+	if (len(clusterValues)) != 0 && (!c.UtilityMetadata.ArgocdClusterRegister.Registered) {
+		for clusterValueKey, clusterValue := range clusterValues {
+			setArgocdClusterValues(&c.UtilityMetadata.ArgocdClusterRegister, clusterValueKey, clusterValue)
+		}
+		c.UtilityMetadata.ManagedByArgocd = true
+	}
+}
+
+func setArgocdClusterValues(clusterValues *UtilityArgocdClusterRegister, clusterValueKey, clusterValue string) {
+	switch clusterValueKey {
+	case "cluster-type":
+		clusterValues.ClusterType = clusterValue
+	}
 }

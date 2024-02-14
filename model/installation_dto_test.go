@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,7 +52,7 @@ func TestInstallationDTOFromReader(t *testing.T) {
 			Installation: &Installation{
 				ID:             "id",
 				OwnerID:        "owner",
-				GroupID:        sToP("group_id"),
+				GroupID:        util.SToP("group_id"),
 				Version:        "version",
 				License:        "this_is_my_license",
 				MattermostEnv:  EnvVarMap{"key1": {Value: "value1"}},
@@ -125,7 +126,7 @@ func TestInstallationDTOsFromReader(t *testing.T) {
 				Installation: &Installation{
 					ID:             "id1",
 					OwnerID:        "owner1",
-					GroupID:        sToP("group_id1"),
+					GroupID:        util.SToP("group_id1"),
 					Version:        "version1",
 					MattermostEnv:  EnvVarMap{"key1": {Value: "value1"}},
 					Affinity:       "affinity1",
@@ -142,7 +143,7 @@ func TestInstallationDTOsFromReader(t *testing.T) {
 				Installation: &Installation{
 					ID:             "id2",
 					OwnerID:        "owner2",
-					GroupID:        sToP("group_id2"),
+					GroupID:        util.SToP("group_id2"),
 					Version:        "version2",
 					License:        "this_is_my_license",
 					MattermostEnv:  EnvVarMap{"key2": {Value: "value2"}},
@@ -150,7 +151,7 @@ func TestInstallationDTOsFromReader(t *testing.T) {
 					State:          "state2",
 					CreateAt:       30,
 					DeleteAt:       40,
-					LockAcquiredBy: sToP("tester"),
+					LockAcquiredBy: util.SToP("tester"),
 					LockAcquiredAt: 50,
 				},
 				DNS: "dns2",

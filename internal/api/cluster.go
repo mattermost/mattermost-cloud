@@ -128,6 +128,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)
+	cluster.SetManagedByArgocd(createClusterRequest.ArgocdClusterRegister)
 
 	annotations, err := model.AnnotationsFromStringSlice(createClusterRequest.Annotations)
 	if err != nil {
@@ -229,6 +230,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 
 	clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
+	clusterDTO.SetManagedByArgocd(provisionClusterRequest.ArgocdClusterRegister)
 
 	if clusterDTO.State != newState {
 		oldState := clusterDTO.State

@@ -46,6 +46,7 @@ type CreateClusterRequest struct {
 	NodeGroupWithPublicSubnet  []string                       `json:"nodegroup-with-public-subnet,omitempty"`
 	NodeGroupWithSecurityGroup []string                       `json:"nodegroup-with-sg,omitempty"`
 	KmsKeyId                   string                         `json:"kms-key-id,omitempty"`
+	ArgocdClusterRegister      map[string]string              `json:"argocd-register,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -159,6 +160,12 @@ func (request *CreateClusterRequest) Validate() error {
 		return errors.Errorf("max pods per node (%d) must be 10 or greater", request.MaxPodsPerNode)
 	}
 	// TODO: check zones and instance types?
+
+	if request.ArgocdClusterRegister != nil {
+		if _, ok := request.ArgocdClusterRegister["cluster-type"]; !ok {
+			return errors.New("argocd register key cluster-type must be set")
+		}
+	}
 
 	if request.Provisioner == ProvisionerEKS {
 		if request.ClusterRoleARN == "" {
@@ -375,6 +382,7 @@ func NewResizeClusterRequestFromReader(reader io.Reader) (*PatchClusterSizeReque
 type ProvisionClusterRequest struct {
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 	Force                  bool                           `json:"force"`
+	ArgocdClusterRegister  map[string]string              `json:"argocd-register,omitempty"`
 }
 
 // NewProvisionClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.

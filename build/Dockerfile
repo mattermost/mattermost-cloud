@@ -5,26 +5,18 @@
 ARG DOCKER_BUILD_IMAGE=golang:1.20
 ARG DOCKER_BASE_IMAGE=alpine:3.19
 
-FROM ${DOCKER_BUILD_IMAGE} AS build
+FROM --platform=${TARGETPLATFORM} ${DOCKER_BUILD_IMAGE} AS build
+ARG TARGETARCH
 WORKDIR /mattermost-cloud/
 COPY . /mattermost-cloud/
+ENV ARCH=${TARGETARCH}
 
-# Detect architecture and set ARCH
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-        ARCH="amd64"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-        ARCH="arm64"; \
-    elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then \
-        ARCH="arm"; \
-    fi && \
-    echo "ARCH=$ARCH" && \
-    apt-get update -yq && apt-get install -yq unzip && \
-    make get-terraform ARCH=$ARCH get-kops ARCH=$ARCH get-helm ARCH=$ARCH get-kubectl ARCH=$ARCH && \
-    make build ARCH=$ARCH
+RUN apt-get update -yq && apt-get install -yq unzip && \
+    make get-terraform ARCH=${ARCH} get-kops ARCH=${ARCH} get-helm ARCH=${ARCH} get-kubectl ARCH=${ARCH} && \
+    make build ARCH=${ARCH}
 
 # Final Image
-FROM ${DOCKER_BASE_IMAGE}
+FROM --platform=${TARGETPLATFORM} ${DOCKER_BASE_IMAGE}
 
 LABEL name="Mattermost Cloud" \
   maintainer="cloud-team@mattermost.com" \
@@ -44,6 +36,7 @@ COPY --from=build /mattermost-cloud/build/terraform /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kops /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/helm /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kubectl /usr/local/bin/
+COPY --from=build /mattermost-cloud/helm-charts /mattermost-cloud/helm-charts
 COPY --from=build /mattermost-cloud/manifests /mattermost-cloud/manifests
 COPY --from=build /mattermost-cloud/build/_output/bin/cloud /mattermost-cloud/cloud
 COPY --from=build /mattermost-cloud/build/bin /usr/local/bin

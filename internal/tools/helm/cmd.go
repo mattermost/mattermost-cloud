@@ -13,20 +13,22 @@ import (
 
 // Cmd is the helm command to execute.
 type Cmd struct {
-	helmPath string
-	logger   log.FieldLogger
+	helmPath   string
+	kubeconfig string
+	logger     log.FieldLogger
 }
 
 // New creates a new instance of Cmd through which to execute helm.
-func New(logger log.FieldLogger) (*Cmd, error) {
+func New(kubeconfigPath string, logger log.FieldLogger) (*Cmd, error) {
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find helm installed on your PATH")
 	}
 
 	return &Cmd{
-		helmPath: helmPath,
-		logger:   logger,
+		helmPath:   helmPath,
+		kubeconfig: kubeconfigPath,
+		logger:     logger.WithField("kubeconfig", kubeconfigPath),
 	}, nil
 }
 

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -149,7 +150,7 @@ func TestClusterInstallationsFromReader(t *testing.T) {
 				State:          "state2",
 				CreateAt:       30,
 				DeleteAt:       40,
-				LockAcquiredBy: sToP("tester2"),
+				LockAcquiredBy: util.SToP("tester2"),
 				LockAcquiredAt: 50,
 			},
 		}, clusterInstallation)

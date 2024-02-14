@@ -10,8 +10,8 @@ GOLANG_VERSION := $(shell cat go.mod | grep "^go " | cut -d " " -f 2)
 ALPINE_VERSION = 3.19
 TERRAFORM_VERSION=1.5.5
 KOPS_VERSION=v1.27.2
-HELM_VERSION=v3.11.2
-KUBECTL_VERSION=v1.24.4
+HELM_VERSION=v3.13.3
+KUBECTL_VERSION=v1.27.9
 POSTGRES_VERSION=14.8
 ARCH ?= amd64
 
@@ -191,7 +191,7 @@ build-image-with-tag:  ## Build the docker image for mattermost-cloud
 	--platform linux/amd64,linux/arm64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
-	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) -t $(MATTERMOST_CLOUD_REPO):${TAG} \
+	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) -t $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME) -t $(MATTERMOST_CLOUD_REPO):${TAG} \
 	--no-cache \
 	--push
 

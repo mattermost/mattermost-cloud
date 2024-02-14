@@ -68,15 +68,16 @@ func (flags *schedulingOptions) addFlags(command *cobra.Command) {
 }
 
 type provisioningParams struct {
-	s3StateStore          string
-	allowListCIDRRange    []string
-	sloInstallationGroups []string
-	sloEnterpriseGroups   []string
-	vpnListCIDR           []string
-	useExistingResources  bool
-	deployMySQLOperator   bool
-	deployMinioOperator   bool
-	ndotsDefaultValue     string
+	s3StateStore              string
+	allowListCIDRRange        []string
+	sloInstallationGroups     []string
+	sloEnterpriseGroups       []string
+	vpnListCIDR               []string
+	useExistingResources      bool
+	deployMySQLOperator       bool
+	deployMinioOperator       bool
+	mattermostOperatorHelmDir string
+	ndotsDefaultValue         string
 
 	backupJobTTL           int32
 	backupRestoreToolImage string
@@ -94,6 +95,7 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.useExistingResources, "use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	command.Flags().BoolVar(&flags.deployMySQLOperator, "deploy-mysql-operator", false, "Whether to deploy the mysql operator.")
 	command.Flags().BoolVar(&flags.deployMinioOperator, "deploy-minio-operator", false, "Whether to deploy the minio operator.")
+	command.Flags().StringVar(&flags.mattermostOperatorHelmDir, "mattermost-operator-helm-dir", "", "Provide a directory location where a local mattermost operator helm chart will be deployed instead of from the standard repo")
 	command.Flags().StringVar(&flags.ndotsDefaultValue, "ndots-value", "5", "The default ndots value for installations.")
 
 	command.Flags().Int32Var(&flags.backupJobTTL, "backup-job-ttl-seconds", 3600, "Number of seconds after which finished backup jobs will be cleaned up. Set to negative value to not cleanup or 0 to cleanup immediately.")
@@ -133,6 +135,7 @@ type installationOptions struct {
 	gitlabOAuthToken              string
 	forceCRUpgrade                bool
 	utilitiesGitURL               string
+	utilitiesGitPath              string
 	enableS3Versioning            bool
 	internalIPRanges              []string
 }
@@ -144,6 +147,7 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.gitlabOAuthToken, "gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
 	command.Flags().BoolVar(&flags.forceCRUpgrade, "force-cr-upgrade", false, "If specified installation CRVersions will be updated to the latest version when supervised.")
 	command.Flags().StringVar(&flags.utilitiesGitURL, "utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
+	command.Flags().StringVar(&flags.utilitiesGitPath, "utilities-git-path", "", "The git path to use for utilities. For example /gitops/gitops.git")
 	command.Flags().BoolVar(&flags.enableS3Versioning, "enable-s3-versioning", false, "Whether to enable S3 versioning for the installation bucket or not")
 	command.Flags().StringSliceVar(&flags.internalIPRanges, "internal-ip-ranges", []string{}, "Some ranges that needed to be allowed for operational reasons")
 }

@@ -830,6 +830,15 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool,
 
 	provisioner.invalidateCachedKopsClient(kopsMetadata.Name, logger)
 
+	//Remove cluster from argoCD.
+	cr, err := NewClusterRegisterHandle(cluster, provisioner.awsClient.GetCloudEnvironmentName(), logger)
+	if err != nil {
+		return false, errors.Wrap(err, "Failed to create new cluster register handle")
+	}
+	if err = cr.deregisterClusterFromArgocd(); err != nil {
+		return false, errors.Wrap(err, "failed to remove cluster from Argocd")
+	}
+
 	logger.Info("Successfully deleted Kops cluster")
 
 	return true, nil

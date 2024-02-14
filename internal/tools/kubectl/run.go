@@ -2,11 +2,10 @@
 // See LICENSE.txt for license information.
 //
 
-package helm
+package kubectl
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -20,32 +19,15 @@ func outputLogger(line string, logger log.FieldLogger) {
 	if len(line) == 0 {
 		return
 	}
-	logger.Debugf("[helm] %s", line)
+	logger.Debugf("[kubectl] %s", line)
 }
 
 func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
-	cmd := exec.Command(c.helmPath, arg...)
+	cmd := exec.Command(c.kubectlPath, arg...)
 	cmd.Env = append(
 		os.Environ(),
 		fmt.Sprintf("KUBECONFIG=%s", c.kubeconfig),
 	)
 
 	return exechelper.RunWithEnv(cmd, c.logger, outputLogger)
-}
-
-func (c *Cmd) runSilent(arg ...string) ([]byte, []byte, error) {
-	cmd := exec.Command(c.helmPath, arg...)
-	cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("KUBECONFIG=%s", c.kubeconfig),
-	)
-
-	return exechelper.Run(cmd, silentLogger(), func(string, log.FieldLogger) {})
-}
-
-func silentLogger() log.FieldLogger {
-	silentLogger := log.New()
-	silentLogger.Out = io.Discard
-
-	return silentLogger
 }

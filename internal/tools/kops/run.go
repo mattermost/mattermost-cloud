@@ -68,7 +68,6 @@ func (c *Cmd) run(arg ...string) (stdout []byte, stderr []byte, err error) {
 	cmd := exec.Command(c.kopsPath, arg...)
 	cmd.Env = append(
 		os.Environ(),
-		"KOPS_FEATURE_FLAGS=SpecOverrideFlag", // Required in kops 1.14.0 for set command.
 		fmt.Sprintf("KUBECONFIG=%s", c.GetKubeConfigPath()),
 	)
 
@@ -79,7 +78,6 @@ func (c *Cmd) runSilent(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.kopsPath, arg...)
 	cmd.Env = append(
 		os.Environ(),
-		"KOPS_FEATURE_FLAGS=SpecOverrideFlag", // Required in kops 1.14.0 for set command.
 		fmt.Sprintf("KUBECONFIG=%s", c.GetKubeConfigPath()),
 	)
 
