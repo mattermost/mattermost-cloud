@@ -28,9 +28,9 @@ runs:
         vuln-type: "os,library"
         severity: "CRITICAL"
 
-    - name: cd/docker-push
-      run: ./scripts/push-docker-e2e.sh
-      shell: bash
+#    - name: cd/docker-push
+#      run: ./scripts/push-docker-e2e.sh
+#      shell: bash
     - name: cd/push-image-pr
       run: "make push-image-pr"
       shell: bash
