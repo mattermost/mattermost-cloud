@@ -285,6 +285,22 @@ verify-mocks: mocks
 		echo "generated files are out of date, run make mocks"; exit 1; \
 	fi
 
+.PHONY: build-image-e2e-pr
+build-image-e2e-pr:
+	@echo Building e2e image
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
+	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE) \
+	--no-cache \
+    --push
+
 .PHONY: build-image-e2e
 build-image-e2e:
 	@echo Building e2e image
@@ -297,7 +313,7 @@ build-image-e2e:
     --platform linux/amd64,linux/arm64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
-	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE) -t $(MATTERMOST_CLOUD_E2E_IMAGE)-$(BUILD_TIME)
+	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE) -t  $(MATTERMOST_CLOUD_E2E_IMAGE)-$(BUILD_TIME) \
 	--no-cache \
     --push
 

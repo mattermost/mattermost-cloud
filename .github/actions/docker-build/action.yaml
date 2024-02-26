@@ -15,9 +15,15 @@ runs:
         vuln-type: "os,library"
         severity: "CRITICAL"
 
+    - name: cd/build-docker-e2e-pr
+      run: make build-image-e2e-pr
+      shell: bash
+      if: github.event_name == 'pull_request'
+
     - name: cd/build-docker-e2e
       run: make build-image-e2e
       shell: bash
+      if: github.event_name != 'pull_request'
 
     - name: cd/scan-docker-security-e2e
       uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
@@ -28,9 +34,6 @@ runs:
         vuln-type: "os,library"
         severity: "CRITICAL"
 
-#    - name: cd/docker-push
-#      run: ./scripts/push-docker-e2e.sh
-#      shell: bash
     - name: cd/push-image-pr
       run: "make push-image-pr"
       shell: bash
