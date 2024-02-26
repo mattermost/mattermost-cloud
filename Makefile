@@ -288,10 +288,18 @@ verify-mocks: mocks
 .PHONY: build-image-e2e
 build-image-e2e:
 	@echo Building e2e image
-	docker build \
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+    --platform linux/amd64,linux/arm64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
-	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE)
+	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE) -t $(MATTERMOST_CLOUD_E2E_IMAGE)-$(BUILD_TIME)
+	--no-cache \
+    --push
 
 .PHONY: e2e-db-migration
 e2e-db-migration:
