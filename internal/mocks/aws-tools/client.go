@@ -300,17 +300,17 @@ func (mr *MockAWSMockRecorder) S3EnsureObjectDeleted(bucketName, path interface{
 }
 
 // S3LargeCopy mocks base method
-func (m *MockAWS) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string) error {
+func (m *MockAWS) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "S3LargeCopy", srcBucketName, srcKey, destBucketName, destKey)
+	ret := m.ctrl.Call(m, "S3LargeCopy", srcBucketName, srcKey, destBucketName, destKey, logger)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // S3LargeCopy indicates an expected call of S3LargeCopy
-func (mr *MockAWSMockRecorder) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "S3LargeCopy", reflect.TypeOf((*MockAWS)(nil).S3LargeCopy), srcBucketName, srcKey, destBucketName, destKey)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "S3LargeCopy", reflect.TypeOf((*MockAWS)(nil).S3LargeCopy), srcBucketName, srcKey, destBucketName, destKey, logger)
 }
 
 // GetMultitenantBucketNameForInstallation mocks base method

@@ -55,7 +55,7 @@ type AWS interface {
 
 	S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error
 	S3EnsureObjectDeleted(bucketName, path string) error
-	S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string) error
+	S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string, logger log.FieldLogger) error
 	GetMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface) (string, error)
 	GetS3RegionURL() string
 

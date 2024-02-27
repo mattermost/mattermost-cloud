@@ -300,7 +300,7 @@ func (a *Client) S3EnsureBucketDirectoryDeleted(bucketName, directory string, _ 
 // S3LargeCopy uses the "Upload Part - Copy API" from AWS to copy
 // srcBucketName/srcBucketKey to destBucketName/destBucketKey in the
 // case that the file being copied may be greater than 5GB in size
-func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBucketKey *string) error {
+func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBucketKey *string, logger log.FieldLogger) error {
 	ctx := context.TODO()
 	response, err := a.service.s3.CreateMultipartUpload(
 		ctx,
@@ -332,11 +332,19 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 		partNum      int32 = 1
 	)
 	completedParts := []types.CompletedPart{}
+
+	logger = logger.WithFields(log.Fields{
+		"s3-upload-id":       uploadID,
+		"source-object-size": objectSize,
+	})
+
 	for ; bytePosition < objectSize; partNum++ {
 		// The last part might be smaller than partSize, so check to make sure
 		// that lastByte isn't beyond the end of the object.
 		lastByte := int(math.Min(float64(bytePosition+partSize-1), float64(objectSize-1)))
 		bytesRange := fmt.Sprintf("bytes=%d-%d", bytePosition, lastByte)
+
+		logger.WithField("s3-copy-source-bytes-range", bytesRange).Debugf("Copying S3 object part %d", partNum)
 
 		var resp *s3.UploadPartCopyOutput
 		resp, err = a.service.s3.UploadPartCopy(
