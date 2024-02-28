@@ -344,7 +344,10 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 		lastByte := int(math.Min(float64(bytePosition+partSize-1), float64(objectSize-1)))
 		bytesRange := fmt.Sprintf("bytes=%d-%d", bytePosition, lastByte)
 
-		logger.WithField("s3-copy-source-bytes-range", bytesRange).Debugf("Copying S3 object part %d", partNum)
+		logger.WithFields(log.Fields{
+			"s3-copy-source-bytes-range": bytesRange,
+			"s3-copy-part-num":           partNum,
+		}).Debug("Copying S3 object part")
 
 		var resp *s3.UploadPartCopyOutput
 		resp, err = a.service.s3.UploadPartCopy(
