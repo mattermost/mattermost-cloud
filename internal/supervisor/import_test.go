@@ -81,8 +81,7 @@ func TestImportSupervisor(t *testing.T) {
 			Return(destBucket, nil)
 
 		aws.EXPECT().
-			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket,
-				gomock.Any())
+			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket, gomock.Any(), gomock.Any())
 
 		err := importSupervisor.Do()
 		assert.NoError(t, err, "error supervising")
@@ -138,8 +137,7 @@ func TestImportSupervisor(t *testing.T) {
 			Return(destBucket, nil)
 
 		aws.EXPECT().
-			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket,
-				gomock.Any())
+			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket, gomock.Any(), gomock.Any())
 
 		err := importSupervisor.Do()
 		assert.Error(t, err, "no error supervising")
@@ -237,8 +235,7 @@ func TestImportSupervisor(t *testing.T) {
 			Return(destBucket, nil)
 
 		aws.EXPECT().
-			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket,
-				gomock.Any()).
+			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket, gomock.Any(), gomock.Any()).
 			Return(errors.New("some AWS error"))
 
 		awatClient.EXPECT().
