@@ -15,6 +15,9 @@ KUBECTL_VERSION=v1.27.9
 POSTGRES_VERSION=14.8
 ARCH ?= amd64
 
+APP_NAME    := $(shell basename -s .git `git config --get remote.origin.url`)
+APP_COMMIT  := $(shell git rev-parse HEAD)
+
 ## Docker Build Versions
 DOCKER_BUILD_IMAGE := golang:$(GOLANG_VERSION)
 DOCKER_BASE_IMAGE = alpine:$(ALPINE_VERSION)
@@ -70,6 +73,15 @@ GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 TRIVY_SEVERITY := CRITICAL
 TRIVY_EXIT_CODE := 1
 TRIVY_VULN_TYPE := os,library
+
+# ====================================================================================
+# Used for semver bumping
+CURRENT_VERSION := $(shell git describe --abbrev=0 --tags)
+VERSION_PARTS := $(subst ., ,$(subst v,,$(CURRENT_VERSION)))
+MAJOR := $(word 1,$(VERSION_PARTS))
+MINOR := $(word 2,$(VERSION_PARTS))
+PATCH := $(word 3,$(VERSION_PARTS))
+# ====================================================================================
 
 export GO111MODULE=on
 
@@ -347,6 +359,27 @@ e2e-installation:
 .PHONY: e2e
 e2e: e2e-cluster e2e-installation
 
+.PHONY: patch minor major
+
+patch: ## to bump patch version (semver)
+	@$(eval PATCH := $(shell echo $$(($(PATCH)+1))))
+	@echo Bumping $(APP_NAME) to Patch version v$(MAJOR).$(MINOR).$(PATCH)
+	git tag -s -a v$(MAJOR).$(MINOR).$(PATCH) -m "Bumping $(APP_NAME) to Patch version v$(MAJOR).$(MINOR).$(PATCH)"
+	git push origin v$(MAJOR).$(MINOR).$(PATCH)
+
+minor: ## to bump minor version (semver)
+	@$(eval MINOR := $(shell echo $$(($(MINOR)+1))))
+	@echo Bumping $(APP_NAME) to Minor version v$(MAJOR).$(MINOR).0
+	git tag -s -a v$(MAJOR).$(MINOR).0 -m "Bumping $(APP_NAME) to Minor version v$(MAJOR).$(MINOR).0"
+	git push origin v$(MAJOR).$(MINOR).0
+
+major: ## to bump major version (semver)
+	$(eval MAJOR := $(shell echo $$(($(MAJOR)+1))))
+	$(eval MINOR := 0)
+	$(eval PATCH := 0)
+	@echo Bumping $(APP_NAME) to Major version v$(MAJOR).$(MINOR).$(PATCH)
+	git tag -s -a v$(MAJOR).$(MINOR).$(PATCH) -m "Bumping $(APP_NAME) to Major version v$(MAJOR).$(MINOR).$(PATCH)"
+	git push origin v$(MAJOR).$(MINOR).$(PATCH)
 
 ## --------------------------------------
 ## Tooling Binaries
