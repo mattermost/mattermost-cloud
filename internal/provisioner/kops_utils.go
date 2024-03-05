@@ -15,6 +15,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// SkipAMIUpdateLabelKey is the label key that can be applied to a kops instance
+// group to indicate to the provisioner that it should skip updating the AMI.
+// The label value can be any string.
+const SkipAMIUpdateLabelKey string = "mattermost/cloud-provisioner-ami-skip"
+
 // verifyTerraformAndKopsMatch looks at terraform output and verifies that the
 // given kops name matches. This should only catch errors where terraform output
 // was incorrectly created from kops or if the terraform client is targeting the
@@ -50,10 +55,14 @@ func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadat
 	var ami string
 	for _, ig := range instanceGroups {
 		if ig.Spec.Image != kopsMetadata.ChangeRequest.AMI {
+			if val, ok := ig.Metadata.Labels[SkipAMIUpdateLabelKey]; ok {
+				logger.Infof("Instance group has %s=%s; skipping AMI update...", SkipAMIUpdateLabelKey, val)
+				continue
+			}
 			if kopsMetadata.ChangeRequest.AMI == "latest" {
 				// Setting the image value to "" leads kops to autoreplace it with
 				// the default image for that kubernetes release.
-				logger.Infof("Updating instance group '%s' image value the default kops image", ig.Metadata.Name)
+				logger.Infof("Updating instance group '%s' image value to the default kops image", ig.Metadata.Name)
 				ami = ""
 			} else {
 				logger.Infof("Updating instance group '%s' image value to '%s'", ig.Metadata.Name, kopsMetadata.ChangeRequest.AMI)
