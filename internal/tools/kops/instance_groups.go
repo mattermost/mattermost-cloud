@@ -15,7 +15,8 @@ import (
 
 // ResourceMetadata is the metadata of a kops resource.
 type ResourceMetadata struct {
-	Name string `json:"name"`
+	Name   string            `json:"name"`
+	Labels map[string]string `json:"labels"`
 }
 
 // Cluster is the configuration of a kops cluster.
