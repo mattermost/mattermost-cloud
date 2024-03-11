@@ -8,6 +8,7 @@ func setWorkbenchFlags(command *cobra.Command) {
 }
 
 type workbenchFlags struct {
+	clusterFlags
 	serverAddress string
 	s3StateStore  string
 }

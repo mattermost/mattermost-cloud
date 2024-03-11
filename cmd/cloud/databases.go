@@ -66,7 +66,7 @@ func newCmdDatabaseMultitenantList() *cobra.Command {
 }
 
 func executeDatabaseMultitenantListCmd(flags databaseMultiTenantListFlag) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -120,7 +120,7 @@ func newCmdDatabaseMultitenantGet() *cobra.Command {
 		Short: "Get a particular multitenant database.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			multitenantDatabase, err := client.GetMultitenantDatabase(flags.multitenantDatabaseID)
 			if err != nil {
@@ -150,7 +150,7 @@ func newCmdDatabaseMultitenantUpdate() *cobra.Command {
 		Short: "Update an multitenant database's configuration",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			request := &model.PatchMultitenantDatabaseRequest{}
 			if flags.isMaxInstallationsChanged {
@@ -187,7 +187,7 @@ func newCmdDatabaseMultitenantDelete() *cobra.Command {
 		Short: "Delete an multitenant database's configuration",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			if err := client.DeleteMultitenantDatabase(flags.multitenantDatabaseID, flags.force); err != nil {
 				return errors.Wrap(err, "failed to delete multitenant database")
@@ -238,7 +238,7 @@ func newCmdDatabaseLogicalList() *cobra.Command {
 }
 
 func executeDatabaseLogicalListCmd(flags databaseLogicalListFlag) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -291,7 +291,7 @@ func newCmdDatabaseLogicalGet() *cobra.Command {
 		Short: "Get a particular logical database.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			logicalDatabase, err := client.GetLogicalDatabase(flags.logicalDatabaseID)
 			if err != nil {
@@ -321,7 +321,7 @@ func newCmdDatabaseLogicalDelete() *cobra.Command {
 		Short: "Delete an empty PGBouncer logical database",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			if err := client.DeleteLogicalDatabase(flags.logicalDatabaseID); err != nil {
 				return errors.Wrap(err, "failed to delete logical database")
@@ -371,7 +371,7 @@ func newCmdDatabaseSchemaList() *cobra.Command {
 }
 
 func executeDatabaseSchemaListCmd(flags databaseSchemaListFlag) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -425,7 +425,7 @@ func newCmdDatabaseSchemaGet() *cobra.Command {
 		Short: "Get a particular database schema.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			databaseSchema, err := client.GetDatabaseSchema(flags.databaseSchemaID)
 			if err != nil {
@@ -468,7 +468,7 @@ func newCmdDatabaseValidationReport() *cobra.Command {
 }
 
 func executeDatabaseValidationReportCmd(flags clusterFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags)
 
 	installations, err := client.GetInstallations(&model.GetInstallationsRequest{
 		Paging: model.AllPagesNotDeleted(),
@@ -546,7 +546,7 @@ func newCmdDatabaseMultitenantReport() *cobra.Command {
 }
 
 func executeMultiTenantDatabaseReportCmd(flags databaseMultiTenantReportFlag) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	multitenantDatabase, err := client.GetMultitenantDatabase(flags.multitenantDatabaseID)
 	if err != nil {

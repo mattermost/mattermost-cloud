@@ -13,6 +13,7 @@ func setWebhookFlags(command *cobra.Command) {
 }
 
 type webhookFlags struct {
+	clusterFlags
 	serverAddress string
 }
 

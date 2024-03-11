@@ -39,7 +39,7 @@ func newCmdClusterInstallationGet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			clusterInstallation, err := client.GetClusterInstallation(flags.clusterInstallationID)
 			if err != nil {
@@ -81,7 +81,7 @@ func newCmdClusterInstallationList() *cobra.Command {
 }
 
 func executeClusterInstallationListCmd(flags clusterInstallationListFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -149,7 +149,7 @@ func newCmdClusterInstallationConfigGet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			clusterInstallationConfig, err := client.GetClusterInstallationConfig(flags.clusterInstallationID)
 			if err != nil {
@@ -179,7 +179,7 @@ func newCmdClusterInstallationConfigSet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			config := make(map[string]interface{})
 			keyParts := strings.Split(flags.key, ".")
@@ -217,7 +217,7 @@ func newCmdClusterInstallationStatus() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			clusterInstallation, err := client.GetClusterInstallationStatus(flags.clusterInstallationID)
 			if err != nil {
@@ -247,7 +247,7 @@ func newCmdClusterInstallationMMCTL() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			output, err := client.ExecClusterInstallationCLI(flags.clusterInstallationID, "mmctl", strings.Split(flags.subcommand, " "))
 			fmt.Println(string(output))
@@ -275,7 +275,7 @@ func newCmdClusterInstallationMattermostCLI() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			output, err := client.RunMattermostCLICommandOnClusterInstallation(flags.clusterInstallationID, strings.Split(flags.subcommand, " "))
 			fmt.Println(string(output))
@@ -318,7 +318,7 @@ func newCmdClusterInstallationMigration() *cobra.Command {
 
 func executeClusterInstallationMigrationCmd(flags clusterInstallationMigrationFlags) error {
 
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	response, err := client.MigrateClusterInstallation(
 		&model.MigrateClusterInstallationRequest{
@@ -359,7 +359,7 @@ func newCmdClusterInstallationDNSMigration() *cobra.Command {
 }
 
 func executeClusterInstallationDNSMigrationCmd(flags clusterInstallationDNSMigrationFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	response, err := client.MigrateDNS(
 		&model.MigrateClusterInstallationRequest{
@@ -399,7 +399,7 @@ func newCmdDeleteInActiveClusterInstallation() *cobra.Command {
 
 func executeDeleteInActiveClusterInstallationCmd(flags inActiveClusterInstallationDeleteFlags) error {
 
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	if len(flags.clusterInstallationID) != 0 {
 		deletedCI, err := client.DeleteInActiveClusterInstallationByID(flags.clusterInstallationID)
@@ -447,7 +447,7 @@ func newCmdClusterRolesPostMigrationSwitch() *cobra.Command {
 }
 
 func executeClusterRolesPostMigrationSwitchCmd(flags clusterRolesPostMigrationSwitchFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	response, err := client.SwitchClusterRoles(
 		&model.MigrateClusterInstallationRequest{

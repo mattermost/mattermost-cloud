@@ -45,7 +45,7 @@ func newCmdClusterNodegroupCreate() *cobra.Command {
 }
 
 func addNodegroup(flags clusterNodegroupsCreateFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	if len(flags.nodegroups) == 0 {
 		return fmt.Errorf("nodegroups must be provided")
@@ -110,7 +110,7 @@ func newCmdClusterNodegroupDelete() *cobra.Command {
 }
 
 func deleteNodegroup(flags clusterNodegroupDeleteFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	if len(flags.nodegroup) == 0 {
 		return fmt.Errorf("nodegroup must be provided")

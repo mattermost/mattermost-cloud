@@ -57,3 +57,12 @@ func runDryRun(request interface{}) error {
 	}
 	return nil
 }
+
+func createClient(flags clusterFlags) *model.Client {
+	if flags.token != "" {
+		authHeaders := map[string]string{"x-api-key": flags.token}
+		return model.NewClientWithHeaders(flags.serverAddress, authHeaders)
+	}
+
+	return model.NewClient(flags.serverAddress)
+}

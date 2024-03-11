@@ -71,7 +71,7 @@ func newCmdInstallationCreate() *cobra.Command {
 }
 
 func executeInstallationCreateCmd(flags installationCreateFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	envVarMap, err := parseEnvVarInput(flags.mattermostEnv, false)
 	if err != nil {
@@ -144,7 +144,7 @@ func newCmdInstallationUpdate() *cobra.Command {
 		Short: "Update an installation's configuration.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			request, err := flags.GetPatchInstallationRequest()
 			if err != nil {
@@ -181,7 +181,7 @@ func newCmdInstallationDelete() *cobra.Command {
 		Short: "Delete an installation.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			if err := client.DeleteInstallation(flags.installationID); err != nil {
 				return errors.Wrap(err, "failed to delete installation")
@@ -205,7 +205,7 @@ func newCmdInstallationUpdateDeletion() *cobra.Command {
 		Short: "Updates the pending deletion parameters of an installation.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			request := &model.PatchInstallationDeletionRequest{}
 			if flags.installationDeletionPatchRequestOptionsChanged.futureDeletionTimeChanged {
@@ -242,7 +242,7 @@ func newCmdInstallationCancelDeletion() *cobra.Command {
 		Short: "Cancels the pending deletion of an installation.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			if err := client.CancelInstallationDeletion(flags.installationID); err != nil {
 				return errors.Wrap(err, "failed to cancel installation deletion")
@@ -266,7 +266,7 @@ func newCmdInstallationHibernate() *cobra.Command {
 		Short: "Put an installation into hibernation.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			installation, err := client.HibernateInstallation(flags.installationID)
 			if err != nil {
@@ -292,7 +292,7 @@ func newCmdInstallationWakeup() *cobra.Command {
 		Short: "Wake an installation from hibernation.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			request, err := flags.GetPatchInstallationRequest()
 			if err != nil {
@@ -324,7 +324,7 @@ func newCmdInstallationGet() *cobra.Command {
 		Short: "Get a particular installation.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			installation, err := client.GetInstallation(flags.installationID, &model.GetInstallationRequest{
 				IncludeGroupConfig:          flags.includeGroupConfig,
@@ -375,7 +375,7 @@ func newCmdInstallationList() *cobra.Command {
 }
 
 func executeInstallationListCmd(flags installationListFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -460,7 +460,7 @@ func newCmdInstallationGetStatuses() *cobra.Command {
 		Short: "Get status information for all installations.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			installationsStatus, err := client.GetInstallationsStatus()
 			if err != nil {
@@ -681,7 +681,7 @@ func newCmdInstallationDeploymentReport() *cobra.Command {
 }
 
 func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	installation, err := client.GetInstallation(flags.installationID, &model.GetInstallationRequest{
 		IncludeGroupConfig:          true,
@@ -880,7 +880,7 @@ func newCmdInstallationDeletionReport() *cobra.Command {
 }
 
 func executeInstallationDeletionReportCmd(flags installationDeletionReportFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	installations, err := client.GetInstallations(&model.GetInstallationsRequest{
 		State:  model.InstallationStateDeletionPending,
