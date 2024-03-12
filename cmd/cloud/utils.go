@@ -60,11 +60,11 @@ func runDryRun(request interface{}) error {
 
 func createClient(flags clusterFlags) *model.Client {
 	if len(flags.headers) > 0 {
-		authHeaders := make(map[string]string, len(flags.headers))
+		headers := make(map[string]string, len(flags.headers))
 		for key, value := range flags.headers {
-			authHeaders[key] = value
+			headers[key] = value
 		}
-		return model.NewClientWithHeaders(flags.serverAddress, authHeaders)
+		return model.NewClientWithHeaders(flags.serverAddress, headers)
 	}
 
 	return model.NewClient(flags.serverAddress)
