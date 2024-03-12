@@ -6,19 +6,19 @@ import (
 
 func setClusterFlags(command *cobra.Command) {
 	command.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
-	command.PersistentFlags().String("token", "", "The auth token to access provisioning server.")
+	command.PersistentFlags().StringToString("header", nil, "The extra headers to sent in every API call towards the provisioning server. Accepts format: HEADER_KEY=HEADER_VALUE. Use the flag multiple times to set multiple headers.")
 	command.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
 }
 
 type clusterFlags struct {
 	serverAddress string
-	token         string
+	headers       map[string]string
 	dryRun        bool
 }
 
 func (flags *clusterFlags) addFlags(command *cobra.Command) {
 	flags.serverAddress, _ = command.Flags().GetString("server")
-	flags.token, _ = command.Flags().GetString("token")
+	flags.headers, _ = command.Flags().GetStringToString("header")
 	flags.dryRun, _ = command.Flags().GetBool("dry-run")
 }
 

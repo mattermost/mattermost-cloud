@@ -59,8 +59,11 @@ func runDryRun(request interface{}) error {
 }
 
 func createClient(flags clusterFlags) *model.Client {
-	if flags.token != "" {
-		authHeaders := map[string]string{"x-api-key": flags.token}
+	if len(flags.headers) > 0 {
+		authHeaders := make(map[string]string, len(flags.headers))
+		for key, value := range flags.headers {
+			authHeaders[key] = value
+		}
 		return model.NewClientWithHeaders(flags.serverAddress, authHeaders)
 	}
 
