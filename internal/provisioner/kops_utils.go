@@ -15,10 +15,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// SkipAMIUpdateLabelKey is the label key that can be applied to a kops instance
-// group to indicate to the provisioner that it should skip updating the AMI.
-// The label value can be any string.
-const SkipAMIUpdateLabelKey string = "mattermost/cloud-provisioner-ami-skip"
+const (
+	// SkipAMIUpdateLabelKey is the label key that can be applied to a kops instance
+	// group to indicate to the provisioner that it should skip updating the AMI.
+	// The label value can be any string.
+	SkipAMIUpdateLabelKey string = "mattermost/cloud-provisioner-ami-skip"
+	// AMISuffixLabelKey is the label key that can be applied to a kops instance
+	// group to indicate to the provisioner that it should use a different AMI.
+	// The label value will be applied as a suffix to whatever AMI value is
+	// passed in for the update.
+	// Example:
+	//   Cluster AMI is "custom-ubuntu"
+	//   Instance group label is set to "mattermost/cloud-provisioner-ami-suffix=-arm64"
+	//   Final AMI for that instance group is "custom-ubuntu-arm64"
+	AMISuffixLabelKey string = "mattermost/cloud-provisioner-ami-suffix"
+)
 
 // verifyTerraformAndKopsMatch looks at terraform output and verifies that the
 // given kops name matches. This should only catch errors where terraform output
@@ -56,7 +67,7 @@ func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadat
 	for _, ig := range instanceGroups {
 		if ig.Spec.Image != kopsMetadata.ChangeRequest.AMI {
 			if val, ok := ig.Metadata.Labels[SkipAMIUpdateLabelKey]; ok {
-				logger.Infof("Instance group has %s=%s; skipping AMI update...", SkipAMIUpdateLabelKey, val)
+				logger.Infof("Instance group has label %s=%s; skipping AMI update...", SkipAMIUpdateLabelKey, val)
 				continue
 			}
 			if kopsMetadata.ChangeRequest.AMI == "latest" {
@@ -65,8 +76,12 @@ func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadat
 				logger.Infof("Updating instance group '%s' image value to the default kops image", ig.Metadata.Name)
 				ami = ""
 			} else {
-				logger.Infof("Updating instance group '%s' image value to '%s'", ig.Metadata.Name, kopsMetadata.ChangeRequest.AMI)
 				ami = kopsMetadata.ChangeRequest.AMI
+				if suffix, ok := ig.Metadata.Labels[AMISuffixLabelKey]; ok {
+					logger.Infof("Instance group has label %s=%s; applying custom AMI suffix...", AMISuffixLabelKey, suffix)
+					ami = kopsMetadata.ChangeRequest.AMI + suffix
+				}
+				logger.Infof("Updating instance group '%s' image value to '%s'", ig.Metadata.Name, ami)
 			}
 
 			err = kops.SetInstanceGroup(kopsMetadata.Name, ig.Metadata.Name, fmt.Sprintf("spec.image=%s", ami))
