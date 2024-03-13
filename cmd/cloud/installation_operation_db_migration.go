@@ -35,7 +35,7 @@ func newCmdInstallationDBMigrationRequest() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			request := &model.InstallationDBMigrationRequest{
 				InstallationID:         flags.installationID,
@@ -86,7 +86,7 @@ func newCmdInstallationDBMigrationsList() *cobra.Command {
 }
 
 func executeInstallationDBMigrationsList(flags installationDBMigrationsListFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -149,7 +149,7 @@ func newCmdInstallationDBMigrationGet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			migrationOperation, err := client.GetInstallationDBMigrationOperation(flags.dbMigrationID)
 			if err != nil {
@@ -176,7 +176,7 @@ func newCmdInstallationDBMigrationCommit() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			migrationOperation, err := client.CommitInstallationDBMigration(flags.dbMigrationID)
 			if err != nil {
@@ -205,7 +205,7 @@ func newCmdInstallationDBMigrationRollback() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			migrationOperation, err := client.RollbackInstallationDBMigration(flags.dbMigrationID)
 			if err != nil {

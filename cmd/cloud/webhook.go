@@ -38,7 +38,7 @@ func newCmdWebhookCreate() *cobra.Command {
 		Short: "Create a webhook.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			var headers model.Headers
 			for key, value := range flags.headers {
@@ -90,7 +90,7 @@ func newCmdWebhookGet() *cobra.Command {
 		Short: "Get a particular webhook.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			webhook, err := client.GetWebhook(flags.webhookID)
 			if err != nil {
@@ -133,7 +133,7 @@ func newCmdWebhookList() *cobra.Command {
 }
 
 func executeWebhookListCmd(flags webhookListFlag) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 	webhooks, err := client.GetWebhooks(&model.GetWebhooksRequest{
@@ -168,7 +168,7 @@ func newCmdWebhookDelete() *cobra.Command {
 		Short: "Delete a webhook.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 			if err := client.DeleteWebhook(flags.webhookID); err != nil {
 				return errors.Wrap(err, "failed to delete webhook")
 			}

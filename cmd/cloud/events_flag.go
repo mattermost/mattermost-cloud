@@ -15,6 +15,7 @@ func (flags *eventFlags) addFlags(command *cobra.Command) {
 }
 
 type stateChangeEventListFlags struct {
+	clusterFlags
 	eventFlags
 	pagingFlags
 	tableOptions

@@ -7,6 +7,7 @@ func setSecurityFlags(command *cobra.Command) {
 }
 
 type securityFlags struct {
+	clusterFlags
 	serverAddress string
 }
 

@@ -34,7 +34,7 @@ func newCmdSubscriptionCreate() *cobra.Command {
 		Short: "Creates subscription.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			var headers model.Headers
 			for key, value := range flags.headers {
@@ -96,7 +96,7 @@ func newCmdSubscriptionList() *cobra.Command {
 		Short: "List subscriptions.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			paging := getPaging(flags.pagingFlags)
 
@@ -169,7 +169,7 @@ func newCmdSubscriptionGet() *cobra.Command {
 		Short: "Get subscription.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			subscription, err := client.GetSubscription(flags.subID)
 			if err != nil {
@@ -196,7 +196,7 @@ func newCmdSubscriptionDelete() *cobra.Command {
 		Short: "Delete subscription.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 			if err := client.DeleteSubscription(flags.subID); err != nil {
 				return errors.Wrap(err, "failed to delete subscription")
 			}

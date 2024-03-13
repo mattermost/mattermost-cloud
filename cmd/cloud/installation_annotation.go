@@ -5,7 +5,6 @@
 package main
 
 import (
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +30,7 @@ func newCmdInstallationAnnotationAdd() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			request := newAddAnnotationsRequest(flags.annotations)
 
@@ -69,7 +68,7 @@ func newCmdInstallationAnnotationDelete() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			if err := client.DeleteInstallationAnnotation(flags.installationID, flags.annotation); err != nil {
 				return errors.Wrap(err, "failed to delete installation annotations")

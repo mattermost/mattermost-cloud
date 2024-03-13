@@ -44,7 +44,7 @@ func newCmdClusterAnnotationAdd() *cobra.Command {
 
 func executeClusterAnnotationAddCmd(flags clusterAnnotationAddFlags) error {
 
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	request := newAddAnnotationsRequest(flags.annotations)
 
@@ -73,7 +73,7 @@ func newCmdClusterAnnotationDelete() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			if err := client.DeleteClusterAnnotation(flags.cluster, flags.annotation); err != nil {
 				return errors.Wrap(err, "failed to delete cluster annotations")

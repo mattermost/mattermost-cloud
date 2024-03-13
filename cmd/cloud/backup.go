@@ -33,7 +33,7 @@ func newCmdInstallationBackupCreate() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			backup, err := client.CreateInstallationBackup(flags.installationID)
 			if err != nil {
@@ -73,7 +73,7 @@ func newCmdInstallationBackupList() *cobra.Command {
 }
 
 func executeInstallationBackupListCmd(flags installationBackupListFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -138,7 +138,7 @@ func newCmdInstallationBackupGet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			backup, err := client.GetInstallationBackup(flags.backupID)
 			if err != nil {
@@ -166,7 +166,7 @@ func newCmdInstallationBackupDelete() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			if err := client.DeleteInstallationBackup(flags.backupID); err != nil {
 				return errors.Wrap(err, "failed to delete backup")
