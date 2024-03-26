@@ -32,13 +32,8 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"nginx":                 {Chart: "4.9.0", ValuesPath: ""},
 				"nginx-internal":        {Chart: "4.9.0", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "54.2.2", ValuesPath: ""},
-<<<<<<< HEAD
 				"thanos":                {Chart: "13.2.2", ValuesPath: ""},
-				"teleport-kube-agent":   {Chart: "9.3.26", ValuesPath: ""},
-=======
-				"thanos":                {Chart: "12.20.0", ValuesPath: ""},
 				"teleport":              {Chart: "9.3.26", ValuesPath: ""},
->>>>>>> 33cb89f ([CLD-5863]make argocd api token as server flag or env var)
 				"pgbouncer":             {Chart: "1.2.1", ValuesPath: ""},
 				"promtail":              {Chart: "6.15.5", ValuesPath: ""},
 				"rtcd":                  {Chart: "1.3.0", ValuesPath: ""},
@@ -108,7 +103,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"nginx-internal":        {Chart: "4.9.0", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "54.2.2", ValuesPath: ""},
 				"thanos":                {Chart: "13.2.2", ValuesPath: ""},
-				"teleport":   			 {Chart: "9.3.26", ValuesPath: ""},
+				"teleport":              {Chart: "9.3.26", ValuesPath: ""},
 				"pgbouncer":             {Chart: "1.2.1", ValuesPath: ""},
 				"promtail":              {Chart: "6.15.5", ValuesPath: ""},
 				"rtcd":                  {Chart: "1.3.0", ValuesPath: ""},
