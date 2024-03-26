@@ -4,7 +4,6 @@ import "github.com/spf13/cobra"
 
 type dashboardFlags struct {
 	clusterFlags
-	serverAddress  string
 	refreshSeconds int
 }
 
