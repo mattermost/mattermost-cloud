@@ -7,6 +7,9 @@ package utility
 import (
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -19,13 +22,14 @@ type nodeProblemDetector struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newNodeProblemDetectorOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (Utility, error) {
+func newNodeProblemDetectorOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.NodeProblemDetectorCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.NodeProblemDetectorCanonicalName, logger), nil
+		return newUnmanagedHandle(model.NodeProblemDetectorCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
 	}
+
 	nodeProblemDetector := newNodeProblemDetectorHandle(desired, cluster, kubeconfigPath, logger)
 	err := nodeProblemDetector.validate()
 	if err != nil {

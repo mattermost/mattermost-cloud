@@ -7,7 +7,9 @@ package utility
 import (
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -22,13 +24,14 @@ type rtcd struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newRtcdOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+func newRtcdOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.RtcdCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.RtcdCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.RtcdCanonicalName, logger), nil
+		return newUnmanagedHandle(model.RtcdCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
 	}
+
 	rtcd := newRtcdHandle(cluster, desired, kubeconfigPath, awsClient, logger)
 	err := rtcd.validate()
 	if err != nil {

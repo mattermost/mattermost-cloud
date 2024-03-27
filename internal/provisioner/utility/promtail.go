@@ -8,29 +8,35 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type promtail struct {
+	awsClient      aws.AWS
+	gitClient      git.Client
+	argocdClient   argocd.Client
 	environment    string
 	kubeconfigPath string
 	cluster        *model.Cluster
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
+	tempDir        string
 }
 
-func newPromtailOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+func newPromtailOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.PromtailCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.PromtailCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.PromtailCanonicalName, logger), nil
+		return newUnmanagedHandle(model.PromtailCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
 	}
-	promtail := newPromtailHandle(cluster, desired, kubeconfigPath, awsClient, logger)
+	promtail := newPromtailHandle(cluster, desired, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
 	err := promtail.validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "promtail utility config is invalid")
@@ -39,14 +45,18 @@ func newPromtailOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string,
 	return promtail, nil
 }
 
-func newPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) *promtail {
+func newPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) *promtail {
 	return &promtail{
+		awsClient:      awsClient,
+		gitClient:      gitClient,
+		argocdClient:   argocdClient,
 		environment:    awsClient.GetCloudEnvironmentName(),
 		cluster:        cluster,
 		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.PromtailCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Promtail,
+		tempDir:        tempDir,
 	}
 }
 
