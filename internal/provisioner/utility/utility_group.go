@@ -5,7 +5,6 @@
 package utility
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
@@ -240,7 +239,7 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	}
 
 	for _, utility := range group.utilities {
-		fmt.Printf("Provisioning utility %s\n", utility.Name())
+		logger.Infof("Provisioning utility %s\n", utility.Name())
 
 		if utility.DesiredVersion().IsEmpty() {
 			logger.WithField("utility", utility.Name()).Info("Skipping reprovision")
