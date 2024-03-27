@@ -144,6 +144,16 @@ func (mr *MockMattermostRequesterMockRecorder) GetPing() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPing", reflect.TypeOf((*MockMattermostRequester)(nil).GetPing))
 }
 
+// GetTeamsForUser mocks base method.
+func (m *MockMattermostRequester) GetTeamsForUser(userID, etag string) ([]*model0.Team, *model0.Response) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTeamsForUser", userID)
+	ret0, _ := ret[0].(*model0.Team)
+	ret1, _ := ret[1].(*model0.Response)
+	retur := []*model0.Team{ret0}
+	return retur, ret1
+}
+
 // Login mocks base method.
 func (m *MockMattermostRequester) Login(username, password string) (*model0.User, *model0.Response) {
 	m.ctrl.T.Helper()

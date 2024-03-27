@@ -22,6 +22,7 @@ type MattermostRequester interface {
 	GetPing() (string, *mmodel.Response)
 	Logout() (bool, *mmodel.Response)
 	CreateTeam(team *mmodel.Team) (*mmodel.Team, *mmodel.Response)
+	GetTeamsForUser(userID, etag string) ([]*mmodel.Team, *mmodel.Response)
 	AddTeamMember(teamID, userID string) (*mmodel.TeamMember, *mmodel.Response)
 	CreatePost(post *mmodel.Post) (*mmodel.Post, *mmodel.Response)
 	CreateUser(user *mmodel.User) (*mmodel.User, *mmodel.Response)
@@ -75,6 +76,27 @@ func (w *TestWicker) CreateInstallation(request *cmodel.CreateInstallationReques
 		w.installation = i
 		return nil
 	}
+}
+
+// UpdateTestwickWithExistingInstallation updates testwick with existing installation
+func (w *TestWicker) UpdateTestwickWithExistingInstallation(installation *cmodel.InstallationDTO) error {
+	w.installation = installation
+	u := &mmodel.User{
+		Username: "testwick",
+		Email:    "testwick@example.mattermost.com",
+		Password: "T3stw1ck10!",
+	}
+	userLogged, response := w.mmClient.Login(u.Email, u.Password)
+	if response.StatusCode != 200 {
+		return fmt.Errorf("failed logging user: username = %s, status code = %d, message = %s", u.Username, response.StatusCode, response.Error.Message)
+	}
+	w.userID = userLogged.Id
+	teams, response := w.mmClient.GetTeamsForUser(userLogged.Id, "")
+	if response.StatusCode != 200 {
+		return fmt.Errorf("failed getting user teams: username = %s, status code = %d, message = %s", w.userID, response.StatusCode, response.Error.Message)
+	}
+	w.teamID = teams[0].Id
+	return nil
 }
 
 // DeleteInstallation interacts with provisioner and uses the provided request
