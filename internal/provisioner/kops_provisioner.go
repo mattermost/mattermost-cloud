@@ -1047,7 +1047,7 @@ func (provisioner *KopsProvisioner) prepareArgoCDRepo(cluster *model.Cluster, ph
 	gitOpsRepoPath := model.GetGitopsRepoPath()
 	argocdRepoURL := gitOpsRepoURL + gitOpsRepoPath
 
-	gitClient, err := git.NewGitClient(provisioner.gitlabOAuthToken, argocdRepoTempDir, argocdRepoURL, "Provisioner", "feat-CLD-5708")
+	gitClient, err := git.NewGitClient(provisioner.gitlabOAuthToken, argocdRepoTempDir, argocdRepoURL, "Provisioner", "main")
 	if err != nil {
 		return "", nil, nil, errors.Wrap(err, "failed to create new git client")
 	}

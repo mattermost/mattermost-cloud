@@ -99,7 +99,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		return errors.Wrap(err, "failed to commit to repo")
 	}
 
-	if err = gitClient.Push("feat-CLD-5708", logger); err != nil {
+	if err = gitClient.Push(logger); err != nil {
 		return errors.Wrap(err, "failed to push to repo")
 	}
 

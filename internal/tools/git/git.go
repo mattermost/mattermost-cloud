@@ -66,7 +66,7 @@ func (g *Git) Commit(filePath, commitMsg string, logger log.FieldLogger) error {
 	return nil
 }
 
-func (g *Git) Push(branchName string, logger log.FieldLogger) error {
+func (g *Git) Push(logger log.FieldLogger) error {
 	remote, err := g.repo.Remote("origin")
 	if err != nil {
 		return errors.Wrapf(err, "unable to get remote origin")
@@ -76,7 +76,7 @@ func (g *Git) Push(branchName string, logger log.FieldLogger) error {
 		Auth:     g.auth,
 		Progress: os.Stdout,
 		RefSpecs: []config.RefSpec{
-			config.RefSpec("refs/heads/" + branchName + ":refs/heads/" + branchName),
+			config.RefSpec("refs/heads/" + g.branchName + ":refs/heads/" + g.branchName),
 		},
 	})
 

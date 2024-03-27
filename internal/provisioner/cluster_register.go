@@ -68,7 +68,7 @@ func (cr *ClusterRegister) clusterRegister(s3StateStore string) error {
 		return errors.Wrap(err, "failed to commit to repo")
 	}
 
-	if err = cr.gitClient.Push("feat-CLD-5708", logger); err != nil {
+	if err = cr.gitClient.Push(logger); err != nil {
 		return errors.Wrap(err, "failed to push to repo")
 	}
 
@@ -145,7 +145,7 @@ func (cr *ClusterRegister) deregisterClusterFromArgocd() error {
 		return errors.Wrap(err, "failed to commit to repo")
 	}
 
-	if err = cr.gitClient.Push("feat-CLD-5708", logger); err != nil {
+	if err = cr.gitClient.Push(logger); err != nil {
 		return errors.Wrap(err, "failed to push to repo")
 	}
 

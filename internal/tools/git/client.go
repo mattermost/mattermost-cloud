@@ -10,7 +10,7 @@ import (
 
 type Client interface {
 	Commit(filePath, commitMsg string, logger log.FieldLogger) error
-	Push(branchName string, logger log.FieldLogger) error
+	Push(logger log.FieldLogger) error
 	Close(tempDir string, logger log.FieldLogger) error
 	Pull(logger log.FieldLogger) error
 }
