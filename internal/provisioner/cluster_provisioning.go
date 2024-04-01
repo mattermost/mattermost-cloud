@@ -37,27 +37,24 @@ func provisionCluster(
 	logger logrus.FieldLogger) error {
 
 	// Register cluster in argocd
-	switch {
-	case cluster.UtilityMetadata.ManagedByArgocd:
-		switch {
-		case !cluster.UtilityMetadata.ArgocdClusterRegister.Registered:
-			logger.Debug("Starting argocd cluster registration")
-			clusterRegister, err := NewClusterRegisterHandle(cluster, gitClient, awsClient.GetCloudEnvironmentName(), tempDir, logger)
-			if err != nil {
-				return errors.Wrap(err, "Failed to create new cluster register handle")
-			}
-			if err = clusterRegister.clusterRegister(params.S3StateStore); err != nil {
-				return errors.Wrap(err, "failed to register cluster in argocd")
-			}
-
-			cluster.UtilityMetadata.ArgocdClusterRegister.Registered = true
-			logger.Infof("Cluster: %s successfully registered in argocd", cluster.ID)
-
-		default:
-			logger.Info("Cluster already registered, skipping argocd cluster register")
+	if cluster.UtilityMetadata.ManagedByArgocd && !cluster.UtilityMetadata.ArgocdClusterRegister.Registered {
+		logger.Debug("Starting argocd cluster registration")
+		clusterRegister, err := NewClusterRegisterHandle(cluster, gitClient, awsClient.GetCloudEnvironmentName(), tempDir, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to create new cluster register handle")
 		}
-	default:
-		logger.Info("ManagedByArgocd is false, skipping argocd cluster registration")
+		if err = clusterRegister.clusterRegister(params.S3StateStore); err != nil {
+			return errors.Wrap(err, "failed to register cluster in argocd")
+		}
+
+		cluster.UtilityMetadata.ArgocdClusterRegister.Registered = true
+		logger.Infof("Cluster: %s successfully registered in argocd", cluster.ID)
+
+	} else {
+		logger.WithFields(logrus.Fields{
+			"ManagedByArgocd": cluster.UtilityMetadata.ManagedByArgocd,
+			"Registered":      cluster.UtilityMetadata.ArgocdClusterRegister.Registered,
+		}).Info("Skipping argocd cluster registration")
 	}
 
 	err := attachPolicyRoles(cluster, awsClient, logger)
