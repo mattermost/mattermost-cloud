@@ -114,7 +114,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	timeout := time.Second * 300
 
 	wg.Add(1)
-	go argocdClient.WaitForAppHealthy(appName, &wg, timeout) //TODO: return error
+	go argocdClient.WaitForAppHealthy(appName, &wg, timeout)
 	wg.Wait()
 
 	logger.WithField("app:", app.Name).Info("Deployed utility successfully.")
