@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -83,23 +84,35 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 func (a *Client) IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error) {
 	ctx := context.TODO()
 
-	// if AMI image is blank it will use the default KOPS image
 	if AMIImage == "" {
+		// if AMI image is blank it will use the default KOPS image
 		return true, nil
 	}
 
-	output, err := a.Service().ec2.DescribeImages(ctx, &ec2.DescribeImagesInput{
+	// Preparing a list of possible AMI names to check, including potential suffixes
+	amiNames := []string{AMIImage}
+	if !strings.HasPrefix(AMIImage, "ami-") {
+		// Append possible architecture suffixes only if the AMI name does not start with "ami-"
+		amiNames = append(amiNames, AMIImage+"-amd64", AMIImage+"-arm64")
+	}
+
+	describeInput := &ec2.DescribeImagesInput{
 		Filters: []ec2Types.Filter{
 			{
-				Name:   aws.String("image-id"),
-				Values: []string{AMIImage},
+				Name:   aws.String("name"),
+				Values: amiNames, // Searching for any of the possible names
 			},
 		},
-	})
+	}
+
+	output, err := a.Service().ec2.DescribeImages(ctx, describeInput)
 	if err != nil {
+		logger.WithError(err).Error("Failed to describe images")
 		return false, err
 	}
+
 	if len(output.Images) == 0 {
+		logger.Info("No images found matching the criteria")
 		return false, nil
 	}
 
