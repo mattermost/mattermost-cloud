@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -16,22 +18,25 @@ import (
 
 type teleport struct {
 	awsClient      aws.AWS
+	gitClient      git.Client
+	argocdClient   argocd.Client
 	kubeconfigPath string
 	environment    string
 	cluster        *model.Cluster
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
+	tempDir        string
 }
 
-func newTeleportOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
+func newTeleportOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.TeleportCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.TeleportCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.TeleportCanonicalName, logger), nil
+		return newUnmanagedHandle(model.TeleportCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
 	}
-	teleport := newTeleportHandle(cluster, desired, kubeconfigPath, awsClient, logger)
+	teleport := newTeleportHandle(cluster, desired, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
 	err := teleport.validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "teleport utility config is invalid")
@@ -40,15 +45,18 @@ func newTeleportOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string,
 	return teleport, nil
 }
 
-func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) *teleport {
+func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) *teleport {
 	return &teleport{
 		awsClient:      awsClient,
+		gitClient:      gitClient,
+		argocdClient:   argocdClient,
 		kubeconfigPath: kubeconfigPath,
 		environment:    awsClient.GetCloudEnvironmentName(),
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.TeleportCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Teleport,
+		tempDir:        tempDir,
 	}
 }
 
