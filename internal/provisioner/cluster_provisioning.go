@@ -12,7 +12,9 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -26,10 +28,34 @@ import (
 func provisionCluster(
 	cluster *model.Cluster,
 	kubeconfigPath string,
+	tempDir string,
 	awsClient aws.AWS,
+	gitClient git.Client,
+	argocdClient argocd.Client,
 	params ProvisioningParams,
 	store model.ClusterUtilityDatabaseStoreInterface,
 	logger logrus.FieldLogger) error {
+
+	// Register cluster in argocd
+	if cluster.UtilityMetadata.ManagedByArgocd && !cluster.UtilityMetadata.ArgocdClusterRegister.Registered {
+		logger.Debug("Starting argocd cluster registration")
+		clusterRegister, err := NewClusterRegisterHandle(cluster, gitClient, awsClient.GetCloudEnvironmentName(), tempDir, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to create new cluster register handle")
+		}
+		if err = clusterRegister.clusterRegister(params.S3StateStore); err != nil {
+			return errors.Wrap(err, "failed to register cluster in argocd")
+		}
+
+		cluster.UtilityMetadata.ArgocdClusterRegister.Registered = true
+		logger.Infof("Cluster: %s successfully registered in argocd", cluster.ID)
+
+	} else {
+		logger.WithFields(logrus.Fields{
+			"ManagedByArgocd": cluster.UtilityMetadata.ManagedByArgocd,
+			"Registered":      cluster.UtilityMetadata.ArgocdClusterRegister.Registered,
+		}).Info("Skipping argocd cluster registration")
+	}
 
 	err := attachPolicyRoles(cluster, awsClient, logger)
 	if err != nil {
@@ -349,7 +375,7 @@ func provisionCluster(
 		}
 	}
 
-	ugh, err := utility.NewUtilityGroupHandle(params.AllowCIDRRangeList, kubeconfigPath, cluster, awsClient, logger)
+	ugh, err := utility.NewUtilityGroupHandle(params.AllowCIDRRangeList, kubeconfigPath, tempDir, cluster, awsClient, gitClient, argocdClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}
@@ -390,30 +416,6 @@ func provisionCluster(
 		clusterName = cluster.ProvisionerMetadataKops.Name
 	} else if cluster.Provisioner == model.ProvisionerEKS {
 		clusterName = cluster.ProvisionerMetadataEKS.Name
-	}
-
-	// Register cluster in argocd
-	switch {
-	case cluster.UtilityMetadata.ManagedByArgocd:
-		switch {
-		case !cluster.UtilityMetadata.ArgocdClusterRegister.Registered:
-			logger.Debug("Starting argocd cluster registration")
-			clusterRegister, err := NewClusterRegisterHandle(cluster, awsClient.GetCloudEnvironmentName(), logger)
-			if err != nil {
-				return errors.Wrap(err, "Failed to create new cluster register handle")
-			}
-			if err = clusterRegister.clusterRegister(params.S3StateStore); err != nil {
-				return errors.Wrap(err, "failed to register cluster in argocd")
-			}
-
-			cluster.UtilityMetadata.ArgocdClusterRegister.Registered = true
-			logger.Infof("Cluster: %s successfully registered in argocd", cluster.ID)
-
-		default:
-			logger.Info("Cluster already registered, skipping argocd cluster register")
-		}
-	default:
-		logger.Info("ManagedByArgocd is false, skipping argocd cluster registration")
 	}
 
 	logger.WithField("name", clusterName).Info("Successfully provisioned cluster")
