@@ -1,6 +1,8 @@
 module github.com/mattermost/mattermost-cloud
 
-go 1.20
+go 1.21
+
+toolchain go1.21.8
 
 require (
 	github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
@@ -37,7 +39,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.9
 	github.com/mattermost/awat v0.2.0
-	github.com/mattermost/mattermost-operator v1.21.0-rc.1
+	github.com/mattermost/mattermost-operator v1.21.0
 	github.com/mattermost/rotator v0.2.1-0.20230830064954-61490ed26761
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
@@ -50,7 +52,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/vrischmann/envconfig v1.3.0
 	golang.org/x/tools v0.17.0
 	gopkg.in/yaml.v2 v2.4.0
