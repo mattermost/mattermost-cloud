@@ -143,18 +143,33 @@ func (a *AWSTestSuite) TestIsValidAMINoImages() {
 			Images: []ec2Types.Image{},
 		}, nil)
 
+	a.Mocks.Log.Logger.EXPECT().
+		Info("No images found matching the criteria", "AMI Names", []string{"example-ami-name-amd64"}).
+		Times(1)
+
 	ok, err := a.Mocks.AWS.IsValidAMI("example-ami-name-amd64", a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 	a.Assert().False(ok)
 }
 
 func (a *AWSTestSuite) TestIsValidAMIError() {
-	// Test case when DescribeImages returns an error
+	errorMsg := errors.New("resource id not found")
+
+	// Assuming testlib.NewLoggerEntry() returns a mock or a stub that satisfies the logger's interface
+	mockEntry := testlib.NewLoggerEntry()
+
+	// Setup the expectation for WithError, expecting any error and returning the mock logger entry
+	a.Mocks.Log.Logger.EXPECT().WithError(gomock.Any()).Return(mockEntry).AnyTimes()
+
+	// Setup the EC2 mock to return an error for DescribeImages
 	a.Mocks.API.EC2.EXPECT().
 		DescribeImages(gomock.Any(), gomock.Any()).
-		Return(nil, errors.New("resource id not found"))
+		Return(nil, errorMsg).Times(1)
 
-	ok, err := a.Mocks.AWS.IsValidAMI("example-ami-name-amd64", a.Mocks.Log.Logger)
+	// Call the function under test
+	ok, err := a.Mocks.AWS.IsValidAMI("ami-failingcase", a.Mocks.Log.Logger)
+
+	// Assert that an error was returned as expected
 	a.Assert().Error(err)
 	a.Assert().False(ok)
 	a.Assert().Equal("resource id not found", err.Error())
