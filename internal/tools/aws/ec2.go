@@ -85,38 +85,64 @@ func (a *Client) IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, erro
 	ctx := context.TODO()
 
 	if AMIImage == "" {
-		// if AMI image is blank it will use the default KOPS image
+		// If the AMI image is blank, it will use the default KOPS image.
+		logger.Info("AMI image is blank; using the default KOPS image")
 		return true, nil
 	}
 
-	// Preparing a list of possible AMI names to check, including potential suffixes
-	amiNames := []string{AMIImage}
-	if !strings.HasPrefix(AMIImage, "ami-") {
-		// Append possible architecture suffixes only if the AMI name does not start with "ami-"
-		amiNames = append(amiNames, AMIImage+"-amd64", AMIImage+"-arm64")
-	}
+	if strings.HasPrefix(AMIImage, "ami-") {
+		// If AMIImage is an AMI ID, use ImageIds to search for it directly.
+		describeIDInput := &ec2.DescribeImagesInput{
+			ImageIds: []string{AMIImage},
+		}
 
-	describeInput := &ec2.DescribeImagesInput{
-		Filters: []ec2Types.Filter{
-			{
-				Name:   aws.String("name"),
-				Values: amiNames, // Searching for any of the possible names
+		output, err := a.Service().ec2.DescribeImages(ctx, describeIDInput)
+		if err != nil {
+			logger.WithError(err).Error("Failed to describe images by AMI ID")
+			return false, err
+		}
+
+		if len(output.Images) == 0 {
+			logger.Info("No images found matching the AMI ID")
+			return false, nil
+		}
+
+		return true, nil
+
+	} else {
+		// For AMI names, prepare a list of possible AMI names including potential suffixes.
+		var amiNames []string
+
+		// If AMIImage already includes an architecture suffix, use it as is.
+		if strings.HasSuffix(AMIImage, "-amd64") || strings.HasSuffix(AMIImage, "-arm64") {
+			amiNames = []string{AMIImage}
+		} else {
+			// If AMIImage is a name without an architecture suffix, append "-amd64" and "-arm64".
+			amiNames = append(amiNames, AMIImage+"-amd64", AMIImage+"-arm64")
+		}
+
+		describeNameInput := &ec2.DescribeImagesInput{
+			Filters: []ec2Types.Filter{
+				{
+					Name:   aws.String("name"),
+					Values: amiNames,
+				},
 			},
-		},
-	}
+		}
 
-	output, err := a.Service().ec2.DescribeImages(ctx, describeInput)
-	if err != nil {
-		logger.WithError(err).Error("Failed to describe images")
-		return false, err
-	}
+		output, err := a.Service().ec2.DescribeImages(ctx, describeNameInput)
+		if err != nil {
+			logger.WithError(err).Error("Failed to describe images by name")
+			return false, err
+		}
 
-	if len(output.Images) == 0 {
-		logger.Info("No images found matching the criteria")
-		return false, nil
-	}
+		if len(output.Images) == 0 {
+			logger.Info("No images found matching the criteria", "AMI Names", amiNames)
+			return false, nil
+		}
 
-	return true, nil
+		return true, nil
+	}
 }
 
 // GetVpcsWithFilters returns VPCs matching a given filter.
