@@ -85,8 +85,6 @@ func (a *Client) IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, erro
 	ctx := context.TODO()
 
 	if AMIImage == "" {
-		// If the AMI image is blank, it will use the default KOPS image.
-		logger.Info("AMI image is blank; using the default KOPS image")
 		return true, nil
 	}
 

@@ -67,7 +67,7 @@ type AWSTestSuite struct {
 	DBName               string
 	ResourceID           string
 	HostedZoneID         string
-	CertifcateARN        string
+	CertificateARN       string
 	ResourceARN          string
 	RDSResourceARN       string
 	RDSAvailabilityZones []string
@@ -129,7 +129,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		SecretStringPassErr:  `{"MasterUsername":"mmcloud","password":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
 		RDSEncryptionKeyID:   "rds-encryption-key-id-123",
 		ResourceID:           "WSxqXCaZw1dC",
-		CertifcateARN:        "arn:aws:certificate::123456789012",
+		CertificateARN:       "arn:aws:certificate::123456789012",
 		ResourceARN:          "arn:aws:kms:us-east-1:526412419611:key/10cbe864-7411-4cda-bd28-3355218d0995",
 		RDSResourceARN:       "arn:aws:rds:us-east-1:926412419614:cluster:rds-cluster-multitenant-09d44077df9934f96-97670d43",
 		InstanceID:           "WSxaaqafXCgeaZers2qergasdgsw1dC",
