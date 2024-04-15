@@ -86,6 +86,7 @@ func newCmdClusterCreate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+			flags.pgBouncerConfigChanges.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -116,6 +117,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		VPC:                    flags.vpc,
 		Provisioner:            model.ProvisionerKops,
 		ArgocdClusterRegister:  flags.argocdRegister,
+		PgBouncerConfig:        flags.GetPgBouncerConfig(),
 	}
 
 	if flags.useEKS {
@@ -212,6 +214,7 @@ func newCmdClusterProvision() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+			flags.pgBouncerConfigChanges.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -226,6 +229,7 @@ func executeClusterProvisionCmd(flags clusterProvisionFlags) error {
 		Force:                  flags.reprovisionAllUtilities,
 		DesiredUtilityVersions: processUtilityFlags(flags.utilityFlags),
 		ArgocdClusterRegister:  flags.argocdRegister,
+		PgBouncerConfig:        flags.GetPatchPgBouncerConfig(),
 	}
 
 	if flags.dryRun {

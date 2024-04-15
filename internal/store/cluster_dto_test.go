@@ -39,6 +39,7 @@ func TestClusterDTOs(t *testing.T) {
 		ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
 		ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
 		UtilityMetadata:         &model.UtilityMetadata{},
+		PgBouncerConfig:         &model.PgBouncerConfig{},
 		State:                   model.ClusterStateCreationRequested,
 		AllowInstallations:      false,
 	}
@@ -49,6 +50,7 @@ func TestClusterDTOs(t *testing.T) {
 		ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
 		ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
 		UtilityMetadata:        &model.UtilityMetadata{},
+		PgBouncerConfig:        &model.PgBouncerConfig{},
 		State:                  model.ClusterStateStable,
 		AllowInstallations:     true,
 	}

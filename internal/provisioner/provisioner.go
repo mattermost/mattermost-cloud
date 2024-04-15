@@ -39,7 +39,6 @@ type ProvisioningParams struct {
 	MattermostOperatorHelmDir string
 	NdotsValue                string
 	InternalIPRanges          []string
-	PGBouncerConfig           *model.PGBouncerConfig
 	SLOInstallationGroups     []string
 	SLOEnterpriseGroups       []string
 	EtcdManagerEnv            map[string]string

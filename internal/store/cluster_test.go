@@ -35,6 +35,7 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
 			UtilityMetadata:         &model.UtilityMetadata{},
+			PgBouncerConfig:         &model.PgBouncerConfig{},
 			State:                   model.ClusterStateCreationRequested,
 			AllowInstallations:      false,
 		}
@@ -45,6 +46,7 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
 			UtilityMetadata:        &model.UtilityMetadata{},
+			PgBouncerConfig:        &model.PgBouncerConfig{MinPoolSize: 1},
 			State:                  model.ClusterStateStable,
 			AllowInstallations:     true,
 		}
@@ -103,6 +105,7 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
 			UtilityMetadata:         &model.UtilityMetadata{},
+			PgBouncerConfig:         &model.PgBouncerConfig{MinPoolSize: 1},
 			State:                   model.ClusterStateCreationRequested,
 			AllowInstallations:      false,
 		}
@@ -113,6 +116,7 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
 			UtilityMetadata:        &model.UtilityMetadata{},
+			PgBouncerConfig:        &model.PgBouncerConfig{MinPoolSize: 1},
 			State:                  model.ClusterStateStable,
 			AllowInstallations:     true,
 		}
@@ -154,6 +158,7 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
 			UtilityMetadata:         &model.UtilityMetadata{},
+			PgBouncerConfig:         &model.PgBouncerConfig{},
 			AllowInstallations:      false,
 		}
 
@@ -163,6 +168,7 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
 			UtilityMetadata:        &model.UtilityMetadata{},
+			PgBouncerConfig:        &model.PgBouncerConfig{},
 			AllowInstallations:     true,
 		}
 
@@ -225,8 +231,9 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 
 	creationRequestedCluster := &model.Cluster{
-		Provisioner: model.ProvisionerKops,
-		State:       model.ClusterStateCreationRequested,
+		Provisioner:     model.ProvisionerKops,
+		State:           model.ClusterStateCreationRequested,
+		PgBouncerConfig: model.NewDefaultPgBouncerConfig(),
 	}
 	err := sqlStore.CreateCluster(creationRequestedCluster, nil)
 	require.NoError(t, err)
@@ -234,8 +241,9 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	upgradeRequestedCluster := &model.Cluster{
-		Provisioner: model.ProvisionerKops,
-		State:       model.ClusterStateUpgradeRequested,
+		Provisioner:     model.ProvisionerKops,
+		State:           model.ClusterStateUpgradeRequested,
+		PgBouncerConfig: model.NewDefaultPgBouncerConfig(),
 	}
 	err = sqlStore.CreateCluster(upgradeRequestedCluster, nil)
 	require.NoError(t, err)
@@ -243,8 +251,9 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	deletionRequestedCluster := &model.Cluster{
-		Provisioner: model.ProvisionerKops,
-		State:       model.ClusterStateDeletionRequested,
+		Provisioner:     model.ProvisionerKops,
+		State:           model.ClusterStateDeletionRequested,
+		PgBouncerConfig: model.NewDefaultPgBouncerConfig(),
 	}
 	err = sqlStore.CreateCluster(deletionRequestedCluster, nil)
 	require.NoError(t, err)
@@ -445,7 +454,8 @@ func TestClustersAnnotationsFilter(t *testing.T) {
 	clusters := make([]*model.Cluster, len(clustersAnnotations))
 	for i := range clusters {
 		clusters[i] = &model.Cluster{
-			Provisioner: model.ProvisionerKops,
+			Provisioner:     model.ProvisionerKops,
+			PgBouncerConfig: model.NewDefaultPgBouncerConfig(),
 		}
 		err := sqlStore.CreateCluster(clusters[i], clustersAnnotations[i])
 		require.NoError(t, err)

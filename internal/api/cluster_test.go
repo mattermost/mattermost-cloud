@@ -634,6 +634,27 @@ func TestProvisionCluster(t *testing.T) {
 		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
+
+	t.Run("update pgbouncer config", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
+
+		t.Run("update 2 values", func(t *testing.T) {
+			clusterResp, errTest := client.ProvisionCluster(cluster1.ID, &model.ProvisionClusterRequest{PgBouncerConfig: &model.PatchPgBouncerConfig{
+				MinPoolSize:     util.IToP(5),
+				DefaultPoolSize: util.IToP(10),
+			}})
+			require.NoError(t, errTest)
+			assert.NotNil(t, clusterResp)
+
+			updatedCluster, errTest := client.GetCluster(cluster1.ID)
+			require.NoError(t, errTest)
+			assert.Equal(t, model.ClusterStateProvisioningRequested, updatedCluster.State)
+			assert.Equal(t, int64(5), updatedCluster.PgBouncerConfig.MinPoolSize)
+			assert.Equal(t, int64(10), updatedCluster.PgBouncerConfig.DefaultPoolSize)
+		})
+	})
 }
 
 func TestUpgradeCluster(t *testing.T) {

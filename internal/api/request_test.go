@@ -42,6 +42,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"velero":                {Chart: "5.1.5", ValuesPath: ""},
 				"cloudprober":           {Chart: "0.1.4", ValuesPath: ""},
 			},
+			PgBouncerConfig: model.NewDefaultPgBouncerConfig(),
 		}
 	}
 
@@ -112,6 +113,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"velero":                {Chart: "5.1.5", ValuesPath: ""},
 				"cloudprober":           {Chart: "0.1.4", ValuesPath: ""},
 			},
+			PgBouncerConfig: model.NewDefaultPgBouncerConfig(),
 		}, clusterRequest)
 	})
 }

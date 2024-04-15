@@ -107,25 +107,33 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 }
 
 type pgBouncerConfig struct {
-	minPoolSize                   int
-	defaultPoolSize               int
-	reservePoolSize               int
-	maxClientConnections          int
-	maxDatabaseConnectionsPerPool int
-	serverIdleTimeout             int
-	serverLifetime                int
-	serverResetQueryAlways        int
+	minPoolSize                   int64
+	defaultPoolSize               int64
+	reservePoolSize               int64
+	maxClientConnections          int64
+	maxDatabaseConnectionsPerPool int64
+	serverIdleTimeout             int64
+	serverLifetime                int64
+	serverResetQueryAlways        int64
 }
 
 func (flags *pgBouncerConfig) addFlags(command *cobra.Command) {
-	command.Flags().IntVar(&flags.minPoolSize, "min-proxy-db-pool-size", 1, "The db proxy min pool size.")
-	command.Flags().IntVar(&flags.defaultPoolSize, "default-proxy-db-pool-size", 5, "The db proxy default pool size per user.")
-	command.Flags().IntVar(&flags.reservePoolSize, "reserve-proxy-db-pool-size", 10, "The db proxy reserve pool size per logical database.")
-	command.Flags().IntVar(&flags.maxClientConnections, "max-client-connections", 20000, "The db proxy max client connections.")
-	command.Flags().IntVar(&flags.maxDatabaseConnectionsPerPool, "max-proxy-db-connections-per-pool", 20, "The maximum number of proxy database connections per pool (logical database).")
-	command.Flags().IntVar(&flags.serverIdleTimeout, "server-idle-timeout", 30, "The server idle timeout.")
-	command.Flags().IntVar(&flags.serverLifetime, "server-lifetime", 300, "The server lifetime.")
-	command.Flags().IntVar(&flags.serverResetQueryAlways, "server-reset-query-always", 0, "Whether server_reset_query should be run in all pooling modes.")
+	command.Flags().Int64Var(&flags.minPoolSize, "min-proxy-db-pool-size", 1, "Deprecated")
+	command.Flags().MarkDeprecated("min-proxy-db-pool-size", "PgBouncer config is now set on clusters")
+	command.Flags().Int64Var(&flags.defaultPoolSize, "default-proxy-db-pool-size", 5, "Deprecated")
+	command.Flags().MarkDeprecated("default-proxy-db-pool-size", "PgBouncer config is now set on clusters")
+	command.Flags().Int64Var(&flags.reservePoolSize, "reserve-proxy-db-pool-size", 10, "Deprecated")
+	command.Flags().MarkDeprecated("reserve-proxy-db-pool-size", "PgBouncer config is now set on clusters")
+	command.Flags().Int64Var(&flags.maxClientConnections, "max-client-connections", 20000, "Deprecated")
+	command.Flags().MarkDeprecated("max-client-connections", "PgBouncer config is now set on clusters")
+	command.Flags().Int64Var(&flags.maxDatabaseConnectionsPerPool, "max-proxy-db-connections-per-pool", 20, "Deprecated")
+	command.Flags().MarkDeprecated("max-proxy-db-connections-per-pool", "PgBouncer config is now set on clusters")
+	command.Flags().Int64Var(&flags.serverIdleTimeout, "server-idle-timeout", 30, "Deprecated")
+	command.Flags().MarkDeprecated("server-idle-timeout", "PgBouncer config is now set on clusters")
+	command.Flags().Int64Var(&flags.serverLifetime, "server-lifetime", 300, "Deprecated")
+	command.Flags().MarkDeprecated("server-lifetime", "PgBouncer config is now set on clusters")
+	command.Flags().Int64Var(&flags.serverResetQueryAlways, "server-reset-query-always", 0, "Deprecated")
+	command.Flags().MarkDeprecated("server-reset-query-always", "PgBouncer config is now set on clusters")
 }
 
 type installationOptions struct {

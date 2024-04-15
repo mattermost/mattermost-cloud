@@ -25,7 +25,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -84,16 +83,6 @@ func executeServerCmd(flags serverFlags) error {
 
 	if err := model.SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(flags.maxSchemas); err != nil {
 		return err
-	}
-
-	pgbouncerConfig := pgbouncer.NewPGBouncerConfig(
-		flags.minPoolSize, flags.defaultPoolSize, flags.reservePoolSize,
-		flags.maxClientConnections, flags.maxDatabaseConnectionsPerPool,
-		flags.serverIdleTimeout, flags.serverLifetime, flags.serverResetQueryAlways,
-	)
-
-	if err := pgbouncerConfig.Validate(); err != nil {
-		return errors.Wrap(err, "pgbouncer config failed validation")
 	}
 
 	gitlabOAuthToken := flags.gitlabOAuthToken
@@ -300,7 +289,6 @@ func executeServerCmd(flags serverFlags) error {
 		MattermostOperatorHelmDir: flags.mattermostOperatorHelmDir,
 		NdotsValue:                flags.ndotsDefaultValue,
 		InternalIPRanges:          flags.internalIPRanges,
-		PGBouncerConfig:           pgbouncerConfig,
 		SLOInstallationGroups:     flags.sloInstallationGroups,
 		SLOEnterpriseGroups:       flags.sloEnterpriseGroups,
 		EtcdManagerEnv:            etcdManagerEnv,
@@ -594,6 +582,10 @@ func deprecationWarnings(logger logrus.FieldLogger, flags serverFlags) {
 	if flags.debugHelm {
 		logger.Warn("The debug-helm flag has been deprecated")
 	}
+
+	// Generic warning for old flags.
+	// TODO: Remove after deployments are updated.
+	logger.Warn("All pgbouncer config.ini flags have been deprecated. Review server flags to ensure you are not setting any as they will be removed later.")
 }
 
 // getHumanReadableID  represents  a  best  effort  attempt  to  retrieve  an

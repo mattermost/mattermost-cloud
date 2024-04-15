@@ -114,6 +114,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			Zones: createClusterRequest.Zones,
 		},
 		Provisioner:        createClusterRequest.Provisioner,
+		PgBouncerConfig:    createClusterRequest.PgBouncerConfig,
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,
@@ -231,6 +232,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 	clusterDTO.SetManagedByArgocd(provisionClusterRequest.ArgocdClusterRegister)
+	clusterDTO.PgBouncerConfig.ApplyPatch(provisionClusterRequest.PgBouncerConfig)
 
 	if clusterDTO.State != newState {
 		oldState := clusterDTO.State
@@ -265,6 +267,13 @@ func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
+	updateClusterRequest, err := model.NewUpdateClusterRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
 	if status != 0 {
 		w.WriteHeader(status)
@@ -275,13 +284,6 @@ func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http
 	if clusterDTO.APISecurityLock {
 		logSecurityLockConflict("cluster", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
-	updateClusterRequest, err := model.NewUpdateClusterRequestFromReader(r.Body)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to decode request")
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
