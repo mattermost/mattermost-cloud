@@ -405,7 +405,7 @@ func provisionCluster(
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
 	defer cancel()
-	err = pgbouncer.UpdatePGBouncerConfigMap(ctx, vpc, store, params.PGBouncerConfig, k8sClient, logger)
+	err = pgbouncer.UpdatePGBouncerConfigMap(ctx, vpc, store, cluster.PgBouncerConfig, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to update configmap for pgbouncer-configmap")
 	}

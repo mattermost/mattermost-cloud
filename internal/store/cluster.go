@@ -19,7 +19,7 @@ var clusterSelect sq.SelectBuilder
 func init() {
 	clusterSelect = sq.
 		Select("Cluster.ID", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
-			"UtilityMetadataRaw", "State", "AllowInstallations", "CreateAt", "DeleteAt",
+			"UtilityMetadataRaw", "PgBouncerConfig", "State", "AllowInstallations", "CreateAt", "DeleteAt",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
 		From("Cluster")
 }
@@ -232,6 +232,7 @@ func (sqlStore *SQLStore) createCluster(execer execer, cluster *model.Cluster) e
 			"Provisioner":            cluster.Provisioner,
 			"ProvisionerMetadataRaw": rawMetadata.ProvisionerMetadataRaw,
 			"UtilityMetadataRaw":     rawMetadata.UtilityMetadataRaw,
+			"PgBouncerConfig":        cluster.PgBouncerConfig,
 			"AllowInstallations":     cluster.AllowInstallations,
 			"CreateAt":               cluster.CreateAt,
 			"DeleteAt":               0,
@@ -262,6 +263,7 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *model.Cluster) error {
 			"Provisioner":            cluster.Provisioner,
 			"ProvisionerMetadataRaw": rawMetadata.ProvisionerMetadataRaw,
 			"UtilityMetadataRaw":     rawMetadata.UtilityMetadataRaw,
+			"PgBouncerConfig":        cluster.PgBouncerConfig,
 			"AllowInstallations":     cluster.AllowInstallations,
 		}).
 		Where("ID = ?", cluster.ID),

@@ -21,14 +21,15 @@ type Cluster struct {
 	Provisioner             string
 	ProvisionerMetadataKops *KopsMetadata
 	ProvisionerMetadataEKS  *EKSMetadata
+	Networking              string
 	UtilityMetadata         *UtilityMetadata
+	PgBouncerConfig         *PgBouncerConfig
 	AllowInstallations      bool
 	CreateAt                int64
 	DeleteAt                int64
 	APISecurityLock         bool
 	LockAcquiredBy          *string
 	LockAcquiredAt          int64
-	Networking              string
 }
 
 // Clone returns a deep copy the cluster.

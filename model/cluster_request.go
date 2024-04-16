@@ -47,6 +47,7 @@ type CreateClusterRequest struct {
 	NodeGroupWithSecurityGroup []string                       `json:"nodegroup-with-sg,omitempty"`
 	KmsKeyId                   string                         `json:"kms-key-id,omitempty"`
 	ArgocdClusterRegister      map[string]string              `json:"argocd-register,omitempty"`
+	PgBouncerConfig            *PgBouncerConfig               `json:"pgbouncer-config,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -134,6 +135,11 @@ func (request *CreateClusterRequest) SetDefaults() {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
 	}
 	request.setUtilitiesDefaults()
+
+	if request.PgBouncerConfig == nil {
+		request.PgBouncerConfig = &PgBouncerConfig{}
+	}
+	request.PgBouncerConfig.SetDefaults()
 }
 
 // Validate validates the values of a cluster create request.
@@ -159,12 +165,16 @@ func (request *CreateClusterRequest) Validate() error {
 	if request.MaxPodsPerNode < 10 {
 		return errors.Errorf("max pods per node (%d) must be 10 or greater", request.MaxPodsPerNode)
 	}
-	// TODO: check zones and instance types?
 
 	if request.ArgocdClusterRegister != nil {
 		if _, ok := request.ArgocdClusterRegister["cluster-type"]; !ok {
 			return errors.New("argocd register key cluster-type must be set")
 		}
+	}
+
+	err := request.PgBouncerConfig.Validate()
+	if err != nil {
+		return errors.Wrap(err, "pgbouncer config is not valid")
 	}
 
 	if request.Provisioner == ProvisionerEKS {
@@ -220,6 +230,7 @@ func (request *CreateClusterRequest) Validate() error {
 	if !contains(GetSupportedCniList(), request.Networking) {
 		return errors.Errorf("unsupported cluster networking option %s", request.Networking)
 	}
+
 	return nil
 }
 
@@ -380,9 +391,10 @@ func NewResizeClusterRequestFromReader(reader io.Reader) (*PatchClusterSizeReque
 
 // ProvisionClusterRequest contains metadata related to changing the installed cluster state.
 type ProvisionClusterRequest struct {
-	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 	Force                  bool                           `json:"force"`
+	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 	ArgocdClusterRegister  map[string]string              `json:"argocd-register,omitempty"`
+	PgBouncerConfig        *PatchPgBouncerConfig          `json:"pgbouncer-config,omitempty"`
 }
 
 // NewProvisionClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.
@@ -393,7 +405,24 @@ func NewProvisionClusterRequestFromReader(reader io.Reader) (*ProvisionClusterRe
 		return nil, errors.Wrap(err, "failed to decode provision cluster request")
 	}
 
+	err = provisionClusterRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "provision cluster request failed validation")
+	}
+
 	return &provisionClusterRequest, nil
+}
+
+// Validate validates the values of a cluster provision request.
+func (request *ProvisionClusterRequest) Validate() error {
+	if request.PgBouncerConfig != nil {
+		err := request.PgBouncerConfig.Validate()
+		if err != nil {
+			return errors.Wrap(err, "pgbouncer config validation failed")
+		}
+	}
+
+	return nil
 }
 
 type CreateNodegroupsRequest struct {
