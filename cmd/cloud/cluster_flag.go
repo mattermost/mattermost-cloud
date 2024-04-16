@@ -184,25 +184,25 @@ type pgBouncerConfigChanges struct {
 }
 
 func (flags *pgBouncerConfigChanges) addFlags(command *cobra.Command) {
-	flags.minPoolSizeChanged = command.Flags().Changed("pgbouncer-min-proxy-db-pool-size")
-	flags.defaultPoolSizeChanged = command.Flags().Changed("pgbouncer-default-proxy-db-pool-size")
-	flags.reservePoolSizeChanged = command.Flags().Changed("pgbouncer-reserve-proxy-db-pool-size")
+	flags.minPoolSizeChanged = command.Flags().Changed("pgbouncer-min-pool-size")
+	flags.defaultPoolSizeChanged = command.Flags().Changed("pgbouncer-default-pool-size")
+	flags.reservePoolSizeChanged = command.Flags().Changed("pgbouncer-reserve-pool-size")
 	flags.maxClientConnectionsChanged = command.Flags().Changed("pgbouncer-max-client-connections")
-	flags.maxDatabaseConnectionsPerPoolChanged = command.Flags().Changed("pgbouncer-max-proxy-db-connections-per-pool")
+	flags.maxDatabaseConnectionsPerPoolChanged = command.Flags().Changed("pgbouncer-max-connections-per-pool")
 	flags.serverIdleTimeoutChanged = command.Flags().Changed("pgbouncer-server-idle-timeout")
 	flags.serverLifetimeChanged = command.Flags().Changed("pgbouncer-server-lifetime")
 	flags.serverResetQueryAlwaysChanged = command.Flags().Changed("pgbouncer-server-reset-query-always")
 }
 
 func (flags *pgBouncerConfigOptions) addFlags(command *cobra.Command) {
-	command.Flags().Int64Var(&flags.minPoolSize, "pgbouncer-min-proxy-db-pool-size", model.PgBouncerDefaultMinPoolSize, "The db proxy min pool size.")
-	command.Flags().Int64Var(&flags.defaultPoolSize, "pgbouncer-default-proxy-db-pool-size", model.PgBouncerDefaultPoolSize, "The db proxy default pool size per user.")
-	command.Flags().Int64Var(&flags.reservePoolSize, "pgbouncer-reserve-proxy-db-pool-size", model.PgBouncerDefaultReservePoolSize, "The db proxy reserve pool size per logical database.")
-	command.Flags().Int64Var(&flags.maxClientConnections, "pgbouncer-max-client-connections", model.PgBouncerDefaultMaxClientConnections, "The db proxy max client connections.")
-	command.Flags().Int64Var(&flags.maxDatabaseConnectionsPerPool, "pgbouncer-max-proxy-db-connections-per-pool", model.PgBouncerDefaultMaxDatabaseConnectionsPerPool, "The maximum number of proxy database connections per pool (logical database).")
-	command.Flags().Int64Var(&flags.serverIdleTimeout, "pgbouncer-server-idle-timeout", model.PgBouncerDefaultServerIdleTimeout, "The server idle timeout.")
-	command.Flags().Int64Var(&flags.serverLifetime, "pgbouncer-server-lifetime", model.PgBouncerDefaultServerLifetime, "The server lifetime.")
-	command.Flags().Int64Var(&flags.serverResetQueryAlways, "pgbouncer-server-reset-query-always", model.PgBouncerDefaultServerResetQueryAlways, "Whether server_reset_query should be run in all pooling modes.")
+	command.Flags().Int64Var(&flags.minPoolSize, "pgbouncer-min-pool-size", model.PgBouncerDefaultMinPoolSize, "The PgBouncer config for min pool size.")
+	command.Flags().Int64Var(&flags.defaultPoolSize, "pgbouncer-default-pool-size", model.PgBouncerDefaultPoolSize, "The PgBouncer config for default pool size per user.")
+	command.Flags().Int64Var(&flags.reservePoolSize, "pgbouncer-reserve-pool-size", model.PgBouncerDefaultReservePoolSize, "The PgBouncer config for reserve pool size per logical database.")
+	command.Flags().Int64Var(&flags.maxClientConnections, "pgbouncer-max-client-connections", model.PgBouncerDefaultMaxClientConnections, "The PgBouncer config for max client connections.")
+	command.Flags().Int64Var(&flags.maxDatabaseConnectionsPerPool, "pgbouncer-max-connections-per-pool", model.PgBouncerDefaultMaxDatabaseConnectionsPerPool, "The PgBouncer config for maximum number of proxy database connections per pool (logical database).")
+	command.Flags().Int64Var(&flags.serverIdleTimeout, "pgbouncer-server-idle-timeout", model.PgBouncerDefaultServerIdleTimeout, "The PgBouncer config for server idle timeout.")
+	command.Flags().Int64Var(&flags.serverLifetime, "pgbouncer-server-lifetime", model.PgBouncerDefaultServerLifetime, "The PgBouncer config for server lifetime.")
+	command.Flags().Int64Var(&flags.serverResetQueryAlways, "pgbouncer-server-reset-query-always", model.PgBouncerDefaultServerResetQueryAlways, "The PgBouncer config for whether server_reset_query should be run in all pooling modes.")
 }
 
 type pgBouncerConfigOptions struct {
