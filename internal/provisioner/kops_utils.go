@@ -148,11 +148,11 @@ func ModifyAMISuffix(ami, archLabel string) string {
 
 	if !re.MatchString(ami) {
 		// Case 2: No architecture suffix, append default "amd64" or the provided label.
-		defaultSuffix := "amd64"
+		suffix := "amd64"
 		if archLabel == "arm64" {
-			defaultSuffix = archLabel
+			suffix = archLabel
 		}
-		return ami + "-" + defaultSuffix
+		return ami + "-" + suffix
 	}
 
 	// Case 3: AMI already includes an architecture suffix.

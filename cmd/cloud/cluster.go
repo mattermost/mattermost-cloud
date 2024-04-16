@@ -574,7 +574,7 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 			provisionerMetadata.Version,
 			fmt.Sprintf("%d x %s", masterCount, masterInstanceType),
 			fmt.Sprintf("%d x %s (max %d)", provisionerMetadata.NodeMinCount, provisionerMetadata.NodeInstanceType, provisionerMetadata.NodeMaxCount),
-			NormalizeAMISuffix(provisionerMetadata.AMI),
+			provisionerMetadata.AMI,
 			provisionerMetadata.Networking,
 			provisionerMetadata.VPC,
 			status,
@@ -720,16 +720,4 @@ func processUtilityFlags(utilityFlags utilityFlags) map[string]*model.HelmUtilit
 			ValuesPath: utilityFlags.cloudproberValues,
 		},
 	}
-}
-
-// NormalizeAMISuffix removes the architecture suffix from the AMI name, if present.
-func NormalizeAMISuffix(amiName string) string {
-	// Check if the AMI name ends with an architecture suffix and remove it
-	if strings.HasSuffix(amiName, "-amd64") {
-		return strings.TrimSuffix(amiName, "-amd64")
-	} else if strings.HasSuffix(amiName, "-arm64") {
-		return strings.TrimSuffix(amiName, "-arm64")
-	}
-	// Return the original AMI name if no architecture suffix is present
-	return amiName
 }
