@@ -1,6 +1,7 @@
 package argocd
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -26,6 +27,13 @@ type ApiClient struct {
 }
 
 func NewClient(c *Connection, logger log.FieldLogger) (*ApiClient, error) {
+	if c.Address == "" {
+		return &ApiClient{}, errors.New("no argocd address provided")
+	}
+	if c.Token == "" {
+		return &ApiClient{}, errors.New("no argocd token provided")
+	}
+
 	apiClient, err := apiclient.NewClient(&apiclient.ClientOptions{
 		ServerAddr: c.Address,
 		Insecure:   true,

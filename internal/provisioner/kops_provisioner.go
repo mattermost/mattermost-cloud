@@ -861,13 +861,15 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool,
 	provisioner.invalidateCachedKopsClient(kopsMetadata.Name, logger)
 
 	//Remove cluster from argoCD.
-	cr, err := NewClusterRegisterHandle(cluster, gitClient, provisioner.awsClient.GetCloudEnvironmentName(), argocdRepoTempDir, logger)
-	if err != nil {
-		return false, errors.Wrap(err, "Failed to create new cluster register handle")
-	}
+	if cluster.UtilityMetadata.ManagedByArgocd {
+		cr, err := NewClusterRegisterHandle(cluster, gitClient, provisioner.awsClient.GetCloudEnvironmentName(), argocdRepoTempDir, logger)
+		if err != nil {
+			return false, errors.Wrap(err, "Failed to create new cluster register handle")
+		}
 
-	if err = cr.deregisterClusterFromArgocd(); err != nil {
-		return false, errors.Wrap(err, "failed to remove cluster from Argocd")
+		if err = cr.deregisterClusterFromArgocd(); err != nil {
+			return false, errors.Wrap(err, "failed to remove cluster from Argocd")
+		}
 	}
 
 	logger.Info("Successfully deleted Kops cluster")
@@ -895,15 +897,18 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 		return errors.Wrap(err, "failed to destroy all services in the utility group")
 	}
 
-	// Git pull to get the latest state before deleting the cluster
-	err = gitClient.Pull(logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to pull from argocd repo")
-	}
+	// Remove utility from argocd
+	if cluster.UtilityMetadata.ManagedByArgocd {
+		// Git pull to get the latest state before deleting the cluster
+		err = gitClient.Pull(logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to pull from argocd repo")
+		}
 
-	err = ugh.RemoveUtilityFromArgocd()
-	if err != nil {
-		return errors.Wrap(err, "failed to remove utility from argocd")
+		err = ugh.RemoveUtilityFromArgocd()
+		if err != nil {
+			return errors.Wrap(err, "failed to remove utility from argocd")
+		}
 	}
 
 	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
@@ -1036,6 +1041,11 @@ func (provisioner *KopsProvisioner) prepareArgoCDRepo(cluster *model.Cluster, ph
 		logger.WithError(err).Debug("Failed to create temporary directory")
 	}
 
+	argocdApiAddress := model.GetArgocdServerApi()
+	if argocdApiAddress == "" || provisioner.argocdApiToken == "" {
+		return argocdRepoTempDir, &git.NoOpClient{}, &argocd.NoOpClient{}, nil
+	}
+
 	gitOpsRepoURL := model.GetGitopsRepoURL()
 	gitOpsRepoPath := model.GetGitopsRepoPath()
 	argocdRepoURL := gitOpsRepoURL + gitOpsRepoPath
@@ -1045,7 +1055,6 @@ func (provisioner *KopsProvisioner) prepareArgoCDRepo(cluster *model.Cluster, ph
 		return "", nil, nil, errors.Wrap(err, "failed to create new git client")
 	}
 
-	argocdApiAddress := model.GetArgocdServerApi()
 	argocdClient, err := argocd.NewClient(&argocd.Connection{
 		Address: argocdApiAddress,
 		Token:   provisioner.argocdApiToken,
