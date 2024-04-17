@@ -218,7 +218,7 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	_, err = os.Stat(group.tempDir + "/apps/dev/helm-values/" + group.cluster.ID)
 	if os.IsNotExist(err) {
 		// Create the cluster directory
-		if err = os.Mkdir(group.tempDir+"/apps/dev/helm-values/"+group.cluster.ID, 0755); err != nil {
+		if err = os.MkdirAll(group.tempDir+"/apps/dev/helm-values/"+group.cluster.ID, 0755); err != nil {
 			return errors.Wrap(err, "failed to create cluster directory for helm values")
 		}
 	}
