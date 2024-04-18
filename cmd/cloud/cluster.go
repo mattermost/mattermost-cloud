@@ -550,7 +550,7 @@ func executeClusterListCmd(flags clusterListFlags) error {
 }
 
 func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]string) {
-	keys := []string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "AMI ID", "NETWORKING", "VPC", "STATUS"}
+	keys := []string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "AMI ID/NAME", "NETWORKING", "VPC", "STATUS"}
 	values := make([][]string, 0, len(clusters))
 
 	for _, cluster := range clusters {

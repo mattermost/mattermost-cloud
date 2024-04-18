@@ -19,10 +19,10 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTag() {
 			Return(&acm.ListCertificatesOutput{
 				CertificateSummaryList: []acmTypes.CertificateSummary{
 					{
-						CertificateArn: aws.String(a.CertifcateARN + "a"),
+						CertificateArn: aws.String(a.CertificateARN + "a"),
 					},
 					{
-						CertificateArn: aws.String(a.CertifcateARN + "b"),
+						CertificateArn: aws.String(a.CertificateARN + "b"),
 					},
 				},
 				NextToken: aws.String("token"),
@@ -39,7 +39,7 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTag() {
 			Return(&acm.ListCertificatesOutput{
 				CertificateSummaryList: []acmTypes.CertificateSummary{
 					{
-						CertificateArn: aws.String(a.CertifcateARN),
+						CertificateArn: aws.String(a.CertificateARN),
 					},
 				},
 			}, nil).
@@ -59,7 +59,7 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTag() {
 	summary, err := a.Mocks.AWS.GetCertificateSummaryByTag(DefaultInstallCertificatesTagKey, "value", a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 	a.Assert().NotNil(summary)
-	a.Assert().Equal(a.CertifcateARN, *summary.ARN)
+	a.Assert().Equal(a.CertificateARN, *summary.ARN)
 }
 
 func (a *AWSTestSuite) TestGetCertificateSummaryByTagNotFound() {
@@ -69,10 +69,10 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTagNotFound() {
 			Return(&acm.ListCertificatesOutput{
 				CertificateSummaryList: []acmTypes.CertificateSummary{
 					{
-						CertificateArn: aws.String(a.CertifcateARN + "a"),
+						CertificateArn: aws.String(a.CertificateARN + "a"),
 					},
 					{
-						CertificateArn: aws.String(a.CertifcateARN + "b"),
+						CertificateArn: aws.String(a.CertificateARN + "b"),
 					},
 				},
 			}, nil).
@@ -118,10 +118,10 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTagListTagsError() {
 			Return(&acm.ListCertificatesOutput{
 				CertificateSummaryList: []acmTypes.CertificateSummary{
 					{
-						CertificateArn: aws.String(a.CertifcateARN + "a"),
+						CertificateArn: aws.String(a.CertificateARN + "a"),
 					},
 					{
-						CertificateArn: aws.String(a.CertifcateARN + "b"),
+						CertificateArn: aws.String(a.CertificateARN + "b"),
 					},
 				},
 			}, nil).

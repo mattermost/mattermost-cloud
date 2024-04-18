@@ -6,6 +6,7 @@ package provisioner
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -63,30 +64,31 @@ func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadat
 		return errors.Wrap(err, "failed to get instance groups")
 	}
 
-	var ami string
 	for _, ig := range instanceGroups {
 		if ig.Spec.Image != kopsMetadata.ChangeRequest.AMI {
 			if val, ok := ig.Metadata.Labels[SkipAMIUpdateLabelKey]; ok {
 				logger.Infof("Instance group has label %s=%s; skipping AMI update...", SkipAMIUpdateLabelKey, val)
 				continue
 			}
-			if kopsMetadata.ChangeRequest.AMI == "latest" {
-				// Setting the image value to "" leads kops to autoreplace it with
-				// the default image for that kubernetes release.
-				logger.Infof("Updating instance group '%s' image value to the default kops image", ig.Metadata.Name)
-				ami = ""
+
+			ami := kopsMetadata.ChangeRequest.AMI // Default AMI from metadata
+
+			// Handle the "latest" special case
+			if ami == "latest" {
+				ami = "" // Setting to default kops image
 			} else {
-				ami = kopsMetadata.ChangeRequest.AMI
-				if suffix, ok := ig.Metadata.Labels[AMISuffixLabelKey]; ok {
-					logger.Infof("Instance group has label %s=%s; applying custom AMI suffix...", AMISuffixLabelKey, suffix)
-					ami = kopsMetadata.ChangeRequest.AMI + suffix
+				// Determine if a suffix modification is needed
+				var archLabel string
+				if suffix, ok := ig.Metadata.Labels[AMISuffixLabelKey]; ok && suffix != "" {
+					archLabel = strings.TrimPrefix(suffix, "=")
 				}
-				logger.Infof("Updating instance group '%s' image value to '%s'", ig.Metadata.Name, ami)
+				ami = ModifyAMISuffix(ami, archLabel)
 			}
 
+			logger.Infof("Updating instance group '%s' image value to '%s'", ig.Metadata.Name, ami)
 			err = kops.SetInstanceGroup(kopsMetadata.Name, ig.Metadata.Name, fmt.Sprintf("spec.image=%s", ami))
 			if err != nil {
-				return errors.Wrap(err, "failed to update instance group ami")
+				return errors.Wrap(err, "failed to update instance group AMI")
 			}
 		}
 	}
@@ -129,4 +131,36 @@ func updateWorkersKopsInstanceGroupValue(kops *kops.Cmd, kopsMetadata *model.Kop
 	}
 
 	return nil
+}
+
+// ModifyAMISuffix updates the AMI name based on the provided architecture label.
+// If the AMI is in "ami-*" format, it returns it unmodified.
+// If the AMI does not include an architecture suffix, it adds the default "amd64" or the provided arch label.
+// If the AMI includes a different architecture suffix than the label, it replaces the suffix with the label.
+func ModifyAMISuffix(ami, archLabel string) string {
+	if strings.HasPrefix(ami, "ami-") {
+		// Case 1: AMI starts with "ami-", return as is.
+		return ami
+	}
+
+	// Regex to find existing architecture suffix in the AMI value.
+	re := regexp.MustCompile(`-(amd64|arm64)$`)
+
+	if !re.MatchString(ami) {
+		// Case 2: No architecture suffix, append default "amd64" or the provided label.
+		suffix := "amd64"
+		if archLabel == "arm64" {
+			suffix = archLabel
+		}
+		return ami + "-" + suffix
+	}
+
+	// Case 3: AMI already includes an architecture suffix.
+	if archLabel != "" && !strings.HasSuffix(ami, "-"+archLabel) {
+		// If a different architecture label is provided, replace the existing suffix with the label.
+		return re.ReplaceAllString(ami, "-"+archLabel)
+	}
+
+	// If the existing suffix matches the label, or no label is provided, return the AMI unmodified.
+	return ami
 }
