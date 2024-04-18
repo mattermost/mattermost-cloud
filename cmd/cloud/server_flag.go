@@ -59,7 +59,7 @@ type schedulingOptions struct {
 }
 
 func (flags *schedulingOptions) addFlags(command *cobra.Command) {
-	command.Flags().BoolVar(&flags.balancedInstallationScheduling, "balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
+	command.Flags().BoolVar(&flags.balancedInstallationScheduling, "balanced-installation-scheduling", true, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
 	command.Flags().IntVar(&flags.clusterResourceThresholdScaleValue, "cluster-resource-threshold-scale-value", 0, "The number of worker nodes to scale up by when the threshold is passed. Set to 0 for no scaling. Scaling will never exceed the cluster max worker configuration value.")
 	command.Flags().IntVar(&flags.clusterResourceThreshold, "cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	command.Flags().IntVar(&flags.thresholdCPUOverride, "cluster-resource-threshold-cpu-override", 0, "The cluster-resource-threshold override value for CPU resources only")
@@ -151,8 +151,8 @@ type installationOptions struct {
 }
 
 func (flags *installationOptions) addFlags(command *cobra.Command) {
-	command.Flags().BoolVar(&flags.keepDatabaseData, "keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
-	command.Flags().BoolVar(&flags.keepFileStoreData, "keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
+	command.Flags().BoolVar(&flags.keepDatabaseData, "keep-database-data", false, "Whether to preserve database data after installation deletion or not.")
+	command.Flags().BoolVar(&flags.keepFileStoreData, "keep-filestore-data", false, "Whether to preserve filestore data after installation deletion or not.")
 	command.Flags().BoolVar(&flags.requireAnnotatedInstallations, "require-annotated-installations", false, "Require new installations to have at least one annotation.")
 	command.Flags().StringVar(&flags.gitlabOAuthToken, "gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
 	command.Flags().StringVar(&flags.argocdServerApi, "argocd-server-api", "", "The API endpoint to use for ArgoCD.")
