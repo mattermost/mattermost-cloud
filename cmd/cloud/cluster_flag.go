@@ -324,7 +324,7 @@ func (flags *clusterUpgradeFlags) addFlags(command *cobra.Command) {
 
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be upgraded.")
 	command.Flags().StringVar(&flags.version, "version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
-	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI to use for the cluster hosts.")
+	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI Name to use for the cluster hosts. Note: AMI ID is still supported for backwards compatibility, but fails in cases you have ARM nodegroups.")
 	command.Flags().Int64Var(&flags.maxPodsPerNode, "max-pods-per-node", 0, "The maximum number of pods that can run on a single worker node.")
 	command.Flags().StringVar(&flags.kmsKeyId, "kms-key-id", "", "Custom KMS key for enterprise customers.")
 
