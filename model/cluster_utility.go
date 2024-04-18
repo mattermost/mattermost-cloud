@@ -53,7 +53,7 @@ const (
 	ArgocdApiToken = "ARGOCD_API_TOKEN"
 	// argocdServerApi is the name of the Environment Variable which
 	// contains the address of the ArgoCD API
-	ArgocdServerApi = "ARGOCD_API_ADDRESS"
+	ArgocdServerApi = "ARGOCD_SERVER_API"
 )
 
 // gitlabToken is the token that will be used for remote helm charts.
