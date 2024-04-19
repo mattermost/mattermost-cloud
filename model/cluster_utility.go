@@ -137,7 +137,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// NodeProblemDetectorCanonicalName defines the default version and values path for the Helm chart
 	NodeProblemDetectorCanonicalName: {Chart: "2.3.12", ValuesPath: ""},
 	// MetricsServerCanonicalName defines the default version and values path for the Helm chart
-	MetricsServerCanonicalName: {Chart: "3.12.1", ValuesPath: ""},
+	MetricsServerCanonicalName: {Chart: "3.10.0", ValuesPath: ""},
 	// VeleroCanonicalName defines the default version for the Helm chart
 	VeleroCanonicalName: {Chart: "5.1.5", ValuesPath: ""},
 	// CloudproberCanonicalName defines the default version for the Helm chart

@@ -153,7 +153,7 @@ func TestGetActualVersion(t *testing.T) {
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.15.5"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.12"},
-				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.12.1"},
+				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.10.0"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-5.1.5"},
 				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.4"},
 			},
@@ -188,7 +188,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "node-problem-detector-2.3.12"}, version)
 
 	version = c.ActualUtilityVersion(MetricsServerCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "metrics-server-3.12.1"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "metrics-server-3.10.0"}, version)
 
 	version = c.ActualUtilityVersion(VeleroCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "velero-5.1.5"}, version)
@@ -227,7 +227,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.15.5"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.3.12"},
-				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.12.1"},
+				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.10.0"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-5.1.5"},
 				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.4"},
 			},
