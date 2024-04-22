@@ -241,6 +241,14 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	for _, utility := range group.utilities {
 		logger.Infof("Provisioning utility %s\n", utility.Name())
 
+		if group.cluster.ActualUtilityVersion(utility.Name()).Chart == "unmanaged" {
+			logger.WithFields(log.Fields{
+				"unmanaged-action": "skip",
+				"utility":          utility.Name(),
+			}).Info("Utility has already defined in argocd; skippping...")
+			continue
+		}
+
 		if utility.DesiredVersion().IsEmpty() {
 			logger.WithField("utility", utility.Name()).Info("Skipping reprovision")
 		} else {
