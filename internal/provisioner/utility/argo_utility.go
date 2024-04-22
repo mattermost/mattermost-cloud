@@ -94,8 +94,6 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		return errors.Wrap(err, "failed to substitute values")
 	}
 
-	logger.WithField("Check the output file:", outputFilePath).Info("Substitution successful.")
-
 	commitMsg := "Adding: utility:" + utilityName + " to cluster: " + clusterID
 	if err = gitClient.Commit(tempDir+"/apps", commitMsg, logger); err != nil {
 		return errors.Wrap(err, "failed to commit to repo")
