@@ -3,7 +3,7 @@ package main
 import "github.com/spf13/cobra"
 
 type dashboardFlags struct {
-	serverAddress  string
+	clusterFlags
 	refreshSeconds int
 }
 

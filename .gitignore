@@ -9,3 +9,4 @@ build/kops
 build/kubectl
 vendor/
 helm-charts/mattermost-operator
+dist/

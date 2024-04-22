@@ -23,7 +23,7 @@ const (
 	// FluentbitCanonicalName is the canonical string representation of fluentbit
 	FluentbitCanonicalName = "fluentbit"
 	// TeleportCanonicalName is the canonical string representation of teleport
-	TeleportCanonicalName = "teleport-kube-agent"
+	TeleportCanonicalName = "teleport"
 	// PgbouncerCanonicalName is the canonical string representation of pgbouncer
 	PgbouncerCanonicalName = "pgbouncer"
 	// PromtailCanonicalName is the canonical string representation of promtail
@@ -48,10 +48,22 @@ const (
 	// GitOpsRepoPath is the name of the Environment Variable which
 	// contains the path to the gitops repo. e.g. /cloud/gitops.git
 	GitOpsRepoPath = "GITOPS_REPO_PATH"
+	// ArgocdApiToken is the name of the Environment Variable which
+	// contains the token for accessing the ArgoCD API
+	ArgocdApiToken = "ARGOCD_API_TOKEN"
+	// argocdServerApi is the name of the Environment Variable which
+	// contains the address of the ArgoCD API
+	ArgocdServerApi = "ARGOCD_SERVER_API"
 )
 
 // gitlabToken is the token that will be used for remote helm charts.
 var gitlabToken string
+
+// argocdApiToken is the token that will be used for accessing the ArgoCD API.
+var argocdApiToken string
+
+// argocdServerApi is the address of the ArgoCD API.
+var argocdServerApi string
 
 var gitOpsRepoURL string
 var gitOpsRepoPath string
@@ -67,20 +79,39 @@ func GetGitlabToken() string {
 	return gitlabToken
 }
 
-func SetGitopsRepoURL(gitopsUrl string) {
-	gitOpsRepoURL = gitopsUrl
+// SetArgocdApiToken is used to define the argocd token that will be used for
+// accessing the ArgoCD API.
+func SetArgocdApiToken(val string) {
+	argocdApiToken = val
+}
+
+// GetArgocdApiToken returns the value of argocdApiToken.
+func GetArgocdApiToken() string {
+	return argocdApiToken
+}
+
+func SetGitopsRepoURL(val string) {
+	gitOpsRepoURL = val
 }
 
 func GetGitopsRepoURL() string {
 	return gitOpsRepoURL
 }
 
-func SetGitopsRepoPath(gitopsPath string) {
-	gitOpsRepoPath = gitopsPath
+func SetGitopsRepoPath(val string) {
+	gitOpsRepoPath = val
 }
 
 func GetGitopsRepoPath() string {
 	return gitOpsRepoPath
+}
+
+func SetArgocdServerApi(val string) {
+	argocdServerApi = val
+}
+
+func GetArgocdServerApi() string {
+	return argocdServerApi
 }
 
 // DefaultUtilityVersions holds the default values for all the HelmUtilityVersions
@@ -88,7 +119,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// PrometheusOperatorCanonicalName defines the default version and values path for the Helm chart
 	PrometheusOperatorCanonicalName: {Chart: "54.2.2", ValuesPath: ""},
 	// ThanosCanonicalName defines the default version and values path for the Helm chart
-	ThanosCanonicalName: {Chart: "12.20.0", ValuesPath: ""},
+	ThanosCanonicalName: {Chart: "13.2.2", ValuesPath: ""},
 	// NginxCanonicalName defines the default version and values path for the Helm chart
 	NginxCanonicalName: {Chart: "4.9.0", ValuesPath: ""},
 	// NginxInternalCanonicalName defines the default version and values path for the Helm chart
@@ -100,13 +131,13 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// PgbouncerCanonicalName defines the default version and values path for the Helm chart
 	PgbouncerCanonicalName: {Chart: "1.2.1", ValuesPath: ""},
 	// PromtailCanonicalName defines the default version and values path for the Helm chart
-	PromtailCanonicalName: {Chart: "6.15.3", ValuesPath: ""},
+	PromtailCanonicalName: {Chart: "6.15.5", ValuesPath: ""},
 	// RtcdCanonicalName defines the default version and values path for the Helm chart
 	RtcdCanonicalName: {Chart: "1.3.0", ValuesPath: ""},
 	// NodeProblemDetectorCanonicalName defines the default version and values path for the Helm chart
-	NodeProblemDetectorCanonicalName: {Chart: "2.3.11", ValuesPath: ""},
+	NodeProblemDetectorCanonicalName: {Chart: "2.3.12", ValuesPath: ""},
 	// MetricsServerCanonicalName defines the default version and values path for the Helm chart
-	MetricsServerCanonicalName: {Chart: "3.10.0", ValuesPath: ""},
+	MetricsServerCanonicalName: {Chart: "3.12.1", ValuesPath: ""},
 	// VeleroCanonicalName defines the default version for the Helm chart
 	VeleroCanonicalName: {Chart: "5.1.5", ValuesPath: ""},
 	// CloudproberCanonicalName defines the default version for the Helm chart

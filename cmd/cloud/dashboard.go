@@ -36,7 +36,7 @@ func newCmdDashboard() *cobra.Command {
 }
 
 func executeDashboardCmd(flags dashboardFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 	if flags.refreshSeconds < 1 {
 		return errors.Errorf("refresh seconds (%d) must be set to 1 or higher", flags.refreshSeconds)
 	}

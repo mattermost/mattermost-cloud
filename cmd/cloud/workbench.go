@@ -10,7 +10,6 @@ import (
 	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -51,7 +50,7 @@ func newCmdWorkbenchCluster() *cobra.Command {
 func executeWorkbenchClusterCmd(flags workbenchClusterFlag) error {
 	// TODO: add support for EKS
 
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 	cluster, err := client.GetCluster(flags.clusterID)
 	if err != nil {
 		return errors.Wrap(err, "failed to query cluster")

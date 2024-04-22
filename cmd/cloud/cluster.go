@@ -86,6 +86,7 @@ func newCmdClusterCreate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+			flags.pgBouncerConfigChanges.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -94,7 +95,7 @@ func newCmdClusterCreate() *cobra.Command {
 }
 
 func executeClusterCreateCmd(flags clusterCreateFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	if flags.cluster != "" {
 		err := client.RetryCreateCluster(flags.cluster)
@@ -116,6 +117,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		VPC:                    flags.vpc,
 		Provisioner:            model.ProvisionerKops,
 		ArgocdClusterRegister:  flags.argocdRegister,
+		PgBouncerConfig:        flags.GetPgBouncerConfig(),
 	}
 
 	if flags.useEKS {
@@ -212,6 +214,7 @@ func newCmdClusterProvision() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+			flags.pgBouncerConfigChanges.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -220,12 +223,13 @@ func newCmdClusterProvision() *cobra.Command {
 }
 
 func executeClusterProvisionCmd(flags clusterProvisionFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	request := &model.ProvisionClusterRequest{
 		Force:                  flags.reprovisionAllUtilities,
 		DesiredUtilityVersions: processUtilityFlags(flags.utilityFlags),
 		ArgocdClusterRegister:  flags.argocdRegister,
+		PgBouncerConfig:        flags.GetPatchPgBouncerConfig(),
 	}
 
 	if flags.dryRun {
@@ -266,7 +270,7 @@ func newCmdClusterUpdate() *cobra.Command {
 
 func executeClusterUpdateCmd(flags clusterUpdateFlags) error {
 
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	request := &model.UpdateClusterRequest{
 		AllowInstallations: flags.allowInstallations,
@@ -310,7 +314,7 @@ func newCmdClusterUpgrade() *cobra.Command {
 }
 
 func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	rotatorConfig := getRotatorConfigFromFlags(flags.rotatorConfig)
 
@@ -368,7 +372,7 @@ func newCmdClusterResize() *cobra.Command {
 }
 
 func executeClusterResizeCmd(flags clusterResizeFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	rotatorConfig := getRotatorConfigFromFlags(flags.rotatorConfig)
 
@@ -436,7 +440,7 @@ func newCmdClusterDelete() *cobra.Command {
 }
 
 func executeClusterDeleteCmd(flags clusterDeleteFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	err := client.DeleteCluster(flags.cluster)
 	if err != nil {
@@ -466,7 +470,7 @@ func newCmdClusterGet() *cobra.Command {
 }
 
 func executeClusterGetCmd(flags clusterGetFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	cluster, err := client.GetCluster(flags.cluster)
 	if err != nil {
@@ -502,7 +506,7 @@ func newCmdClusterList() *cobra.Command {
 }
 
 func executeClusterListCmd(flags clusterListFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -546,7 +550,7 @@ func executeClusterListCmd(flags clusterListFlags) error {
 }
 
 func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]string) {
-	keys := []string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "AMI ID", "NETWORKING", "VPC", "STATUS"}
+	keys := []string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "AMI ID/NAME", "NETWORKING", "VPC", "STATUS"}
 	values := make([][]string, 0, len(clusters))
 
 	for _, cluster := range clusters {
@@ -609,7 +613,7 @@ func newCmdClusterUtilities() *cobra.Command {
 		Short: "Show metadata regarding utility services running in a cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			metadata, err := client.GetClusterUtilities(flags.cluster)
 			if err != nil {

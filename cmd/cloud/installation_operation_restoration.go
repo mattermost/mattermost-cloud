@@ -32,7 +32,7 @@ func newCmdInstallationRestorationRequest() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 
 			installationDTO, err := client.RestoreInstallationDatabase(flags.installationID, flags.backupID)
 			if err != nil {
@@ -73,7 +73,7 @@ func newCmdInstallationRestorationsListCmd() *cobra.Command {
 }
 
 func executeInstallationRestorationsList(flags installationRestorationsListFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -140,7 +140,7 @@ func newCmdInstallationRestorationGetCmd() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 			restorationOperation, err := client.GetInstallationDBRestoration(flags.restorationID)
 			if err != nil {
 				return errors.Wrap(err, "failed to get installation database restoration")

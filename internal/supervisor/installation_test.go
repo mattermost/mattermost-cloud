@@ -597,7 +597,7 @@ func (a *mockAWS) GenerateBifrostUtilitySecret(clusterID string, logger log.Fiel
 func (a *mockAWS) GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error) {
 	return "", nil
 }
-func (a *mockAWS) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string) error {
+func (a *mockAWS) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string, logger log.FieldLogger) error {
 	return nil
 }
 

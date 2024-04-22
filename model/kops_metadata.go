@@ -47,6 +47,7 @@ type KopsInstanceGroupMetadata struct {
 	NodeInstanceType string
 	NodeMinCount     int64
 	NodeMaxCount     int64
+	AMI              string
 }
 
 // KopsMetadataRequestedState is the requested state for kops metadata.

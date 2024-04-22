@@ -1,21 +1,25 @@
 package main
 
 import (
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/spf13/cobra"
 )
 
 func setClusterFlags(command *cobra.Command) {
 	command.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+	command.PersistentFlags().StringToString("header", nil, "The extra headers to send in every API call towards the provisioning server. Accepts format: HEADER_KEY=HEADER_VALUE. Use the flag multiple times to set multiple headers.")
 	command.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
 }
 
 type clusterFlags struct {
 	serverAddress string
+	headers       map[string]string
 	dryRun        bool
 }
 
 func (flags *clusterFlags) addFlags(command *cobra.Command) {
 	flags.serverAddress, _ = command.Flags().GetString("server")
+	flags.headers, _ = command.Flags().GetStringToString("header")
 	flags.dryRun, _ = command.Flags().GetBool("dry-run")
 }
 
@@ -137,6 +141,7 @@ type clusterCreateFlags struct {
 	createRequestOptions
 	utilityFlags
 	sizeOptions
+	pgBouncerConfigOptions
 	cluster string
 }
 
@@ -144,6 +149,7 @@ func (flags *clusterCreateFlags) addFlags(command *cobra.Command) {
 	flags.createRequestOptions.addFlags(command)
 	flags.utilityFlags.addFlags(command)
 	flags.sizeOptions.addFlags(command)
+	flags.pgBouncerConfigOptions.addFlags(command)
 
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster. If provided and the cluster exists the creation will be retried ignoring other parameters.")
 }
@@ -151,17 +157,108 @@ func (flags *clusterCreateFlags) addFlags(command *cobra.Command) {
 type clusterProvisionFlags struct {
 	clusterFlags
 	utilityFlags
+	pgBouncerConfigOptions
 	cluster                 string
 	reprovisionAllUtilities bool
 }
 
 func (flags *clusterProvisionFlags) addFlags(command *cobra.Command) {
 	flags.utilityFlags.addFlags(command)
+	flags.pgBouncerConfigOptions.addFlags(command)
 
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be provisioned.")
 	command.Flags().BoolVar(&flags.reprovisionAllUtilities, "reprovision-all-utilities", false, "Set to true if all utilities should be reprovisioned and not just ones with new versions")
 
 	_ = command.MarkFlagRequired("cluster")
+}
+
+type pgBouncerConfigChanges struct {
+	minPoolSizeChanged                   bool
+	defaultPoolSizeChanged               bool
+	reservePoolSizeChanged               bool
+	maxClientConnectionsChanged          bool
+	maxDatabaseConnectionsPerPoolChanged bool
+	serverIdleTimeoutChanged             bool
+	serverLifetimeChanged                bool
+	serverResetQueryAlwaysChanged        bool
+}
+
+func (flags *pgBouncerConfigChanges) addFlags(command *cobra.Command) {
+	flags.minPoolSizeChanged = command.Flags().Changed("pgbouncer-min-pool-size")
+	flags.defaultPoolSizeChanged = command.Flags().Changed("pgbouncer-default-pool-size")
+	flags.reservePoolSizeChanged = command.Flags().Changed("pgbouncer-reserve-pool-size")
+	flags.maxClientConnectionsChanged = command.Flags().Changed("pgbouncer-max-client-connections")
+	flags.maxDatabaseConnectionsPerPoolChanged = command.Flags().Changed("pgbouncer-max-connections-per-pool")
+	flags.serverIdleTimeoutChanged = command.Flags().Changed("pgbouncer-server-idle-timeout")
+	flags.serverLifetimeChanged = command.Flags().Changed("pgbouncer-server-lifetime")
+	flags.serverResetQueryAlwaysChanged = command.Flags().Changed("pgbouncer-server-reset-query-always")
+}
+
+func (flags *pgBouncerConfigOptions) addFlags(command *cobra.Command) {
+	command.Flags().Int64Var(&flags.minPoolSize, "pgbouncer-min-pool-size", model.PgBouncerDefaultMinPoolSize, "The PgBouncer config for min pool size.")
+	command.Flags().Int64Var(&flags.defaultPoolSize, "pgbouncer-default-pool-size", model.PgBouncerDefaultPoolSize, "The PgBouncer config for default pool size per user.")
+	command.Flags().Int64Var(&flags.reservePoolSize, "pgbouncer-reserve-pool-size", model.PgBouncerDefaultReservePoolSize, "The PgBouncer config for reserve pool size per logical database.")
+	command.Flags().Int64Var(&flags.maxClientConnections, "pgbouncer-max-client-connections", model.PgBouncerDefaultMaxClientConnections, "The PgBouncer config for max client connections.")
+	command.Flags().Int64Var(&flags.maxDatabaseConnectionsPerPool, "pgbouncer-max-connections-per-pool", model.PgBouncerDefaultMaxDatabaseConnectionsPerPool, "The PgBouncer config for maximum number of proxy database connections per pool (logical database).")
+	command.Flags().Int64Var(&flags.serverIdleTimeout, "pgbouncer-server-idle-timeout", model.PgBouncerDefaultServerIdleTimeout, "The PgBouncer config for server idle timeout.")
+	command.Flags().Int64Var(&flags.serverLifetime, "pgbouncer-server-lifetime", model.PgBouncerDefaultServerLifetime, "The PgBouncer config for server lifetime.")
+	command.Flags().Int64Var(&flags.serverResetQueryAlways, "pgbouncer-server-reset-query-always", model.PgBouncerDefaultServerResetQueryAlways, "The PgBouncer config for whether server_reset_query should be run in all pooling modes.")
+}
+
+type pgBouncerConfigOptions struct {
+	pgBouncerConfigChanges
+	minPoolSize                   int64
+	defaultPoolSize               int64
+	reservePoolSize               int64
+	maxClientConnections          int64
+	maxDatabaseConnectionsPerPool int64
+	serverIdleTimeout             int64
+	serverLifetime                int64
+	serverResetQueryAlways        int64
+}
+
+func (flags *pgBouncerConfigOptions) GetPgBouncerConfig() *model.PgBouncerConfig {
+	return &model.PgBouncerConfig{
+		MinPoolSize:                   flags.minPoolSize,
+		DefaultPoolSize:               flags.defaultPoolSize,
+		ReservePoolSize:               flags.reservePoolSize,
+		MaxClientConnections:          flags.maxClientConnections,
+		MaxDatabaseConnectionsPerPool: 20,
+		ServerIdleTimeout:             30,
+		ServerLifetime:                300,
+		ServerResetQueryAlways:        0,
+	}
+}
+
+func (flags *pgBouncerConfigOptions) GetPatchPgBouncerConfig() *model.PatchPgBouncerConfig {
+	request := model.PatchPgBouncerConfig{}
+
+	if flags.minPoolSizeChanged {
+		request.MinPoolSize = &flags.minPoolSize
+	}
+	if flags.defaultPoolSizeChanged {
+		request.DefaultPoolSize = &flags.defaultPoolSize
+	}
+	if flags.reservePoolSizeChanged {
+		request.ReservePoolSize = &flags.reservePoolSize
+	}
+	if flags.maxClientConnectionsChanged {
+		request.MaxClientConnections = &flags.maxClientConnections
+	}
+	if flags.maxDatabaseConnectionsPerPoolChanged {
+		request.MaxDatabaseConnectionsPerPool = &flags.maxDatabaseConnectionsPerPool
+	}
+	if flags.serverIdleTimeoutChanged {
+		request.ServerIdleTimeout = &flags.serverIdleTimeout
+	}
+	if flags.serverLifetimeChanged {
+		request.ServerLifetime = &flags.serverLifetime
+	}
+	if flags.serverResetQueryAlwaysChanged {
+		request.ServerResetQueryAlways = &flags.serverResetQueryAlways
+	}
+
+	return &request
 }
 
 type clusterUpdateFlags struct {
@@ -227,7 +324,7 @@ func (flags *clusterUpgradeFlags) addFlags(command *cobra.Command) {
 
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be upgraded.")
 	command.Flags().StringVar(&flags.version, "version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
-	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI to use for the cluster hosts.")
+	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI Name to use for the cluster hosts. Note: AMI ID is still supported for backwards compatibility, but fails in cases you have ARM nodegroups.")
 	command.Flags().Int64Var(&flags.maxPodsPerNode, "max-pods-per-node", 0, "The maximum number of pods that can run on a single worker node.")
 	command.Flags().StringVar(&flags.kmsKeyId, "kms-key-id", "", "Custom KMS key for enterprise customers.")
 

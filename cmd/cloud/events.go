@@ -56,7 +56,7 @@ func newCmdStateChangeEventList() *cobra.Command {
 }
 
 func executeStateChangeEventListCmd(flags stateChangeEventListFlags) error {
-	client := model.NewClient(flags.serverAddress)
+	client := createClient(flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 

@@ -57,3 +57,15 @@ func runDryRun(request interface{}) error {
 	}
 	return nil
 }
+
+func createClient(flags clusterFlags) *model.Client {
+	if len(flags.headers) > 0 {
+		headers := make(map[string]string, len(flags.headers))
+		for key, value := range flags.headers {
+			headers[key] = value
+		}
+		return model.NewClientWithHeaders(flags.serverAddress, headers)
+	}
+
+	return model.NewClient(flags.serverAddress)
+}

@@ -7,6 +7,9 @@ package utility
 import (
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -20,13 +23,14 @@ type cloudprober struct {
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func newCloudproberOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (Utility, error) {
+func newCloudproberOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.CloudproberCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.CloudproberCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.CloudproberCanonicalName, logger), nil
+		return newUnmanagedHandle(model.CloudproberCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
 	}
+
 	cloudprober := newCloudproberHandle(desired, cluster, kubeconfigPath, logger)
 	err := cloudprober.validate()
 	if err != nil {

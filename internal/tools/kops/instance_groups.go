@@ -15,7 +15,8 @@ import (
 
 // ResourceMetadata is the metadata of a kops resource.
 type ResourceMetadata struct {
-	Name string `json:"name"`
+	Name   string            `json:"name"`
+	Labels map[string]string `json:"labels"`
 }
 
 // Cluster is the configuration of a kops cluster.
@@ -51,13 +52,23 @@ type InstanceGroupSpec struct {
 	RootVolumeEncryptionKey string `json:"rootVolumeEncryptionKey"`
 }
 
+// toKopsInstanceGroupsMetadata is a helper to convert InstanceGroups into the
+// final KopsInstanceGroupMetadata that is stored.
+func (ig *InstanceGroup) toKopsInstanceGroupsMetadata() model.KopsInstanceGroupMetadata {
+	return model.KopsInstanceGroupMetadata{
+		NodeInstanceType: ig.Spec.MachineType,
+		NodeMinCount:     ig.Spec.MinSize,
+		NodeMaxCount:     ig.Spec.MaxSize,
+		AMI:              ig.Spec.Image,
+	}
+}
+
 // UpdateMetadata updates KopsMetadata with the current values from kops state
 // store. This can be a bit tricky. We are attempting to correlate multiple kops
 // instance groups into a simplified set of metadata information. To do so, we
 // assume and check the following:
-// - There is one worker node instance group.
+// - There is one or more worker node instance group.
 // - There is one or more master instance groups.
-// - All the cluster hosts are running the same AMI.
 // - All the master nodes are running the same instance type.
 // Note:
 // If any violations are found, we don't return an error as that is beyond the
@@ -74,14 +85,14 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.CustomInstanceGroups = make(model.KopsInstanceGroupsMetadata)
 
 	var masterIGCount, nodeIGCount, nodeMinCount int64
-	var masterMachineType, nodeMachineType, AMI, kmsKeyId string
+	var masterMachineType, nodeMachineType, masterAMI, kmsKeyId string
 	for _, ig := range instanceGroups {
 		switch ig.Spec.Role {
 		case "Master":
-			if AMI == "" {
-				AMI = ig.Spec.Image
-			} else if AMI != ig.Spec.Image {
-				warning := fmt.Sprintf("Expected all hosts to be running same AMI, but instance group %s has AMI %s", ig.Metadata.Name, ig.Spec.Image)
+			if masterAMI == "" {
+				masterAMI = ig.Spec.Image
+			} else if masterAMI != ig.Spec.Image {
+				warning := fmt.Sprintf("Expected all master nodes to be running same AMI, but instance group %s has AMI %s", ig.Metadata.Name, ig.Spec.Image)
 				metadata.AddWarning(warning)
 				c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 			}
@@ -95,36 +106,16 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 			}
 
 			masterIGCount++
-			metadata.MasterInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
-				NodeInstanceType: ig.Spec.MachineType,
-				NodeMinCount:     ig.Spec.MinSize,
-				NodeMaxCount:     ig.Spec.MaxSize,
-			}
+			metadata.MasterInstanceGroups[ig.Metadata.Name] = ig.toKopsInstanceGroupsMetadata()
 		case "Node":
-			if AMI == "" {
-				AMI = ig.Spec.Image
-			} else if AMI != ig.Spec.Image {
-				warning := fmt.Sprintf("Expected all hosts to be running same AMI, but instance group %s has AMI %s", ig.Metadata.Name, ig.Spec.Image)
-				metadata.AddWarning(warning)
-				c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
-			}
-
 			if strings.HasPrefix(ig.Metadata.Name, "nodes") {
 				nodeIGCount++
 				nodeMachineType = ig.Spec.MachineType
 				nodeMinCount += ig.Spec.MinSize
 				kmsKeyId = ig.Spec.RootVolumeEncryptionKey
-				metadata.NodeInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
-					NodeInstanceType: ig.Spec.MachineType,
-					NodeMinCount:     ig.Spec.MinSize,
-					NodeMaxCount:     ig.Spec.MaxSize,
-				}
+				metadata.NodeInstanceGroups[ig.Metadata.Name] = ig.toKopsInstanceGroupsMetadata()
 			} else {
-				metadata.CustomInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
-					NodeInstanceType: ig.Spec.MachineType,
-					NodeMinCount:     ig.Spec.MinSize,
-					NodeMaxCount:     ig.Spec.MaxSize,
-				}
+				metadata.CustomInstanceGroups[ig.Metadata.Name] = ig.toKopsInstanceGroupsMetadata()
 			}
 		default:
 			warning := fmt.Sprintf("Instance group %s has unknown role %s", ig.Metadata.Name, ig.Spec.Role)
@@ -154,7 +145,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 		return err
 	}
 
-	metadata.AMI = AMI
+	metadata.AMI = masterAMI
 	metadata.MasterInstanceType = masterMachineType
 	metadata.MasterCount = masterIGCount
 	metadata.NodeInstanceType = nodeMachineType

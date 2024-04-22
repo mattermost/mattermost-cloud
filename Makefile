@@ -9,11 +9,14 @@
 GOLANG_VERSION := $(shell cat go.mod | grep "^go " | cut -d " " -f 2)
 ALPINE_VERSION = 3.19
 TERRAFORM_VERSION=1.5.5
-KOPS_VERSION=v1.27.10
+KOPS_VERSION=v1.27.3
 HELM_VERSION=v3.13.3
 KUBECTL_VERSION=v1.27.9
 POSTGRES_VERSION=14.8
 ARCH ?= amd64
+
+APP_NAME    := $(shell basename -s .git `git config --get remote.origin.url`)
+APP_COMMIT  := $(shell git rev-parse HEAD)
 
 ## Docker Build Versions
 DOCKER_BUILD_IMAGE := golang:$(GOLANG_VERSION)
@@ -70,6 +73,15 @@ GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 TRIVY_SEVERITY := CRITICAL
 TRIVY_EXIT_CODE := 1
 TRIVY_VULN_TYPE := os,library
+
+# ====================================================================================
+# Used for semver bumping
+CURRENT_VERSION := $(shell git describe --abbrev=0 --tags)
+VERSION_PARTS := $(subst ., ,$(subst v,,$(CURRENT_VERSION)))
+MAJOR := $(word 1,$(VERSION_PARTS))
+MINOR := $(word 2,$(VERSION_PARTS))
+PATCH := $(word 3,$(VERSION_PARTS))
+# ====================================================================================
 
 export GO111MODULE=on
 
@@ -164,7 +176,14 @@ build: ## Build the mattermost-cloud
 		echo "Unknown architecture $(ARCH)"; \
 		exit 1; \
 	fi; \
-	GOOS=linux CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o ./build/_output/bin/cloud ./cmd/cloud
+	GOOS=linux CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o ./build/_output/$(ARCH)/bin/cloud ./cmd/cloud
+
+.PHONY: package
+package: build ## Package mattermost-cloud binaries
+	@echo Packaging Mattermost-Cloud for ARCH=$(ARCH)
+	@mkdir -p dist
+	@tar cfz dist/mattermost-cloud-linux-$(ARCH).tar.gz --strip-components=5 ./build/_output/$(ARCH)/bin/cloud
+
 build-image:  ## Build the docker image for mattermost-cloud
 	@echo Building Mattermost-cloud Docker Image
 	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
@@ -285,13 +304,37 @@ verify-mocks: mocks
 		echo "generated files are out of date, run make mocks"; exit 1; \
 	fi
 
+.PHONY: build-image-e2e-pr
+build-image-e2e-pr:
+	@echo Building e2e image
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
+	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE) \
+	--no-cache \
+    --push
+
 .PHONY: build-image-e2e
 build-image-e2e:
 	@echo Building e2e image
-	docker build \
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+    --platform linux/amd64,linux/arm64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
-	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE)
+	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE) -t  $(MATTERMOST_CLOUD_E2E_IMAGE)-$(BUILD_TIME) \
+	--no-cache \
+    --push
 
 .PHONY: e2e-db-migration
 e2e-db-migration:
@@ -316,6 +359,27 @@ e2e-installation:
 .PHONY: e2e
 e2e: e2e-cluster e2e-installation
 
+.PHONY: patch minor major
+
+patch: ## to bump patch version (semver)
+	@$(eval PATCH := $(shell echo $$(($(PATCH)+1))))
+	@echo Bumping $(APP_NAME) to Patch version v$(MAJOR).$(MINOR).$(PATCH)
+	git tag -s -a v$(MAJOR).$(MINOR).$(PATCH) -m "Bumping $(APP_NAME) to Patch version v$(MAJOR).$(MINOR).$(PATCH)"
+	git push origin v$(MAJOR).$(MINOR).$(PATCH)
+
+minor: ## to bump minor version (semver)
+	@$(eval MINOR := $(shell echo $$(($(MINOR)+1))))
+	@echo Bumping $(APP_NAME) to Minor version v$(MAJOR).$(MINOR).0
+	git tag -s -a v$(MAJOR).$(MINOR).0 -m "Bumping $(APP_NAME) to Minor version v$(MAJOR).$(MINOR).0"
+	git push origin v$(MAJOR).$(MINOR).0
+
+major: ## to bump major version (semver)
+	$(eval MAJOR := $(shell echo $$(($(MAJOR)+1))))
+	$(eval MINOR := 0)
+	$(eval PATCH := 0)
+	@echo Bumping $(APP_NAME) to Major version v$(MAJOR).$(MINOR).$(PATCH)
+	git tag -s -a v$(MAJOR).$(MINOR).$(PATCH) -m "Bumping $(APP_NAME) to Major version v$(MAJOR).$(MINOR).$(PATCH)"
+	git push origin v$(MAJOR).$(MINOR).$(PATCH)
 
 ## --------------------------------------
 ## Tooling Binaries

@@ -173,7 +173,7 @@ func (provisioner Provisioner) PrepareClusterUtilities(cluster *model.Cluster, i
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return prepareClusterUtilities(cluster, configLocation, store, provisioner.awsClient, provisioner.params.PGBouncerConfig, logger)
+	return prepareClusterUtilities(cluster, configLocation, store, provisioner.awsClient, logger)
 }
 
 func (provisioner Provisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
@@ -707,7 +707,6 @@ func prepareClusterUtilities(
 	configLocation string,
 	store model.ClusterUtilityDatabaseStoreInterface,
 	awsClient aws.AWS,
-	pgbouncerConfig *model.PGBouncerConfig,
 	logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
@@ -728,7 +727,7 @@ func prepareClusterUtilities(
 	// isn't really feasible right now.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
 	defer cancel()
-	err = pgbouncer.UpdatePGBouncerConfigMap(ctx, vpc, store, pgbouncerConfig, k8sClient, logger)
+	err = pgbouncer.UpdatePGBouncerConfigMap(ctx, vpc, store, cluster.PgBouncerConfig, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to update configmap for pgbouncer-configmap")
 	}

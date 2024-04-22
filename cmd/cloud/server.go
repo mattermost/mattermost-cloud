@@ -25,7 +25,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -86,16 +85,6 @@ func executeServerCmd(flags serverFlags) error {
 		return err
 	}
 
-	pgbouncerConfig := pgbouncer.NewPGBouncerConfig(
-		flags.minPoolSize, flags.defaultPoolSize, flags.reservePoolSize,
-		flags.maxClientConnections, flags.maxDatabaseConnectionsPerPool,
-		flags.serverIdleTimeout, flags.serverLifetime, flags.serverResetQueryAlways,
-	)
-
-	if err := pgbouncerConfig.Validate(); err != nil {
-		return errors.Wrap(err, "pgbouncer config failed validation")
-	}
-
 	gitlabOAuthToken := flags.gitlabOAuthToken
 	if len(gitlabOAuthToken) == 0 {
 		gitlabOAuthToken = os.Getenv(model.GitlabOAuthTokenKey)
@@ -103,6 +92,22 @@ func executeServerCmd(flags serverFlags) error {
 	model.SetGitlabToken(gitlabOAuthToken)
 	if len(model.GetGitlabToken()) == 0 {
 		logger.Warnf("The gitlab-oauth flag and %s were empty; using local helm charts", model.GitlabOAuthTokenKey)
+	}
+	ArgocdApiToken := flags.argocdApiToken
+	if len(ArgocdApiToken) == 0 {
+		ArgocdApiToken = os.Getenv(model.ArgocdApiToken)
+	}
+	model.SetArgocdApiToken(ArgocdApiToken)
+	if len(model.GetArgocdApiToken()) == 0 {
+		logger.Warnf("The argocd-api-token flag and %s were empty; using managed utilities", model.ArgocdApiToken)
+	}
+	ArgocdServerApi := flags.argocdServerApi
+	if len(ArgocdServerApi) == 0 {
+		ArgocdServerApi = os.Getenv(model.ArgocdServerApi)
+	}
+	model.SetArgocdServerApi(ArgocdServerApi)
+	if len(model.GetArgocdServerApi()) == 0 {
+		logger.Warnf("The argocd-server-api flag and %s were empty; using managed utilities", model.ArgocdServerApi)
 	}
 
 	if flags.machineLogs {
@@ -284,7 +289,6 @@ func executeServerCmd(flags serverFlags) error {
 		MattermostOperatorHelmDir: flags.mattermostOperatorHelmDir,
 		NdotsValue:                flags.ndotsDefaultValue,
 		InternalIPRanges:          flags.internalIPRanges,
-		PGBouncerConfig:           pgbouncerConfig,
 		SLOInstallationGroups:     flags.sloInstallationGroups,
 		SLOEnterpriseGroups:       flags.sloEnterpriseGroups,
 		EtcdManagerEnv:            etcdManagerEnv,
@@ -297,6 +301,8 @@ func executeServerCmd(flags serverFlags) error {
 		awsClient,
 		sqlStore,
 		logger,
+		gitlabOAuthToken,
+		ArgocdApiToken,
 	)
 
 	eksProvisioner := provisioner.NewEKSProvisioner(
@@ -576,6 +582,10 @@ func deprecationWarnings(logger logrus.FieldLogger, flags serverFlags) {
 	if flags.debugHelm {
 		logger.Warn("The debug-helm flag has been deprecated")
 	}
+
+	// Generic warning for old flags.
+	// TODO: Remove after deployments are updated.
+	logger.Warn("All pgbouncer config.ini flags have been deprecated. Review server flags to ensure you are not setting any as they will be removed later.")
 }
 
 // getHumanReadableID  represents  a  best  effort  attempt  to  retrieve  an

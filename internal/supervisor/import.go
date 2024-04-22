@@ -372,7 +372,7 @@ func (s *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportStat
 	}
 
 	logger.Debugf("Copying %s/%s to %s/%s", srcBucket, srcKey, destBucket, destKey)
-	err = s.awsClient.S3LargeCopy(&srcBucket, &srcKey, &destBucket, &destKey)
+	err = s.awsClient.S3LargeCopy(&srcBucket, &srcKey, &destBucket, &destKey, logger)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to copy archive to Installation %s", installation.ID)
 	}

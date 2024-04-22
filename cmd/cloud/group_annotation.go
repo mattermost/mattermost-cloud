@@ -5,7 +5,6 @@
 package main
 
 import (
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +30,7 @@ func newCmdGroupAnnotationAdd() *cobra.Command {
 		Short: "Adds annotations to the group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 			request := newAddAnnotationsRequest(flags.annotations)
 			if flags.dryRun {
 				return runDryRun(request)
@@ -66,7 +65,7 @@ func newCmdGroupAnnotationDelete() *cobra.Command {
 		Short: "Deletes Annotation from the group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := model.NewClient(flags.serverAddress)
+			client := createClient(flags.clusterFlags)
 			if err := client.DeleteGroupAnnotation(flags.groupID, flags.annotation); err != nil {
 				return errors.Wrap(err, "failed to delete group annotations")
 			}

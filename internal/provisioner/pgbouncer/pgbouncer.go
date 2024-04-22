@@ -45,7 +45,7 @@ server_reset_query_always = %d
 [databases]
 `
 
-func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface, config *model.PGBouncerConfig) (string, error) {
+func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface, config *model.PgBouncerConfig) (string, error) {
 	ini := generatePGBouncerBaseIni(config)
 
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
@@ -106,7 +106,7 @@ func GeneratePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) 
 	return userlist, nil
 }
 
-func generatePGBouncerBaseIni(c *model.PGBouncerConfig) string {
+func generatePGBouncerBaseIni(c *model.PgBouncerConfig) string {
 	return fmt.Sprintf(
 		baseIni,
 		c.MinPoolSize, c.DefaultPoolSize, c.ReservePoolSize,
@@ -115,21 +115,7 @@ func generatePGBouncerBaseIni(c *model.PGBouncerConfig) string {
 	)
 }
 
-// NewPGBouncerConfig returns a new PGBouncerConfig with the provided configuration.
-func NewPGBouncerConfig(minPoolSize, defaultPoolSize, reservePoolSize, maxClientConnections, maxDatabaseConnectionsPerPool, serverIdleTimeout, serverLifetime, serverResetQueryAlways int) *model.PGBouncerConfig {
-	return &model.PGBouncerConfig{
-		MinPoolSize:                   minPoolSize,
-		DefaultPoolSize:               defaultPoolSize,
-		ReservePoolSize:               reservePoolSize,
-		MaxClientConnections:          maxClientConnections,
-		MaxDatabaseConnectionsPerPool: maxDatabaseConnectionsPerPool,
-		ServerIdleTimeout:             serverIdleTimeout,
-		ServerLifetime:                serverLifetime,
-		ServerResetQueryAlways:        serverResetQueryAlways,
-	}
-}
-
-func UpdatePGBouncerConfigMap(ctx context.Context, vpc string, store model.ClusterUtilityDatabaseStoreInterface, pgbouncerConfig *model.PGBouncerConfig, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+func UpdatePGBouncerConfigMap(ctx context.Context, vpc string, store model.ClusterUtilityDatabaseStoreInterface, pgbouncerConfig *model.PgBouncerConfig, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	ini, err := generatePGBouncerIni(vpc, store, pgbouncerConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
