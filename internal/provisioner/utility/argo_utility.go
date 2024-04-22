@@ -84,15 +84,17 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	}
 
 	// Perform substitution
-	_, err = os.Stat(outputFilePath)
+	_, err = os.Stat(inputFilePath)
 	if os.IsNotExist(err) {
-		err = substituteValues(inputFilePath, outputFilePath, replacements)
-		if err != nil {
-			return errors.Wrap(err, "failed to substitute values")
-		} else {
-			logger.WithField("Check the output file:", outputFilePath).Info("Substitution successful.")
-		}
+		return errors.Wrap(err, "custom values template file does not exist")
 	}
+
+	err = substituteValues(inputFilePath, outputFilePath, replacements)
+	if err != nil {
+		return errors.Wrap(err, "failed to substitute values")
+	}
+
+	logger.WithField("Check the output file:", outputFilePath).Info("Substitution successful.")
 
 	commitMsg := "Adding: utility:" + utilityName + " to cluster: " + clusterID
 	if err = gitClient.Commit(tempDir+"/apps", commitMsg, logger); err != nil {
