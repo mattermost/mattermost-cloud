@@ -47,8 +47,15 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		return errors.Wrap(err, "failed to write argo application file")
 	}
 
+	// Create the cluster output directory for the utility
+	clusterOutputDir := tempDir + "/apps/" + awsClient.GetCloudEnvironmentName() + "/helm-values/" + clusterID
+	err = os.MkdirAll(clusterOutputDir, os.ModePerm)
+	if err != nil && !os.IsExist(err) {
+		return errors.Wrap(err, "failed to create cluster output directory for utility")
+	}
+
 	inputFilePath := tempDir + "/apps/custom-values-template/" + utilityName + "-custom-values.yaml-template"
-	outputFilePath := tempDir + "/apps/" + awsClient.GetCloudEnvironmentName() + "/helm-values/" + clusterID + "/" + utilityName + "-custom-values.yaml"
+	outputFilePath := clusterOutputDir + "/" + utilityName + "-custom-values.yaml"
 
 	vpc, err := awsClient.GetClaimedVPC(clusterID, logger)
 	if err != nil {
