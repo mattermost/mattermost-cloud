@@ -157,13 +157,13 @@ func (group utilityGroup) RemoveUtilityFromArgocd() error {
 func substituteValues(inputFilePath, outputFilePath string, replacements map[string]string) error {
 	inputFile, err := os.Open(inputFilePath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to open input file for argo utility substitution")
 	}
 	defer inputFile.Close()
 
 	outputFile, err := os.Create(outputFilePath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create output file for argo utility substitution")
 	}
 	defer outputFile.Close()
 
