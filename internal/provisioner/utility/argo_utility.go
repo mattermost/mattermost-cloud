@@ -47,8 +47,15 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		return errors.Wrap(err, "failed to write argo application file")
 	}
 
+	// Create the cluster output directory for the utility
+	clusterOutputDir := tempDir + "/apps/" + awsClient.GetCloudEnvironmentName() + "/helm-values/" + clusterID
+	err = os.MkdirAll(clusterOutputDir, os.ModePerm)
+	if err != nil && !os.IsExist(err) {
+		return errors.Wrap(err, "failed to create cluster output directory for utility")
+	}
+
 	inputFilePath := tempDir + "/apps/custom-values-template/" + utilityName + "-custom-values.yaml-template"
-	outputFilePath := tempDir + "/apps/" + awsClient.GetCloudEnvironmentName() + "/helm-values/" + clusterID + "/" + utilityName + "-custom-values.yaml"
+	outputFilePath := clusterOutputDir + "/" + utilityName + "-custom-values.yaml"
 
 	vpc, err := awsClient.GetClaimedVPC(clusterID, logger)
 	if err != nil {
@@ -84,14 +91,14 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	}
 
 	// Perform substitution
-	_, err = os.Stat(outputFilePath)
+	_, err = os.Stat(inputFilePath)
 	if os.IsNotExist(err) {
-		err = substituteValues(inputFilePath, outputFilePath, replacements)
-		if err != nil {
-			return errors.Wrap(err, "failed to substitute values")
-		} else {
-			logger.WithField("Check the output file:", outputFilePath).Info("Substitution successful.")
-		}
+		return errors.Wrap(err, "custom values template file does not exist")
+	}
+
+	err = substituteValues(inputFilePath, outputFilePath, replacements)
+	if err != nil {
+		return errors.Wrap(err, "failed to substitute values")
 	}
 
 	commitMsg := "Adding: utility:" + utilityName + " to cluster: " + clusterID
@@ -157,13 +164,13 @@ func (group utilityGroup) RemoveUtilityFromArgocd() error {
 func substituteValues(inputFilePath, outputFilePath string, replacements map[string]string) error {
 	inputFile, err := os.Open(inputFilePath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to open input file for argo utility substitution")
 	}
 	defer inputFile.Close()
 
 	outputFile, err := os.Create(outputFilePath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create output file for argo utility substitution")
 	}
 	defer outputFile.Close()
 
