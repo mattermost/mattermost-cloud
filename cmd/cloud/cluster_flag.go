@@ -196,7 +196,7 @@ func (flags *pgBouncerConfigChanges) addFlags(command *cobra.Command) {
 
 func (flags *pgBouncerConfigOptions) addFlags(command *cobra.Command) {
 	command.Flags().Int64Var(&flags.minPoolSize, "pgbouncer-min-pool-size", model.PgBouncerDefaultMinPoolSize, "The PgBouncer config for min pool size.")
-	command.Flags().Int64Var(&flags.defaultPoolSize, "pgbouncer-default-pool-size", model.PgBouncerDefaultPoolSize, "The PgBouncer config for default pool size per user.")
+	command.Flags().Int64Var(&flags.defaultPoolSize, "pgbouncer-default-pool-size", model.PgBouncerDefaultDefaultPoolSize, "The PgBouncer config for default pool size per user.")
 	command.Flags().Int64Var(&flags.reservePoolSize, "pgbouncer-reserve-pool-size", model.PgBouncerDefaultReservePoolSize, "The PgBouncer config for reserve pool size per logical database.")
 	command.Flags().Int64Var(&flags.maxClientConnections, "pgbouncer-max-client-connections", model.PgBouncerDefaultMaxClientConnections, "The PgBouncer config for max client connections.")
 	command.Flags().Int64Var(&flags.maxDatabaseConnectionsPerPool, "pgbouncer-max-connections-per-pool", model.PgBouncerDefaultMaxDatabaseConnectionsPerPool, "The PgBouncer config for maximum number of proxy database connections per pool (logical database).")

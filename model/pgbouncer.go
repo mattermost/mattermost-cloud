@@ -12,26 +12,27 @@ import (
 )
 
 // PgBouncerConfig contains the configuration for the PGBouncer utility.
-// //////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //   - MaxDatabaseConnectionsPerPool is the maximum number of connections per
 //     logical database pool when using proxy databases.
 //   - MinPoolSize is the minimum pool size.
-//   - DefaultPoolSize is the default pool size per user.
-//   - ReservePoolSize is the default pool size per user.
+//   - DefaultPoolSize controls how many server connections to allow per
+//     user/database pair.
+//   - ReservePoolSize controls how many additional connections to allow to a
+//     pool when the default_pool_size is exhausted
 //   - MaxClientConnections is the maximum client connections.
 //   - ServerIdleTimeout is the server idle timeout.
 //   - ServerLifetime is the server lifetime.
-//   - ServerResetQueryAlways is boolean 0 or 1 whether server_reset_query should
-//     be run in all pooling modes.
-//
-// //////////////////////////////////////////////////////////////////////////////
+//   - ServerResetQueryAlways is boolean 0 or 1 whether server_reset_query
+//     should be run in all pooling modes.
+////////////////////////////////////////////////////////////////////////////////
 
 const (
 	PgBouncerDefaultMinPoolSize                   int64 = 1
-	PgBouncerDefaultPoolSize                      int64 = 5
+	PgBouncerDefaultDefaultPoolSize               int64 = 5
 	PgBouncerDefaultReservePoolSize               int64 = 10
-	PgBouncerDefaultMaxClientConnections          int64 = 20000
-	PgBouncerDefaultMaxDatabaseConnectionsPerPool int64 = 20
+	PgBouncerDefaultMaxClientConnections          int64 = 25000
+	PgBouncerDefaultMaxDatabaseConnectionsPerPool int64 = 50
 	PgBouncerDefaultServerIdleTimeout             int64 = 30
 	PgBouncerDefaultServerLifetime                int64 = 300
 	PgBouncerDefaultServerResetQueryAlways        int64 = 0
@@ -75,7 +76,7 @@ func (c *PgBouncerConfig) SetDefaults() {
 		c.MinPoolSize = PgBouncerDefaultMinPoolSize
 	}
 	if c.DefaultPoolSize == 0 {
-		c.DefaultPoolSize = PgBouncerDefaultPoolSize
+		c.DefaultPoolSize = PgBouncerDefaultDefaultPoolSize
 	}
 	if c.ReservePoolSize == 0 {
 		c.ReservePoolSize = PgBouncerDefaultReservePoolSize
