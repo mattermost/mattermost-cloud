@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -48,14 +49,14 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	}
 
 	// Create the cluster output directory for the utility
-	clusterOutputDir := tempDir + "/apps/" + awsClient.GetCloudEnvironmentName() + "/helm-values/" + clusterID
+	clusterOutputDir := filepath.Join(tempDir, "apps", awsClient.GetCloudEnvironmentName(), "helm-values", clusterID)
 	err = os.MkdirAll(clusterOutputDir, os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		return errors.Wrap(err, "failed to create cluster output directory for utility")
 	}
 
-	inputFilePath := tempDir + "/apps/custom-values-template/" + utilityName + "-custom-values.yaml-template"
-	outputFilePath := clusterOutputDir + "/" + utilityName + "-custom-values.yaml"
+	inputFilePath := filepath.Join(tempDir, "apps/custom-values-template", utilityName+"-custom-values.yaml-template")
+	outputFilePath := filepath.Join(clusterOutputDir, utilityName+"-custom-values.yaml")
 
 	vpc, err := awsClient.GetClaimedVPC(clusterID, logger)
 	if err != nil {
