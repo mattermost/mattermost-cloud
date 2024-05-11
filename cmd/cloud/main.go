@@ -32,7 +32,14 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	instanceID = model.NewID()
+	// If the environment variable "HOSTNAME" is set then that will be used for
+	// the instance ID value of this server. In Kubernetes this should pick up
+	// the pod replica name. If this environment value is not set then the
+	// original behavior will kick in and set the ID to a random ID.
+	instanceID = os.Getenv("HOSTNAME")
+	if len(instanceID) == 0 {
+		instanceID = model.NewID()
+	}
 
 	_ = rootCmd.MarkFlagRequired("database")
 
