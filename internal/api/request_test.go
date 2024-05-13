@@ -29,8 +29,8 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Provisioner:        model.ProvisionerKops,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.31.0", ValuesPath: ""},
-				"nginx":                 {Chart: "4.9.0", ValuesPath: ""},
-				"nginx-internal":        {Chart: "4.9.0", ValuesPath: ""},
+				"nginx":                 {Chart: "4.10.1", ValuesPath: ""},
+				"nginx-internal":        {Chart: "4.10.1", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "54.2.2", ValuesPath: ""},
 				"thanos":                {Chart: "13.2.2", ValuesPath: ""},
 				"teleport":              {Chart: "10.3.16", ValuesPath: ""},
@@ -100,8 +100,8 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Provisioner:        model.ProvisionerKops,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.31.0", ValuesPath: ""},
-				"nginx":                 {Chart: "4.9.0", ValuesPath: ""},
-				"nginx-internal":        {Chart: "4.9.0", ValuesPath: ""},
+				"nginx":                 {Chart: "4.10.1", ValuesPath: ""},
+				"nginx-internal":        {Chart: "4.10.1", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "54.2.2", ValuesPath: ""},
 				"thanos":                {Chart: "13.2.2", ValuesPath: ""},
 				"teleport":              {Chart: "10.3.16", ValuesPath: ""},
