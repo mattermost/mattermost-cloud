@@ -124,7 +124,7 @@ func (s *InstallationDeletionSupervisor) Supervise(installation *model.Installat
 
 	logger.Debugf("Supervising installation in state %s", installation.State)
 
-	newState := s.transitionInstallation(installation, s.instanceID, logger)
+	newState := s.transitionInstallation(installation, logger)
 
 	installation, err = s.store.GetInstallation(installation.ID, true, false)
 	if err != nil {
@@ -154,17 +154,17 @@ func (s *InstallationDeletionSupervisor) Supervise(installation *model.Installat
 }
 
 // transitionInstallation works with the given installation to transition it to a final state.
-func (s *InstallationDeletionSupervisor) transitionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+func (s *InstallationDeletionSupervisor) transitionInstallation(installation *model.Installation, logger log.FieldLogger) string {
 	switch installation.State {
 	case model.InstallationStateDeletionPending:
-		return s.checkIfInstallationShouldBeDeleted(installation, instanceID, logger)
+		return s.checkIfInstallationShouldBeDeleted(installation, logger)
 	default:
 		logger.Warnf("Found installation pending deletion in unexpected state %s", installation.State)
 		return installation.State
 	}
 }
 
-func (s *InstallationDeletionSupervisor) checkIfInstallationShouldBeDeleted(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+func (s *InstallationDeletionSupervisor) checkIfInstallationShouldBeDeleted(installation *model.Installation, logger log.FieldLogger) string {
 	if installation.DeletionPendingExpiry != 0 {
 		// Primary deletion pending check.
 		if model.GetMillis() < installation.DeletionPendingExpiry {

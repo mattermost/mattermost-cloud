@@ -20,7 +20,7 @@ func init() {
 	clusterSelect = sq.
 		Select("Cluster.ID", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
 			"UtilityMetadataRaw", "PgBouncerConfig", "State", "AllowInstallations", "CreateAt", "DeleteAt",
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
+			"APISecurityLock", "SchedulingLockAcquiredBy", "SchedulingLockAcquiredAt", "LockAcquiredBy", "LockAcquiredAt").
 		From("Cluster")
 }
 
@@ -225,20 +225,22 @@ func (sqlStore *SQLStore) createCluster(execer execer, cluster *model.Cluster) e
 	_, err = sqlStore.execBuilder(execer, sq.
 		Insert("Cluster").
 		SetMap(map[string]interface{}{
-			"ID":                     cluster.ID,
-			"State":                  cluster.State,
-			"Provider":               cluster.Provider,
-			"ProviderMetadataRaw":    rawMetadata.ProviderMetadataRaw,
-			"Provisioner":            cluster.Provisioner,
-			"ProvisionerMetadataRaw": rawMetadata.ProvisionerMetadataRaw,
-			"UtilityMetadataRaw":     rawMetadata.UtilityMetadataRaw,
-			"PgBouncerConfig":        cluster.PgBouncerConfig,
-			"AllowInstallations":     cluster.AllowInstallations,
-			"CreateAt":               cluster.CreateAt,
-			"DeleteAt":               0,
-			"APISecurityLock":        cluster.APISecurityLock,
-			"LockAcquiredBy":         nil,
-			"LockAcquiredAt":         0,
+			"ID":                       cluster.ID,
+			"State":                    cluster.State,
+			"Provider":                 cluster.Provider,
+			"ProviderMetadataRaw":      rawMetadata.ProviderMetadataRaw,
+			"Provisioner":              cluster.Provisioner,
+			"ProvisionerMetadataRaw":   rawMetadata.ProvisionerMetadataRaw,
+			"UtilityMetadataRaw":       rawMetadata.UtilityMetadataRaw,
+			"PgBouncerConfig":          cluster.PgBouncerConfig,
+			"AllowInstallations":       cluster.AllowInstallations,
+			"CreateAt":                 cluster.CreateAt,
+			"DeleteAt":                 0,
+			"APISecurityLock":          cluster.APISecurityLock,
+			"SchedulingLockAcquiredBy": nil,
+			"SchedulingLockAcquiredAt": 0,
+			"LockAcquiredBy":           nil,
+			"LockAcquiredAt":           0,
 		}),
 	)
 	if err != nil {
@@ -299,6 +301,16 @@ func (sqlStore *SQLStore) LockCluster(clusterID, lockerID string) (bool, error) 
 // UnlockCluster releases a lock previously acquired against a caller.
 func (sqlStore *SQLStore) UnlockCluster(clusterID, lockerID string, force bool) (bool, error) {
 	return sqlStore.unlockRows("Cluster", []string{clusterID}, lockerID, force)
+}
+
+// LockCluster marks the cluster as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockClusterScheduling(clusterID, lockerID string) (bool, error) {
+	return sqlStore.lockCustomRows("Cluster", "SchedulingLockAcquiredBy", "SchedulingLockAcquiredAt", []string{clusterID}, lockerID)
+}
+
+// UnlockCluster releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockClusterScheduling(clusterID, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockCustomRows("Cluster", "SchedulingLockAcquiredBy", "SchedulingLockAcquiredAt", []string{clusterID}, lockerID, force)
 }
 
 // LockClusterAPI locks updates to the cluster from the API.

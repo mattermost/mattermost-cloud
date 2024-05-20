@@ -2216,4 +2216,27 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.47.0"), semver.MustParse("0.48.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE Cluster ADD COLUMN SchedulingLockAcquiredBy TEXT NULL;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE Cluster ADD COLUMN SchedulingLockAcquiredAt BIGINT;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`UPDATE Cluster SET SchedulingLockAcquiredAt = 0;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE Cluster ALTER COLUMN SchedulingLockAcquiredAt SET NOT NULL;`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

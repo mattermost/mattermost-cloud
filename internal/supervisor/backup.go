@@ -168,10 +168,10 @@ func (s *BackupSupervisor) transitionBackup(backup *model.InstallationBackup, in
 		return s.triggerBackup(backup, instanceID, logger)
 
 	case model.InstallationBackupStateBackupInProgress:
-		return s.monitorBackup(backup, instanceID, logger)
+		return s.monitorBackup(backup, logger)
 
 	case model.InstallationBackupStateDeletionRequested:
-		return s.deleteBackup(backup, instanceID, logger)
+		return s.deleteBackup(backup, logger)
 
 	default:
 		logger.Warnf("Found backup pending work in unexpected state %s", backup.State)
@@ -234,7 +234,7 @@ func (s *BackupSupervisor) triggerBackup(backup *model.InstallationBackup, insta
 	return model.InstallationBackupStateBackupInProgress
 }
 
-func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, instanceID string, logger log.FieldLogger) model.InstallationBackupState {
+func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, logger log.FieldLogger) model.InstallationBackupState {
 	cluster, err := getClusterForClusterInstallation(s.store, backup.ClusterInstallationID)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster")
@@ -267,7 +267,7 @@ func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, insta
 	return model.InstallationBackupStateBackupSucceeded
 }
 
-func (s *BackupSupervisor) deleteBackup(backup *model.InstallationBackup, instanceID string, logger log.FieldLogger) model.InstallationBackupState {
+func (s *BackupSupervisor) deleteBackup(backup *model.InstallationBackup, logger log.FieldLogger) model.InstallationBackupState {
 	cluster, err := getClusterForClusterInstallation(s.store, backup.ClusterInstallationID)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster for backup")

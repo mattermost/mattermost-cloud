@@ -22,6 +22,8 @@ type clusterStore interface {
 	UpdateCluster(cluster *model.Cluster) error
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID string, lockerID string, force bool) (bool, error)
+	LockClusterScheduling(clusterID, lockerID string) (bool, error)
+	UnlockClusterScheduling(clusterID string, lockerID string, force bool) (bool, error)
 	DeleteCluster(clusterID string) error
 
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)

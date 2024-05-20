@@ -347,7 +347,7 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 		return s.updateInstallation(installation, instanceID, logger)
 
 	case model.InstallationStateUpdateInProgress:
-		return s.waitForUpdateStable(installation, instanceID, logger)
+		return s.waitForUpdateStable(installation, logger)
 
 	case model.InstallationStateHibernationRequested:
 		return s.hibernateInstallation(installation, instanceID, logger)
@@ -448,7 +448,6 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 		}
 	}
 
-	// TODO: Support creating a cluster on demand if no existing cluster meets the criteria.
 	logger.Warn("No compatible clusters available for installation scheduling")
 
 	return model.InstallationStateCreationNoCompatibleClusters
@@ -537,12 +536,12 @@ func (s *InstallationSupervisor) getClusterResources(cluster *model.Cluster, log
 
 // createClusterInstallation attempts to schedule a cluster installation onto the given cluster.
 func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluster, installation *model.Installation, instanceID string, logger log.FieldLogger) *model.ClusterInstallation {
-	clusterLock := newClusterLock(cluster.ID, instanceID, s.store, logger)
-	if !clusterLock.TryLock() {
-		logger.Debugf("Failed to lock cluster %s", cluster.ID)
+	clusterScheduleLock := newClusterScheduleLock(cluster.ID, instanceID, s.store, logger)
+	if !clusterScheduleLock.TryLock() {
+		logger.Debugf("Failed to lock scheduling on cluster %s", cluster.ID)
 		return nil
 	}
-	defer clusterLock.Unlock()
+	defer clusterScheduleLock.Unlock()
 
 	if !s.installationCanBeScheduledOnCluster(cluster, installation, logger) {
 		return nil
@@ -670,12 +669,9 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 // scheduled on the given cluster in regard to configuration and state. This
 // does not include resource checks.
 func (s *InstallationSupervisor) installationCanBeScheduledOnCluster(cluster *model.Cluster, installation *model.Installation, logger log.FieldLogger) bool {
-	if cluster.State != model.ClusterStateStable {
-		logger.Debugf("Cluster %s is not stable (currently %s)", cluster.ID, cluster.State)
-		return false
-	}
-	if !cluster.AllowInstallations {
-		logger.Debugf("Cluster %s is set to not allow for new installation scheduling", cluster.ID)
+	err := cluster.CanScheduleInstallations()
+	if err != nil {
+		logger.Debugf(errors.Wrapf(err, "Unable to schedule on cluster %s", cluster.ID).Error())
 		return false
 	}
 
@@ -910,10 +906,10 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 
 	logger.Info("Finished updating cluster installations")
 
-	return s.waitForUpdateStable(installation, instanceID, logger)
+	return s.waitForUpdateStable(installation, logger)
 }
 
-func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Installation, logger log.FieldLogger) string {
 	// If the installation belongs to a group that has been updated, we requeue
 	// the installation update.
 	if !installation.InstallationSequenceMatchesMergedGroupSequence() {

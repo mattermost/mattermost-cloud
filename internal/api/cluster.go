@@ -571,6 +571,15 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	newState := model.ClusterInstallationStateDeletionRequested
 
+	// Cluster deletion requires acquiring the standard cluster and scheduling
+	// locks for safe deletion.
+	status, unlockSchedulingOnce := lockClusterScheduling(c, clusterID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockSchedulingOnce()
+
 	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
