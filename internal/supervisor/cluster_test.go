@@ -64,6 +64,17 @@ func (s *mockClusterStore) UnlockCluster(clusterID string, lockerID string, forc
 	return true, nil
 }
 
+func (s *mockClusterStore) LockClusterScheduling(clusterID, lockerID string) (bool, error) {
+	return true, nil
+}
+
+func (s *mockClusterStore) UnlockClusterScheduling(clusterID string, lockerID string, force bool) (bool, error) {
+	if s.UnlockChan != nil {
+		close(s.UnlockChan)
+	}
+	return true, nil
+}
+
 func (s *mockClusterStore) DeleteCluster(clusterID string) error {
 	return nil
 }

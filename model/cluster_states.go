@@ -4,6 +4,8 @@
 
 package model
 
+import "github.com/pkg/errors"
+
 const (
 	// ClusterStateStable is a cluster in a stable state and undergoing no changes.
 	ClusterStateStable = "stable"
@@ -112,6 +114,36 @@ var AllClusterRequestStates = []string{
 	ClusterStateResizeRequested,
 	ClusterStateNodegroupsCreationRequested,
 	ClusterStateDeletionRequested,
+}
+
+var ClusterStatesInstallationScheduable = []string{
+	ClusterStateStable,
+	ClusterStateProvisionInProgress,
+	ClusterStateProvisioningRequested,
+	ClusterStateRefreshMetadata,
+	ClusterStateProvisioningFailed,
+	ClusterStateUpgradeRequested,
+	ClusterStateUpgradeFailed,
+	ClusterStateResizeRequested,
+	ClusterStateResizeFailed,
+	ClusterStateWaitingForNodes,
+	ClusterStateNodegroupsCreationRequested,
+	ClusterStateNodegroupsCreationFailed,
+	ClusterStateNodegroupsDeletionRequested,
+	ClusterStateNodegroupsDeletionFailed,
+}
+
+// CanScheduleInstallations returns whether a cluster is in a valid state to
+// accept new installations.
+func (c *Cluster) CanScheduleInstallations() error {
+	if !c.AllowInstallations {
+		return errors.New("cluster set to not allow for new installation scheduling")
+	}
+	if !contains(ClusterStatesInstallationScheduable, c.State) {
+		return errors.Errorf("not in a state to accept new installations (currently %s)", c.State)
+	}
+
+	return nil
 }
 
 // ValidTransitionState returns whether a cluster can be transitioned into the

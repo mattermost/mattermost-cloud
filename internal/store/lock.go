@@ -5,26 +5,40 @@
 package store
 
 import (
+	"fmt"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
 
+const (
+	standardLockByName = "LockAcquiredBy"
+	standardLockAtName = "LockAcquiredAt"
+)
+
 // lockRow marks the row in the given table as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) lockRows(table string, ids []string, lockerID string) (bool, error) {
-	return sqlStore.lockRowsTx(sqlStore.db, table, ids, lockerID)
+	return sqlStore.lockRowsTx(sqlStore.db, table, standardLockByName, standardLockAtName, ids, lockerID)
 }
 
-func (sqlStore *SQLStore) lockRowsTx(db execer, table string, ids []string, lockerID string) (bool, error) {
+// lockCustomRows marks the custom lock rows in the given table as locked for
+// exclusive use by the caller.
+func (sqlStore *SQLStore) lockCustomRows(table, lockByName, lockAtName string, ids []string, lockerID string) (bool, error) {
+	return sqlStore.lockRowsTx(sqlStore.db, table, lockByName, lockAtName, ids, lockerID)
+}
+
+// lockRowsTx performs the resource locking transaction.
+func (sqlStore *SQLStore) lockRowsTx(db execer, table, lockByName, lockAtName string, ids []string, lockerID string) (bool, error) {
 	result, err := sqlStore.execBuilder(db, sq.
 		Update(table).
 		SetMap(map[string]interface{}{
-			"LockAcquiredBy": lockerID,
-			"LockAcquiredAt": model.GetMillis(),
+			lockByName: lockerID,
+			lockAtName: model.GetMillis(),
 		}).
 		Where(sq.Eq{
-			"ID":             ids,
-			"LockAcquiredAt": 0,
+			"ID":       ids,
+			lockAtName: 0,
 		}),
 	)
 	if err != nil {
@@ -47,12 +61,22 @@ func (sqlStore *SQLStore) lockRowsTx(db execer, table string, ids []string, lock
 	return locked, nil
 }
 
-// unlockRow releases a lock previously acquired against a caller.
+// unlockRows releases a lock previously acquired against a caller.
 func (sqlStore *SQLStore) unlockRows(table string, ids []string, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRowsTx(table, standardLockByName, standardLockAtName, ids, lockerID, force)
+}
+
+// unlockCustomRows releases a cusotm lock previously acquired against a caller.
+func (sqlStore *SQLStore) unlockCustomRows(table, lockByName, lockAtName string, ids []string, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRowsTx(table, lockByName, lockAtName, ids, lockerID, force)
+}
+
+// unlockRowsTx performs the resource unlocking transaction.
+func (sqlStore *SQLStore) unlockRowsTx(table, lockByName, lockAtName string, ids []string, lockerID string, force bool) (bool, error) {
 	builder := sq.Update(table).
 		SetMap(map[string]interface{}{
-			"LockAcquiredBy": nil,
-			"LockAcquiredAt": 0,
+			lockByName: nil,
+			lockAtName: 0,
 		}).
 		Where(sq.Eq{
 			"ID": ids,
@@ -60,11 +84,11 @@ func (sqlStore *SQLStore) unlockRows(table string, ids []string, lockerID string
 
 	if force {
 		// If forcing the unlock, only require that a lock was held by someone.
-		builder = builder.Where("LockAcquiredAt <> 0")
+		builder = builder.Where(fmt.Sprintf("%s <> 0", lockAtName))
 	} else {
 		// If not forcing the unlock, require that the current instance held the lock.
 		builder = builder.Where(sq.Eq{
-			"LockAcquiredBy": lockerID,
+			lockByName: lockerID,
 		})
 	}
 

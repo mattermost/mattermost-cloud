@@ -22,7 +22,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,6 +60,14 @@ func (s *mockInstallationStore) LockCluster(clusterID, lockerID string) (bool, e
 }
 
 func (s *mockInstallationStore) UnlockCluster(clusterID string, lockerID string, force bool) (bool, error) {
+	return true, nil
+}
+
+func (s *mockInstallationStore) LockClusterScheduling(clusterID, lockerID string) (bool, error) {
+	return true, nil
+}
+
+func (s *mockInstallationStore) UnlockClusterScheduling(clusterID string, lockerID string, force bool) (bool, error) {
 	return true, nil
 }
 
@@ -635,11 +642,11 @@ func (m *mockEventProducer) ProduceClusterInstallationStateChangeEvent(clusterIn
 
 type mockCloudflareClient struct{}
 
-func (m *mockCloudflareClient) CreateDNSRecords(customerDNSName []string, dnsEndpoints []string, logger logrus.FieldLogger) error {
+func (m *mockCloudflareClient) CreateDNSRecords(customerDNSName []string, dnsEndpoints []string, logger log.FieldLogger) error {
 	return nil
 
 }
-func (m *mockCloudflareClient) DeleteDNSRecords(customerDNSName []string, logger logrus.FieldLogger) error {
+func (m *mockCloudflareClient) DeleteDNSRecords(customerDNSName []string, logger log.FieldLogger) error {
 	return nil
 }
 

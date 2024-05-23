@@ -320,7 +320,7 @@ func (sqlStore *SQLStore) GetDeliveriesForSubscription(subID string) ([]*model.E
 
 // lockSubscription marks the subscription as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) lockSubscription(db execer, subID, lockerID string) (bool, error) {
-	return sqlStore.lockRowsTx(db, subscriptionsTable, []string{subID}, lockerID)
+	return sqlStore.lockRowsTx(db, subscriptionsTable, standardLockByName, standardLockAtName, []string{subID}, lockerID)
 }
 
 // UnlockSubscription releases a lock previously acquired against a caller.

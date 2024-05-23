@@ -46,6 +46,41 @@ func lockCluster(c *Context, clusterID string) (*model.ClusterDTO, int, func()) 
 	}
 }
 
+// lockClusterScheduling synchronizes access to the given cluster's installation
+// scheduling across potentially multiple provisioning servers.
+func lockClusterScheduling(c *Context, clusterID string) (int, func()) {
+	clusterDTO, err := c.Store.GetClusterDTO(clusterID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster")
+		return http.StatusInternalServerError, nil
+	}
+	if clusterDTO == nil {
+		return http.StatusNotFound, nil
+	}
+
+	locked, err := c.Store.LockClusterScheduling(clusterID, c.RequestID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to lock cluster scheduling")
+		return http.StatusInternalServerError, nil
+	} else if !locked {
+		c.Logger.Error("failed to acquire lock for cluster scheduling")
+		return http.StatusConflict, nil
+	}
+
+	unlockOnce := sync.Once{}
+
+	return 0, func() {
+		unlockOnce.Do(func() {
+			unlocked, err := c.Store.UnlockClusterScheduling(clusterDTO.ID, c.RequestID, false)
+			if err != nil {
+				c.Logger.WithError(err).Errorf("failed to unlock cluster scheduling")
+			} else if !unlocked {
+				c.Logger.Error("failed to release lock for cluster scheduling")
+			}
+		})
+	}
+}
+
 // lockGroup synchronizes access to the given group across potentially multiple
 // provisioning servers.
 func lockGroup(c *Context, groupID string) (*model.GroupDTO, int, func()) {

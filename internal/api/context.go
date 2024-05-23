@@ -31,6 +31,8 @@ type Store interface {
 	UpdateCluster(cluster *model.Cluster) error
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID, lockerID string, force bool) (bool, error)
+	LockClusterScheduling(clusterID, lockerID string) (bool, error)
+	UnlockClusterScheduling(clusterID, lockerID string, force bool) (bool, error)
 	LockClusterAPI(clusterID string) error
 	UnlockClusterAPI(clusterID string) error
 	DeleteCluster(clusterID string) error
