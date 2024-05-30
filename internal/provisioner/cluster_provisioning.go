@@ -36,6 +36,10 @@ func provisionCluster(
 	store model.ClusterUtilityDatabaseStoreInterface,
 	logger logrus.FieldLogger) error {
 
+	if err := attachPolicyRoles(cluster, awsClient, logger); err != nil {
+		return errors.Wrap(err, "failed to attach policy roles to cluster")
+	}
+
 	// Register cluster in argocd
 	if cluster.UtilityMetadata.ManagedByArgocd && !cluster.UtilityMetadata.ArgocdClusterRegister.Registered {
 		logger.Debug("Starting argocd cluster registration")
@@ -55,11 +59,6 @@ func provisionCluster(
 			"ManagedByArgocd": cluster.UtilityMetadata.ManagedByArgocd,
 			"Registered":      cluster.UtilityMetadata.ArgocdClusterRegister.Registered,
 		}).Info("Skipping argocd cluster registration")
-	}
-
-	err := attachPolicyRoles(cluster, awsClient, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to attach policy roles to cluster")
 	}
 
 	// Start by gathering resources that will be needed later. If any of this
