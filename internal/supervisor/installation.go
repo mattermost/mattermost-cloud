@@ -121,6 +121,7 @@ type InstallationSupervisorCache struct {
 // how installation scheduling occurs.
 type InstallationSupervisorSchedulingOptions struct {
 	BalanceInstallations               bool
+	PreferScheduleOnStableClusters     bool
 	ClusterResourceThresholdCPU        int
 	ClusterResourceThresholdMemory     int
 	ClusterResourceThresholdPodCount   int
@@ -168,9 +169,10 @@ func NewInstallationSupervisor(
 }
 
 // NewInstallationSupervisorSchedulingOptions creates a new InstallationSupervisorSchedulingOptions.
-func NewInstallationSupervisorSchedulingOptions(balanceInstallations bool, clusterResourceThreshold, thresholdCPUOverride, thresholdMemoryOverride, thresholdPodCountOverride, clusterResourceThresholdScaleValue int) InstallationSupervisorSchedulingOptions {
+func NewInstallationSupervisorSchedulingOptions(balanceInstallations, preferStableClusters bool, clusterResourceThreshold, thresholdCPUOverride, thresholdMemoryOverride, thresholdPodCountOverride, clusterResourceThresholdScaleValue int) InstallationSupervisorSchedulingOptions {
 	schedulingOptions := InstallationSupervisorSchedulingOptions{
 		BalanceInstallations:               balanceInstallations,
+		PreferScheduleOnStableClusters:     preferStableClusters,
 		ClusterResourceThresholdCPU:        clusterResourceThreshold,
 		ClusterResourceThresholdMemory:     clusterResourceThreshold,
 		ClusterResourceThresholdPodCount:   clusterResourceThreshold,
@@ -438,7 +440,12 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 
 	if s.scheduling.BalanceInstallations {
 		logger.Info("Attempting to schedule installation on the lowest-utilized cluster")
-		clusters = s.prioritizeLowerUtilizedClusters(clusters, installation, instanceID, logger)
+		clusters = s.prioritizeLowerUtilizedClusters(clusters, installation, logger)
+	}
+
+	if s.scheduling.PreferScheduleOnStableClusters {
+		logger.Info("Attempting to schedule installation on a cluster in the stable state")
+		clusters = PrioritizeStableStateClusters(clusters)
 	}
 
 	for _, cluster := range clusters {
@@ -466,7 +473,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 //     list will be the lowest at the time it was checked.
 //   - When scheduling an installation, all of the standard scheduling checks
 //     should be performed again under cluster lock.
-func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*model.Cluster, installation *model.Installation, instanceID string, logger log.FieldLogger) []*model.Cluster {
+func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*model.Cluster, installation *model.Installation, logger log.FieldLogger) []*model.Cluster {
 	lowestResourcePercent := 10000
 	var filteredPrioritizedClusters []*model.Cluster
 
@@ -515,6 +522,25 @@ func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*mod
 	}
 
 	return filteredPrioritizedClusters
+}
+
+// PrioritizeStableStateClusters will sort the cluster list prioritizing
+// clusters in the stable state.
+func PrioritizeStableStateClusters(clusters []*model.Cluster) []*model.Cluster {
+	// Build a new prioritized list of clusters. The cluster list may already be
+	// sorted by resource usage so try to preserve that as well.
+	var stableClusters []*model.Cluster
+	var unstableClusters []*model.Cluster
+
+	for _, cluster := range clusters {
+		if cluster.State == model.ClusterStateStable {
+			stableClusters = append(stableClusters, cluster)
+		} else {
+			unstableClusters = append(unstableClusters, cluster)
+		}
+	}
+
+	return append(stableClusters, unstableClusters...)
 }
 
 // getClusterResources returns cluster resources from cache or will obtain them
@@ -660,7 +686,11 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		logger.WithError(err).Error("Failed to create cluster installation state change event")
 	}
 
-	logger.Infof("Requested creation of cluster installation on cluster %s. Expected resource load: CPU=%d%%, Memory=%d%%, PodCount=%d%%", cluster.ID, cpuPercent, memoryPercent, podPercent)
+	logger.Infof(
+		"Requested creation of cluster installation on cluster %s (state=%s). Expected resource load: CPU=%d%%, Memory=%d%%, PodCount=%d%%",
+		cluster.ID, cluster.State,
+		cpuPercent, memoryPercent, podPercent,
+	)
 
 	return clusterInstallation
 }

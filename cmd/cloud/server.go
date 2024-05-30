@@ -164,6 +164,7 @@ func executeServerCmd(flags serverFlags) error {
 	// TODO: move these cluster threshold values to cluster configuration.
 	installationScheduling := supervisor.NewInstallationSupervisorSchedulingOptions(
 		flags.balancedInstallationScheduling,
+		flags.preferScheduleOnStableClusters,
 		flags.clusterResourceThreshold,
 		flags.thresholdCPUOverride,
 		flags.thresholdMemoryOverride,
