@@ -36,20 +36,19 @@ func provisionCluster(
 	store model.ClusterUtilityDatabaseStoreInterface,
 	logger logrus.FieldLogger) error {
 
-	err := attachPolicyRoles(cluster, awsClient, logger)
-	if err != nil {
+	if err := attachPolicyRoles(cluster, awsClient, logger); err != nil {
 		return errors.Wrap(err, "failed to attach policy roles to cluster")
 	}
 
 	// Register cluster in argocd
 	if cluster.UtilityMetadata.ManagedByArgocd && !cluster.UtilityMetadata.ArgocdClusterRegister.Registered {
 		logger.Debug("Starting argocd cluster registration")
-		clusterRegister, err1 := NewClusterRegisterHandle(cluster, gitClient, awsClient.GetCloudEnvironmentName(), tempDir, logger)
-		if err1 != nil {
-			return errors.Wrap(err1, "failed to create new cluster register handle")
+		clusterRegister, err := NewClusterRegisterHandle(cluster, gitClient, awsClient.GetCloudEnvironmentName(), tempDir, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to create new cluster register handle")
 		}
-		if err1 = clusterRegister.clusterRegister(params.S3StateStore); err1 != nil {
-			return errors.Wrap(err1, "failed to register cluster in argocd")
+		if err = clusterRegister.clusterRegister(params.S3StateStore); err != nil {
+			return errors.Wrap(err, "failed to register cluster in argocd")
 		}
 
 		cluster.UtilityMetadata.ArgocdClusterRegister.Registered = true
