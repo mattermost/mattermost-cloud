@@ -21,7 +21,7 @@ func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Applicatio
 	}
 
 	var wg sync.WaitGroup
-	timeout := time.Second * 300
+	timeout := time.Second * 600
 	wg.Add(1)
 	go c.waitForSyncCompletion(gitopsAppName, &wg, timeout)
 	wg.Wait()
@@ -52,7 +52,7 @@ func (c *ApiClient) WaitForAppHealthy(appName string, wg *sync.WaitGroup, timeou
 			return errors.Wrapf(err, "failed to get application %s", appName)
 		}
 
-		if app.Status.Health.Status == health.HealthStatusHealthy {
+		if app.Status.Health.Status == health.HealthStatusHealthy && app.Status.Sync.Status == argoappv1.SyncStatusCodeSynced {
 			break
 		}
 

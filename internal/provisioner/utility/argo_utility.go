@@ -119,7 +119,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	}
 
 	var wg sync.WaitGroup
-	timeout := time.Second * 300
+	timeout := time.Second * 600
 
 	wg.Add(1)
 	go argocdClient.WaitForAppHealthy(appName, &wg, timeout)
