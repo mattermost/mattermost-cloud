@@ -885,7 +885,7 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 		return errors.Wrap(err, "failed to destroy all services in the utility group")
 	}
 
-	// Remove utility from argocd
+	// Remove utility and cluster from argocd
 	if cluster.UtilityMetadata.ManagedByArgocd {
 		// Git pull to get the latest state before deleting the cluster
 		err = gitClient.Pull(logger)
@@ -897,11 +897,7 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 		if err != nil {
 			return errors.Wrap(err, "failed to remove utility from argocd")
 		}
-	}
 
-	//Remove cluster from argoCD.
-	if cluster.UtilityMetadata.ManagedByArgocd {
-		var err error
 		cr, err := NewClusterRegisterHandle(cluster, gitClient, provisioner.awsClient.GetCloudEnvironmentName(), tempDir, logger)
 		if err != nil {
 			return errors.Wrap(err, "Failed to create new cluster register handle")
