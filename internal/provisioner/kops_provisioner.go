@@ -906,7 +906,7 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 			return errors.Wrap(err, "Failed to create new cluster register handle")
 		}
 
-		if err = cr.deregisterClusterFromArgocd(); err != nil {
+		if err := cr.deregisterClusterFromArgocd(); err != nil {
 			return errors.Wrap(err, "failed to remove cluster from Argocd")
 		}
 	}
