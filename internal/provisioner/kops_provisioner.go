@@ -901,12 +901,13 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 
 	//Remove cluster from argoCD.
 	if cluster.UtilityMetadata.ManagedByArgocd {
+		var err error
 		cr, err := NewClusterRegisterHandle(cluster, gitClient, provisioner.awsClient.GetCloudEnvironmentName(), tempDir, logger)
 		if err != nil {
 			return errors.Wrap(err, "Failed to create new cluster register handle")
 		}
 
-		if err := cr.deregisterClusterFromArgocd(); err != nil {
+		if err = cr.deregisterClusterFromArgocd(); err != nil {
 			return errors.Wrap(err, "failed to remove cluster from Argocd")
 		}
 	}
