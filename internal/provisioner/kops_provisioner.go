@@ -898,7 +898,8 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 			return errors.Wrap(err, "failed to remove utility from argocd")
 		}
 
-		cr, err := NewClusterRegisterHandle(cluster, gitClient, provisioner.awsClient.GetCloudEnvironmentName(), tempDir, logger)
+		var cr *ClusterRegister
+		cr, err = NewClusterRegisterHandle(cluster, gitClient, provisioner.awsClient.GetCloudEnvironmentName(), tempDir, logger)
 		if err != nil {
 			return errors.Wrap(err, "Failed to create new cluster register handle")
 		}
