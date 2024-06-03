@@ -860,18 +860,6 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool,
 
 	provisioner.invalidateCachedKopsClient(kopsMetadata.Name, logger)
 
-	//Remove cluster from argoCD.
-	if cluster.UtilityMetadata.ManagedByArgocd {
-		cr, err := NewClusterRegisterHandle(cluster, gitClient, provisioner.awsClient.GetCloudEnvironmentName(), argocdRepoTempDir, logger)
-		if err != nil {
-			return false, errors.Wrap(err, "Failed to create new cluster register handle")
-		}
-
-		if err = cr.deregisterClusterFromArgocd(); err != nil {
-			return false, errors.Wrap(err, "failed to remove cluster from Argocd")
-		}
-	}
-
 	logger.Info("Successfully deleted Kops cluster")
 
 	return true, nil
@@ -908,6 +896,18 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 		err = ugh.RemoveUtilityFromArgocd()
 		if err != nil {
 			return errors.Wrap(err, "failed to remove utility from argocd")
+		}
+	}
+
+	//Remove cluster from argoCD.
+	if cluster.UtilityMetadata.ManagedByArgocd {
+		cr, err := NewClusterRegisterHandle(cluster, gitClient, provisioner.awsClient.GetCloudEnvironmentName(), tempDir, logger)
+		if err != nil {
+			return errors.Wrap(err, "Failed to create new cluster register handle")
+		}
+
+		if err = cr.deregisterClusterFromArgocd(); err != nil {
+			return errors.Wrap(err, "failed to remove cluster from Argocd")
 		}
 	}
 
