@@ -218,6 +218,10 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
 			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
 		}
+	case model.RtcdCanonicalName:
+		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+		}
 	default:
 		u.logger.WithFields(log.Fields{
 			"unmanaged-action": "skip",
