@@ -76,18 +76,28 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		return errors.New("retrieved certificate does not have ARN")
 	}
 
+	privateCertificate, err := awsClient.GetCertificateSummaryByTag(aws.DefaultInstallPrivateCertificatesTagKey, aws.DefaultInstallPrivateCertificatesTagValue, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to retrive the AWS Private ACM")
+	}
+
+	if privateCertificate.ARN == nil {
+		return errors.New("retrieved certificate does not have ARN")
+	}
+
 	privateZoneDomainName, err := awsClient.GetPrivateZoneDomainName(logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to get private zone domain name")
 	}
 
 	replacements := map[string]string{
-		"<VPC_ID>":         vpc,
-		"<CERTFICATE_ARN>": *certificate.ARN,
-		"<CLUSTER_ID>":     clusterID,
-		"<ENV>":            awsClient.GetCloudEnvironmentName(),
-		"<IP_RANGE>":       strings.Join(allowCIDRRangeList, ","),
-		"<PRIVATE_DOMAIN>": privateZoneDomainName,
+		"<VPC_ID>":                  vpc,
+		"<CERTFICATE_ARN>":          *certificate.ARN,
+		"<PRIVATE_CERTIFICATE_ARN>": *privateCertificate.ARN,
+		"<CLUSTER_ID>":              clusterID,
+		"<ENV>":                     awsClient.GetCloudEnvironmentName(),
+		"<IP_RANGE>":                strings.Join(allowCIDRRangeList, ","),
+		"<PRIVATE_DOMAIN>":          privateZoneDomainName,
 		// Add more replacements as needed
 	}
 
