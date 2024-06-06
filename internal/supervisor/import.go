@@ -69,7 +69,7 @@ type mmctl struct {
 }
 
 func (m *mmctl) Run(args ...string) ([]byte, error) {
-	args = append([]string{"--format", "json", "--local"}, args...)
+	args = append([]string{"--json", "--local"}, args...)
 	return m.provisioner.ExecMMCTL(m.cluster, m.clusterInstallation, args...)
 }
 
@@ -381,7 +381,7 @@ func (s *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportStat
 }
 
 func (s *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, logger logrus.FieldLogger, importArchiveFilename, awatImportID string) error {
-	output, err := mmctl.Run("import", "process", importArchiveFilename)
+	output, err := mmctl.Run("import", "process", "--extract-content=false", importArchiveFilename)
 	if err != nil {
 		return errors.Wrap(err, "failed to start import process in Mattermost itself")
 	}
