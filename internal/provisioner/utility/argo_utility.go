@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
@@ -123,17 +122,28 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 
 	appName := utilityName + "-sre-" + awsClient.GetCloudEnvironmentName() + "-" + clusterID
 	gitopsAppName := "gitops-sre-" + awsClient.GetCloudEnvironmentName()
+
 	app, err := argocdClient.SyncApplication(gitopsAppName)
 	if err != nil {
 		return errors.Wrap(err, "failed to sync application")
 	}
 
-	var wg sync.WaitGroup
+	errCh := make(chan error, 10)
 	timeout := time.Second * 600
 
-	wg.Add(1)
-	go argocdClient.WaitForAppHealthy(appName, &wg, timeout)
-	wg.Wait()
+	go func() {
+		err = argocdClient.WaitForAppHealthy(appName, timeout)
+		if err != nil {
+			errCh <- err
+		}
+
+		close(errCh)
+	}()
+
+	err = <-errCh
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for application to be healthy")
+	}
 
 	logger.WithField("app:", app.Name).Info("Deployed utility successfully.")
 
