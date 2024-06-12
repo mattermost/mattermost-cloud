@@ -68,7 +68,7 @@ func (c *ApiClient) WaitForAppHealthy(appName string, timeout time.Duration) err
 		// Check for timeout
 		if time.Since(startTime) >= timeout {
 			err = errors.New("timed out waiting for application to be healthy")
-			return errors.Wrapf(err, "app %s isn't healthy", appName)
+			return err
 		}
 
 		//Add a small delay to reduce CPU usage and avoid too_many_pings error.
