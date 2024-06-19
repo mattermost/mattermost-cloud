@@ -28,8 +28,6 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		return errors.Wrap(err, "failed to pull from repo")
 	}
 
-	//TODO: Skip provision utility if it is already provisioned
-
 	appsFile, err := os.ReadFile(tempDir + "/apps/" + awsClient.GetCloudEnvironmentName() + ArgocdAppsFile)
 	if err != nil {
 		return errors.Wrap(err, "failed to read cluster file")
@@ -128,19 +126,9 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		return errors.Wrap(err, "failed to sync application")
 	}
 
-	errCh := make(chan error, 10)
 	timeout := time.Second * 600
 
-	go func() {
-		err = argocdClient.WaitForAppHealthy(appName, timeout)
-		if err != nil {
-			errCh <- err
-		}
-
-		close(errCh)
-	}()
-
-	err = <-errCh
+	err = argocdClient.WaitForAppHealthy(appName, timeout)
 	if err != nil {
 		return errors.Wrap(err, "failed to wait for application to be healthy")
 	}
@@ -150,7 +138,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	return nil
 }
 
-func (group utilityGroup) RemoveUtilityFromArgocd() error {
+func (group utilityGroup) RemoveUtilityFromArgocd(gitClient git.Client) error {
 
 	appsFile, err := os.ReadFile(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + ArgocdAppsFile)
 	if err != nil {
@@ -176,6 +164,23 @@ func (group utilityGroup) RemoveUtilityFromArgocd() error {
 
 	if err = os.RemoveAll(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + "/helm-values/" + group.cluster.ID); err != nil {
 		return errors.Wrap(err, "failed to remove helm values directory")
+	}
+
+	applicationFile := filepath.Join(group.tempDir, "apps", group.awsClient.GetCloudEnvironmentName(), ArgocdAppsFile)
+
+	// Git pull to get the latest state before deleting the cluster
+	err = gitClient.Pull(group.logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to pull from argocd repo")
+	}
+
+	commitMsg := "Removing Utilities: " + group.cluster.ID
+	if err = gitClient.Commit(applicationFile, commitMsg, group.logger); err != nil {
+		return errors.Wrap(err, "failed to commit to repo")
+	}
+
+	if err = gitClient.Push(group.logger); err != nil {
+		return errors.Wrap(err, "failed to push to repo")
 	}
 
 	return nil

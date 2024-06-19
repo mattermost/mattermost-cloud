@@ -75,12 +75,12 @@ func (u *unmanaged) CreateOrUpgrade() error {
 			return err
 		}
 		if err = u.utiliyArgocdDeploy(u.Name()); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+			return err
 		}
 
 	case model.NginxCanonicalName, model.NginxInternalCanonicalName:
 		if err = u.utiliyArgocdDeploy(u.Name()); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+			return err
 		}
 
 		endpoint, elbType, elbErr := getElasticLoadBalancerInfo(u.Name(), u.logger, u.kubeconfigPath)
@@ -132,7 +132,7 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		}
 
 		if err = u.utiliyArgocdDeploy(u.Name()); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+			return err
 		}
 
 		app := "prometheus"
@@ -185,7 +185,7 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		}
 
 		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+			return err
 		}
 
 		if u.awsClient.IsProvisionedPrivateCNAME(grpcDNS, logger) {
@@ -208,19 +208,19 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		}
 	case model.TeleportCanonicalName:
 		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+			return err
 		}
 	case model.PromtailCanonicalName:
 		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+			return err
 		}
 	case model.VeleroCanonicalName:
 		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+			return err
 		}
 	case model.RtcdCanonicalName:
 		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
-			return errors.Wrapf(err, "failed to provision %s utility", u.Name())
+			return err
 		}
 	default:
 		u.logger.WithFields(log.Fields{
