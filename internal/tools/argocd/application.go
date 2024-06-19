@@ -19,19 +19,9 @@ func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Applicatio
 		return nil, errors.Wrap(err, "failed to sync application.")
 	}
 
-	errCh := make(chan error, 10)
 	timeout := time.Second * 600
 
-	go func() {
-		err = c.WaitForAppHealthy(gitopsAppName, timeout)
-		if err != nil {
-			errCh <- err
-		}
-
-		close(errCh)
-	}()
-
-	err = <-errCh
+	err = c.WaitForAppHealthy(gitopsAppName, timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to wait for application to be healthy")
 	}
@@ -72,7 +62,8 @@ func (c *ApiClient) WaitForAppHealthy(appName string, timeout time.Duration) err
 		}
 
 		//Add a small delay to reduce CPU usage and avoid too_many_pings error.
-		time.Sleep(time.Second * 1)
+		//This time is needed for the application to be healthy in the ArgoCD.
+		time.Sleep(time.Second * 5)
 	}
 	return nil
 }
