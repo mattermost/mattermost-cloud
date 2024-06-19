@@ -126,6 +126,12 @@ func (cr *ClusterRegister) getClusterCreds(s3StateStore string) (*k8s.Kubeconfig
 func (cr *ClusterRegister) deregisterClusterFromArgocd() error {
 	logger := cr.logger.WithField("cluster", cr.cluster.ID)
 
+	// Git pull to get the latest state before deleting the cluster
+	err := cr.gitClient.Pull(logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to pull from argocd repo")
+	}
+
 	clusteFile, err := os.ReadFile(cr.clusterFilePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to read cluster file")

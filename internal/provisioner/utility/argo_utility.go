@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
@@ -28,8 +27,6 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	if err != nil {
 		return errors.Wrap(err, "failed to pull from repo")
 	}
-
-	//TODO: Skip provision utility if it is already provisioned
 
 	appsFile, err := os.ReadFile(tempDir + "/apps/" + awsClient.GetCloudEnvironmentName() + ArgocdAppsFile)
 	if err != nil {
@@ -123,24 +120,25 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 
 	appName := utilityName + "-sre-" + awsClient.GetCloudEnvironmentName() + "-" + clusterID
 	gitopsAppName := "gitops-sre-" + awsClient.GetCloudEnvironmentName()
+
 	app, err := argocdClient.SyncApplication(gitopsAppName)
 	if err != nil {
 		return errors.Wrap(err, "failed to sync application")
 	}
 
-	var wg sync.WaitGroup
 	timeout := time.Second * 600
 
-	wg.Add(1)
-	go argocdClient.WaitForAppHealthy(appName, &wg, timeout)
-	wg.Wait()
+	err = argocdClient.WaitForAppHealthy(appName, timeout)
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for application to be healthy")
+	}
 
 	logger.WithField("app:", app.Name).Info("Deployed utility successfully.")
 
 	return nil
 }
 
-func (group utilityGroup) RemoveUtilityFromArgocd() error {
+func (group utilityGroup) RemoveUtilityFromArgocd(gitClient git.Client) error {
 
 	appsFile, err := os.ReadFile(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + ArgocdAppsFile)
 	if err != nil {
@@ -166,6 +164,23 @@ func (group utilityGroup) RemoveUtilityFromArgocd() error {
 
 	if err = os.RemoveAll(group.tempDir + "/apps/" + group.awsClient.GetCloudEnvironmentName() + "/helm-values/" + group.cluster.ID); err != nil {
 		return errors.Wrap(err, "failed to remove helm values directory")
+	}
+
+	applicationFile := filepath.Join(group.tempDir, "apps", group.awsClient.GetCloudEnvironmentName(), ArgocdAppsFile)
+
+	// Git pull to get the latest state before deleting the cluster
+	err = gitClient.Pull(group.logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to pull from argocd repo")
+	}
+
+	commitMsg := "Removing Utilities: " + group.cluster.ID
+	if err = gitClient.Commit(applicationFile, commitMsg, group.logger); err != nil {
+		return errors.Wrap(err, "failed to commit to repo")
+	}
+
+	if err = gitClient.Push(group.logger); err != nil {
+		return errors.Wrap(err, "failed to push to repo")
 	}
 
 	return nil

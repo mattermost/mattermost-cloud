@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
@@ -887,15 +888,15 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 
 	// Remove utility and cluster from argocd
 	if cluster.UtilityMetadata.ManagedByArgocd {
-		// Git pull to get the latest state before deleting the cluster
-		err = gitClient.Pull(logger)
-		if err != nil {
-			return errors.Wrap(err, "failed to pull from argocd repo")
-		}
-
-		err = ugh.RemoveUtilityFromArgocd()
+		err = ugh.RemoveUtilityFromArgocd(gitClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to remove utility from argocd")
+		}
+
+		appName := fmt.Sprintf("%s-%s", "gitops-sre", provisioner.awsClient.GetCloudEnvironmentName())
+		err = argocdClient.WaitForAppHealthy(appName, 5*time.Minute)
+		if err != nil {
+			return errors.Wrap(err, "failed to wait for app to be healthy")
 		}
 
 		var cr *ClusterRegister
