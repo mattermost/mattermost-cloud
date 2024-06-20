@@ -47,12 +47,11 @@ func (c *ApiClient) WaitForAppHealthy(appName string, timeout time.Duration) err
 			Name:    &appName,
 			Refresh: &refresh,
 		})
-		if err != nil {
-			return err
-		}
 
-		if app.Status.Health.Status == health.HealthStatusHealthy && app.Status.Sync.Status == argoappv1.SyncStatusCodeSynced {
-			break
+		if err == nil {
+			if app.Status.Health.Status == health.HealthStatusHealthy && app.Status.Sync.Status == argoappv1.SyncStatusCodeSynced {
+				break
+			}
 		}
 
 		// Check for timeout
