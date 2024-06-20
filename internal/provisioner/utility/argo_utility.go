@@ -119,21 +119,14 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 	}
 
 	appName := utilityName + "-sre-" + awsClient.GetCloudEnvironmentName() + "-" + clusterID
-	gitopsAppName := "gitops-sre-" + awsClient.GetCloudEnvironmentName()
-
-	app, err := argocdClient.SyncApplication(gitopsAppName)
-	if err != nil {
-		return errors.Wrap(err, "failed to sync application")
-	}
 
 	timeout := time.Second * 600
-
 	err = argocdClient.WaitForAppHealthy(appName, timeout)
 	if err != nil {
 		return errors.Wrap(err, "failed to wait for application to be healthy")
 	}
 
-	logger.WithField("app:", app.Name).Info("Deployed utility successfully.")
+	logger.WithField("Utility:", utilityName).Info("Deployed utility successfully.")
 
 	return nil
 }
