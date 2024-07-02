@@ -241,7 +241,7 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.Installation
 
 	installationSecretName := RDSMultitenantSecretName(d.installationID)
 
-	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, logger)
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get secret value for database")
 	}
@@ -944,7 +944,7 @@ func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoin
 func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClusterID, VpcID *string) (*RDSSecret, error) {
 	installationSecretName := RDSMultitenantSecretName(d.installationID)
 
-	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, d.client.logger)
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName)
 	if err != nil {
 		// If there's any error apart from the resource not existing, fail
 		var awsErr *smTypes.ResourceNotFoundException

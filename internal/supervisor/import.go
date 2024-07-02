@@ -272,7 +272,7 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		return errors.Wrapf(err, "failed to copy workspace import archive to Installation %s filestore", installation.ID)
 	}
 
-	err = s.startImportProcessAndWait(mmctl, logger, srcKey, imprt.ID)
+	err = s.startImportProcessAndWait(mmctl, logger, srcKey)
 	if err != nil {
 		return errors.Wrap(err, "failed to complete import process")
 	}
@@ -380,7 +380,7 @@ func (s *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportStat
 	return srcKey, nil
 }
 
-func (s *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, logger logrus.FieldLogger, importArchiveFilename, awatImportID string) error {
+func (s *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, logger logrus.FieldLogger, importArchiveFilename string) error {
 	output, err := mmctl.Run("import", "process", "--extract-content=false", importArchiveFilename)
 	if err != nil {
 		return errors.Wrap(err, "failed to start import process in Mattermost itself")
@@ -398,10 +398,10 @@ func (s *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, logger logrus
 
 	jobID := jobResponses[0].ID
 	logger.Infof("Started Import job %s", jobID)
-	return s.waitForImportToComplete(mmctl, logger, jobID, awatImportID)
+	return s.waitForImportToComplete(mmctl, logger, jobID)
 }
 
-func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, logger logrus.FieldLogger, mattermostJobID, awatImportID string) error {
+func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, logger logrus.FieldLogger, mattermostJobID string) error {
 	complete := false
 	var (
 		resp         *jobResponse

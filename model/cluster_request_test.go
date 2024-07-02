@@ -20,13 +20,37 @@ func TestCreateClusterRequestValid(t *testing.T) {
 	}{
 		{"defaults", &model.CreateClusterRequest{}, false},
 		{"invalid provider", &model.CreateClusterRequest{Provider: "blah"}, true},
+		{"invalid provisioner", &model.CreateClusterRequest{Provider: model.ProviderAWS, Provisioner: "blah"}, true},
 		{"invalid version", &model.CreateClusterRequest{Version: "blah"}, true},
 		{"negative node counts", &model.CreateClusterRequest{NodeMinCount: -1, NodeMaxCount: -1}, true},
 		{"negative master count", &model.CreateClusterRequest{MasterCount: -1}, true},
 		{"mismatched node count", &model.CreateClusterRequest{NodeMinCount: 2, NodeMaxCount: 3}, true},
 		{"max pods too low", &model.CreateClusterRequest{MaxPodsPerNode: 1}, true},
-		{"eks no node group", &model.CreateClusterRequest{Provisioner: model.ProvisionerEKS}, true},
+		{"eks, no node group", &model.CreateClusterRequest{Provider: model.ProviderAWS, Provisioner: model.ProvisionerEKS}, true},
 		{"cluster-type not set", &model.CreateClusterRequest{ArgocdClusterRegister: map[string]string{"type": "customer"}}, true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			tc.request.SetDefaults()
+
+			if tc.requireError {
+				assert.Error(t, tc.request.Validate())
+			} else {
+				assert.NoError(t, tc.request.Validate())
+			}
+		})
+	}
+}
+
+func TestImportClusterRequestValid(t *testing.T) {
+	var testCases = []struct {
+		testName     string
+		request      *model.ImportClusterRequest
+		requireError bool
+	}{
+		{"defaults", &model.ImportClusterRequest{}, true},
+		{"secret name set", &model.ImportClusterRequest{ExternalClusterSecretName: "secret1"}, false},
 	}
 
 	for _, tc := range testCases {

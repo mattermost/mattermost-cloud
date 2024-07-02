@@ -146,6 +146,23 @@ func (c *Client) RetryCreateCluster(clusterID string) error {
 	}
 }
 
+// ImportCluster requests importing of a cluster from the configured provisioning server.
+func (c *Client) ImportCluster(request *ImportClusterRequest) (*ClusterDTO, error) {
+	resp, err := c.doPost(c.buildURL("/api/clusters/import"), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return DTOFromReader[ClusterDTO](resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // ProvisionCluster provisions k8s operators and Helm charts on a
 // cluster from the configured provisioning server.
 func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterRequest) (*ClusterDTO, error) {

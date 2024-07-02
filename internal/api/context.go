@@ -143,6 +143,7 @@ type Provisioner interface {
 // AwsClient describes the interface required to communicate with the AWS
 type AwsClient interface {
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
+	SecretsManagerValidateExternalClusterSecret(name string) error
 	SecretsManagerValidateExternalDatabaseSecret(name string) error
 	RDSDBCLusterExists(awsID string) (bool, error)
 	DeletePGBouncerLogicalDatabase(multitenantDatabase *model.MultitenantDatabase, logicalDatabaseName string, logger log.FieldLogger) error

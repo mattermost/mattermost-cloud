@@ -31,7 +31,7 @@ func (a *Client) GetS3RegionURL() string {
 	return result
 }
 
-func (a *Client) s3EnsureBucketCreated(bucketName string, enableVersioning bool, logger log.FieldLogger) error {
+func (a *Client) s3EnsureBucketCreated(bucketName string, enableVersioning bool) error {
 	ctx := context.TODO()
 
 	_, err := a.Service().s3.CreateBucket(

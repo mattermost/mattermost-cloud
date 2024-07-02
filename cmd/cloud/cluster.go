@@ -36,6 +36,7 @@ func newCmdCluster() *cobra.Command {
 	setClusterFlags(cmd)
 
 	cmd.AddCommand(newCmdClusterCreate())
+	cmd.AddCommand(newCmdClusterImport())
 	cmd.AddCommand(newCmdClusterProvision())
 	cmd.AddCommand(newCmdClusterUpdate())
 	cmd.AddCommand(newCmdClusterUpgrade())
@@ -199,7 +200,50 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 	}
 
 	return nil
+}
 
+func newCmdClusterImport() *cobra.Command {
+	var flags clusterImportFlags
+
+	cmd := &cobra.Command{
+		Use:   "import",
+		Short: "Import an exisiting cluster that is managed externally.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeClusterImportCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+		},
+	}
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeClusterImportCmd(flags clusterImportFlags) error {
+	client := createClient(flags.clusterFlags)
+
+	request := &model.ImportClusterRequest{
+		ExternalClusterSecretName: flags.secretName,
+		Annotations:               flags.annotations,
+		AllowInstallations:        flags.allowInstallations,
+	}
+
+	if flags.dryRun {
+		return runDryRun(request)
+	}
+
+	cluster, err := client.ImportCluster(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to import cluster")
+	}
+
+	if err = printJSON(cluster); err != nil {
+		return errors.Wrap(err, "failed to print cluster response")
+	}
+
+	return nil
 }
 
 func newCmdClusterProvision() *cobra.Command {
@@ -560,27 +604,35 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 		}
 
 		var provisionerMetadata model.ProvisionerMetadata
-		var masterCount int64
-		var masterInstanceType string
+		var versionEntry, masterEntry, workerEntry, amiEntry, networkingEntry, vpcEntry string
 		if cluster.Provisioner == model.ProvisionerKops && cluster.ProvisionerMetadataKops != nil {
 			provisionerMetadata = cluster.ProvisionerMetadataKops.GetCommonMetadata()
-			masterCount = cluster.ProvisionerMetadataKops.MasterCount
-			masterInstanceType = cluster.ProvisionerMetadataKops.MasterInstanceType
+			versionEntry = provisionerMetadata.Version
+			masterEntry = fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType)
+			workerEntry = fmt.Sprintf("%d x %s (max %d)", provisionerMetadata.NodeMinCount, provisionerMetadata.NodeInstanceType, provisionerMetadata.NodeMaxCount)
+			amiEntry = provisionerMetadata.AMI
+			networkingEntry = provisionerMetadata.Networking
+			vpcEntry = provisionerMetadata.VPC
 		} else if cluster.Provisioner == model.ProvisionerEKS && cluster.ProvisionerMetadataEKS != nil {
 			provisionerMetadata = cluster.ProvisionerMetadataEKS.GetCommonMetadata()
-			masterCount = 1
-			masterInstanceType = "-"
+			versionEntry = provisionerMetadata.Version
+			masterEntry = "eks"
+			workerEntry = fmt.Sprintf("%d x %s (max %d)", provisionerMetadata.NodeMinCount, provisionerMetadata.NodeInstanceType, provisionerMetadata.NodeMaxCount)
+			amiEntry = provisionerMetadata.AMI
+			networkingEntry = provisionerMetadata.Networking
+			vpcEntry = provisionerMetadata.VPC
+		} else if cluster.Provisioner == model.ProvisionerExternal && cluster.ProvisionerMetadataExternal != nil {
+			versionEntry = cluster.ProvisionerMetadataExternal.Version
+			masterEntry = "external"
+			workerEntry = "external"
+			amiEntry = "external"
+			networkingEntry = "external"
+			vpcEntry = "external"
 		}
 
 		values = append(values, []string{
-			cluster.ID,
-			cluster.State,
-			provisionerMetadata.Version,
-			fmt.Sprintf("%d x %s", masterCount, masterInstanceType),
-			fmt.Sprintf("%d x %s (max %d)", provisionerMetadata.NodeMinCount, provisionerMetadata.NodeInstanceType, provisionerMetadata.NodeMaxCount),
-			provisionerMetadata.AMI,
-			provisionerMetadata.Networking,
-			provisionerMetadata.VPC,
+			cluster.ID, cluster.State,
+			versionEntry, masterEntry, workerEntry, amiEntry, networkingEntry, vpcEntry,
 			status,
 		})
 	}

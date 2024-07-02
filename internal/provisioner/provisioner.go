@@ -15,12 +15,16 @@ import (
 )
 
 type ClusterProvisionerOption struct {
-	kopsProvisioner *KopsProvisioner
-	eksProvisioner  *EKSProvisioner
+	kopsProvisioner     *KopsProvisioner
+	eksProvisioner      *EKSProvisioner
+	externalProvisioner *ExternalProvisioner
 }
 
 func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supervisor.ClusterProvisioner {
-	if provisioner == model.ProvisionerEKS {
+	switch provisioner {
+	case model.ProvisionerExternal:
+		return c.externalProvisioner
+	case model.ProvisionerEKS:
 		return c.eksProvisioner
 	}
 
@@ -69,6 +73,7 @@ var _ kube = (*KopsProvisioner)(nil)
 func NewProvisioner(
 	kopsProvisioner *KopsProvisioner,
 	eksProvisioner *EKSProvisioner,
+	externalProvisioner *ExternalProvisioner,
 	params ProvisioningParams,
 	awsClient aws.AWS,
 	resourceUtil *utils.ResourceUtil,
@@ -79,8 +84,9 @@ func NewProvisioner(
 
 	return Provisioner{
 		ClusterProvisionerOption: ClusterProvisionerOption{
-			kopsProvisioner: kopsProvisioner,
-			eksProvisioner:  eksProvisioner,
+			kopsProvisioner:     kopsProvisioner,
+			eksProvisioner:      eksProvisioner,
+			externalProvisioner: externalProvisioner,
 		},
 		params:         params,
 		awsClient:      awsClient,
