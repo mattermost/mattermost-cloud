@@ -22,6 +22,7 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clustersRouter := apiRouter.PathPrefix("/clusters").Subrouter()
 	clustersRouter.Handle("", addContext(handleGetClusters)).Methods("GET")
 	clustersRouter.Handle("", addContext(handleCreateCluster)).Methods("POST")
+	clustersRouter.Handle("/import", addContext(handleImportCluster)).Methods("POST")
 
 	clusterRouter := apiRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
 	clusterRouter.Handle("", addContext(handleGetCluster)).Methods("GET")
@@ -88,18 +89,8 @@ func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, clusters)
 }
 
-// handleCreateCluster responds to POST /api/clusters, beginning the process of creating a new
-// cluster.
-// sample body:
-//
-//	{
-//			"provider": "aws",
-//			"version": "1.15.0",
-//			"kops-ami": "ami-xoxoxo",
-//			"size": "SizeAlef1000",
-//			"zones": "",
-//			"allow-installations": true
-//	}
+// handleCreateCluster responds to POST /api/clusters, beginning the process of
+// creating a new cluster.
 func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	createClusterRequest, err := model.NewCreateClusterRequestFromReader(r.Body)
 	if err != nil {
@@ -200,6 +191,59 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, clusterDTO)
+}
+
+// handleImportCluster responds to POST /api/clusters/import, beginning the
+// process of importing an existing cluster.
+func handleImportCluster(c *Context, w http.ResponseWriter, r *http.Request) {
+	importClusterRequest, err := model.NewImportClusterRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = c.AwsClient.SecretsManagerValidateExternalClusterSecret(importClusterRequest.ExternalClusterSecretName)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to validate external secret")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	cluster := model.Cluster{
+		Provider:                    model.ProviderExternal,
+		Provisioner:                 model.ProvisionerExternal,
+		ProvisionerMetadataExternal: &model.ExternalClusterMetadata{},
+		AllowInstallations:          importClusterRequest.AllowInstallations,
+		APISecurityLock:             importClusterRequest.APISecurityLock,
+		State:                       model.ClusterStateCreationRequested,
+	}
+	cluster.ProvisionerMetadataExternal.ApplyClusterImportRequest(importClusterRequest)
+
+	annotations, err := model.AnnotationsFromStringSlice(importClusterRequest.Annotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to validate extra annotations")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = c.Store.CreateCluster(&cluster, annotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = c.EventProducer.ProduceClusterStateChangeEvent(&cluster, model.NonApplicableState)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to create cluster state change event")
+	}
+
+	c.Supervisor.Do()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, cluster.ToDTO(annotations))
 }
 
 // handleProvisionCluster responds to POST /api/cluster/{cluster}/provision,

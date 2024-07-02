@@ -416,6 +416,21 @@ func (mr *MockAWSMockRecorder) SecretsManagerGetPGBouncerAuthUserPassword(vpcID 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecretsManagerGetPGBouncerAuthUserPassword", reflect.TypeOf((*MockAWS)(nil).SecretsManagerGetPGBouncerAuthUserPassword), vpcID)
 }
 
+// SecretsManagerGetSecretBytes mocks base method
+func (m *MockAWS) SecretsManagerGetSecretBytes(secretName string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SecretsManagerGetSecretBytes", secretName)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SecretsManagerGetSecretBytes indicates an expected call of SecretsManagerGetSecretBytes
+func (mr *MockAWSMockRecorder) SecretsManagerGetSecretBytes(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecretsManagerGetSecretBytes", reflect.TypeOf((*MockAWS)(nil).SecretsManagerGetSecretBytes), secretName)
+}
+
 // EnsureEKSCluster mocks base method
 func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources) (*types.Cluster, error) {
 	m.ctrl.T.Helper()

@@ -82,7 +82,7 @@ func (a *Client) SecretsManagerRestoreSecret(secretName string, logger log.Field
 func (a *Client) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error) {
 	authUserSecretName := PGBouncerAuthUserSecretName(vpcID)
 
-	secret, err := a.secretsManagerGetRDSSecret(authUserSecretName, a.logger)
+	secret, err := a.secretsManagerGetRDSSecret(authUserSecretName)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get secret")
 	}
@@ -90,7 +90,7 @@ func (a *Client) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (strin
 	return secret.MasterPassword, nil
 }
 
-func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak *iamTypes.AccessKey, logger log.FieldLogger) error {
+func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak *iamTypes.AccessKey) error {
 	accessKeyPayload := &IAMAccessKey{
 		ID:     *ak.AccessKeyId,
 		Secret: *ak.SecretAccessKey,
@@ -207,7 +207,7 @@ func (a *Client) secretsManagerGetIAMAccessKeyFromSecretName(secretName string) 
 	return iamAccessKey, nil
 }
 
-func (a *Client) secretsManagerGetRDSSecret(secretName string, logger log.FieldLogger) (*RDSSecret, error) {
+func (a *Client) secretsManagerGetRDSSecret(secretName string) (*RDSSecret, error) {
 	result, err := a.Service().secretsManager.GetSecretValue(
 		context.TODO(),
 		&secretsmanager.GetSecretValueInput{
@@ -260,4 +260,17 @@ func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, force bool
 	logger.WithField("secret-name", secretName).Debugf("Secret Manager secret scheduled for deletion on %s", response.DeletionDate)
 
 	return nil
+}
+
+func (a *Client) SecretsManagerGetSecretBytes(secretName string) ([]byte, error) {
+	result, err := a.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(secretName),
+		})
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get secrets manager secret")
+	}
+
+	return []byte(*result.SecretString), nil
 }

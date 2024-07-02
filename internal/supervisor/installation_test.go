@@ -616,6 +616,10 @@ func (a *mockAWS) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (stri
 	return "password", nil
 }
 
+func (a *mockAWS) SecretsManagerGetSecretBytes(secretName string) ([]byte, error) {
+	return []byte{}, nil
+}
+
 func (a *mockAWS) GetVpcsWithFilters(filters []ec2Types.Filter) ([]ec2Types.Vpc, error) {
 	return nil, nil
 }

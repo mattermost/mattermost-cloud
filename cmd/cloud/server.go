@@ -313,8 +313,15 @@ func executeServerCmd(flags serverFlags) error {
 		logger,
 	)
 
+	externalProvisioner := provisioner.NewExternalProvisioner(
+		provisioningParams,
+		awsClient,
+		sqlStore,
+		logger,
+	)
+
 	provisionerObj := provisioner.NewProvisioner(
-		kopsProvisioner, eksProvisioner,
+		kopsProvisioner, eksProvisioner, externalProvisioner,
 		provisioningParams,
 		awsClient,
 		resourceUtil,

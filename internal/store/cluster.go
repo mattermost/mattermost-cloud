@@ -46,15 +46,21 @@ func buildRawMetadata(cluster *model.Cluster) (*RawClusterMetadata, error) {
 
 	var provisionerMetadataJSON []byte
 
-	if cluster.Provisioner == model.ProvisionerKops {
+	switch cluster.Provisioner {
+	case model.ProvisionerKops:
 		provisionerMetadataJSON, err = json.Marshal(cluster.ProvisionerMetadataKops)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataKops")
 		}
-	} else if cluster.Provisioner == model.ProvisionerEKS {
+	case model.ProvisionerEKS:
 		provisionerMetadataJSON, err = json.Marshal(cluster.ProvisionerMetadataEKS)
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataKops")
+			return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataEKS")
+		}
+	case model.ProvisionerExternal:
+		provisionerMetadataJSON, err = json.Marshal(cluster.ProvisionerMetadataExternal)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataExternal")
 		}
 	}
 
@@ -81,7 +87,16 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 		r.Provisioner = model.ProvisionerKops
 	}
 
-	if r.Provisioner == model.ProvisionerEKS {
+	switch r.Provisioner {
+	case model.ProvisionerKops:
+		r.Cluster.ProvisionerMetadataKops, err = model.NewKopsMetadata(r.ProvisionerMetadataRaw)
+		if err != nil {
+			return nil, err
+		}
+		if r.Cluster.ProvisionerMetadataKops != nil {
+			r.Cluster.Networking = r.Cluster.ProvisionerMetadataKops.Networking
+		}
+	case model.ProvisionerEKS:
 		r.Cluster.ProvisionerMetadataEKS, err = model.NewEKSMetadata(r.ProvisionerMetadataRaw)
 		if err != nil {
 			return nil, err
@@ -89,13 +104,10 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 		if r.Cluster.ProvisionerMetadataEKS != nil {
 			r.Cluster.Networking = r.Cluster.ProvisionerMetadataEKS.Networking
 		}
-	} else if r.Provisioner == model.ProvisionerKops {
-		r.Cluster.ProvisionerMetadataKops, err = model.NewKopsMetadata(r.ProvisionerMetadataRaw)
+	case model.ProvisionerExternal:
+		r.Cluster.ProvisionerMetadataExternal, err = model.NewExternalClusterMetadata(r.ProvisionerMetadataRaw)
 		if err != nil {
 			return nil, err
-		}
-		if r.Cluster.ProvisionerMetadataKops != nil {
-			r.Cluster.Networking = r.Cluster.ProvisionerMetadataKops.Networking
 		}
 	}
 
