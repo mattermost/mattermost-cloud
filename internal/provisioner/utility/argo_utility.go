@@ -187,7 +187,7 @@ func substituteValues(inputFilePath, outputFilePath string, replacements map[str
 	}
 	defer inputFile.Close()
 
-	if _, err := os.Stat(outputFilePath); err == nil {
+	if _, err = os.Stat(outputFilePath); err == nil {
 		logger.Debugf("Output file already exists, skipping substitution for %s", outputFilePath)
 		return nil
 	}
