@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -98,6 +97,12 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		// Add more replacements as needed
 	}
 
+	// Skip substitution if the output file already exists
+	if _, err = os.Stat(outputFilePath); err == nil {
+		logger.Debugf("Output file already exists, skipping substitution for %s", outputFilePath)
+		return nil
+	}
+
 	// Perform substitution
 	_, err = os.Stat(inputFilePath)
 	if os.IsNotExist(err) {
@@ -120,8 +125,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 
 	appName := utilityName + "-sre-" + awsClient.GetCloudEnvironmentName() + "-" + clusterID
 
-	timeout := time.Second * 420
-	err = argocdClient.WaitForAppHealthy(appName, timeout)
+	err = argocdClient.WaitForAppHealthy(appName)
 	if err != nil {
 		return errors.Wrap(err, "failed to wait for application to be healthy")
 	}
@@ -187,10 +191,6 @@ func substituteValues(inputFilePath, outputFilePath string, replacements map[str
 	}
 	defer inputFile.Close()
 
-	if _, err = os.Stat(outputFilePath); err == nil {
-		logger.Debugf("Output file already exists, skipping substitution for %s", outputFilePath)
-		return nil
-	}
 	outputFile, err := os.Create(outputFilePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to create output file for argo utility substitution")
