@@ -67,6 +67,8 @@ type AWS interface {
 
 	SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error)
 
+	SecretsManagerGetSecretBytes(secretName string) ([]byte, error)
+
 	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error)
 	EnsureEKSClusterUpdated(cluster *model.Cluster) (*eksTypes.Update, error)
 	EnsureEKSNodeGroup(cluster *model.Cluster, nodeGroupPrefix string) (*eksTypes.Nodegroup, error)

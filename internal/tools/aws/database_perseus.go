@@ -180,7 +180,7 @@ func (d *PerseusDatabase) ensurePerseusAuthDatabaseEntriesCreated(dbResources *m
 
 	// Generate destination password.
 	perseusUserSecretName := PerseusDatabaseUserSecretName(dbResources.MultitenantDatabase.RdsClusterID)
-	perseusSecret, err := d.client.secretsManagerGetRDSSecret(perseusUserSecretName, d.client.logger)
+	perseusSecret, err := d.client.secretsManagerGetRDSSecret(perseusUserSecretName)
 	if err != nil {
 		return errors.Wrap(err, "failed to get perseus database user secret")
 	}
@@ -463,7 +463,7 @@ func (d *PerseusDatabase) provisionPerseusDatabase(vpcID string, rdsCluster *rds
 func (d *PerseusDatabase) ensurePerseusDatabaseUserSecretIsCreated(rdsClusterID, VpcID *string) (*RDSSecret, error) {
 	perseusUserSecretName := PerseusDatabaseUserSecretName(*rdsClusterID)
 
-	secret, err := d.client.secretsManagerGetRDSSecret(perseusUserSecretName, d.client.logger)
+	secret, err := d.client.secretsManagerGetRDSSecret(perseusUserSecretName)
 	if err != nil {
 		var awsErr *smTypes.ResourceNotFoundException
 		if !errors.As(err, &awsErr) {
@@ -496,7 +496,7 @@ func (d *PerseusDatabase) ensurePerseusDatabaseUserSecretIsCreated(rdsClusterID,
 func (d *PerseusDatabase) ensurePGBouncerAuthUserSecretIsCreated(rdsClusterID, VpcID *string) (*RDSSecret, error) {
 	authUserSecretName := PGBouncerAuthUserSecretName(*VpcID)
 
-	secret, err := d.client.secretsManagerGetRDSSecret(authUserSecretName, d.client.logger)
+	secret, err := d.client.secretsManagerGetRDSSecret(authUserSecretName)
 	if err != nil {
 		var awsErr *smTypes.ResourceNotFoundException
 		if !errors.As(err, &awsErr) {
@@ -730,7 +730,7 @@ func (d *PerseusDatabase) connectToPerseusAuthDatabase(vpcID string, logger log.
 func (d *PerseusDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClusterID, vpcID *string) (*RDSSecret, error) {
 	installationSecretName := PerseusInstallationSecretName(d.installationID)
 
-	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, d.client.logger)
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName)
 	var awsErr *smTypes.ResourceNotFoundException
 	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
@@ -802,7 +802,7 @@ func (d *PerseusDatabase) GenerateDatabaseSecret(store model.InstallationDatabas
 
 	installationSecretName := PerseusInstallationSecretName(d.installationID)
 
-	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, d.client.logger)
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get secret value for installation")
 	}
@@ -1085,7 +1085,7 @@ func ensurePerseusAuthDatabaseProvisioned(a *Client, rdsCluster *rdsTypes.DBClus
 func ensurePerseusAuthUserSecretIsCreated(a *Client, rdsClusterID, VpcID *string) (*RDSSecret, error) {
 	authUserSecretName := PerseusAuthUserSecretName(*VpcID)
 
-	secret, err := a.secretsManagerGetRDSSecret(authUserSecretName, a.logger)
+	secret, err := a.secretsManagerGetRDSSecret(authUserSecretName)
 	if err != nil {
 		var awsErr *smTypes.ResourceNotFoundException
 		if !errors.As(err, &awsErr) {

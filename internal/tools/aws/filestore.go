@@ -136,7 +136,7 @@ func (f *S3Filestore) s3FilestoreProvision(installationID string, logger log.Fie
 		"iam-user-name":   *user.UserName,
 	}).Debug("AWS IAM policy attached to user")
 
-	err = f.awsClient.s3EnsureBucketCreated(awsID, f.enableVersioning, logger)
+	err = f.awsClient.s3EnsureBucketCreated(awsID, f.enableVersioning)
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func (f *S3Filestore) s3FilestoreProvision(installationID string, logger log.Fie
 	}
 	logger.WithField("iam-user-name", *user.UserName).Debug("AWS IAM user access key created")
 
-	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak, logger)
+	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak)
 	if err != nil {
 		return err
 	}

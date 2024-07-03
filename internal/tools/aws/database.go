@@ -149,7 +149,7 @@ func (d *RDSDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseSto
 		"database-type":   d.databaseType,
 	})
 
-	installationSecret, err := d.client.secretsManagerGetRDSSecret(RDSSecretName(awsID), logger)
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(RDSSecretName(awsID))
 	if err != nil {
 		return nil, err
 	}

@@ -18,6 +18,9 @@ func (provisioner Provisioner) getKubeOption(provisionerOption string) kube {
 	if provisionerOption == model.ProvisionerEKS {
 		return provisioner.eksProvisioner
 	}
+	if provisionerOption == model.ProvisionerExternal {
+		return provisioner.externalProvisioner
+	}
 
 	return provisioner.kopsProvisioner
 }

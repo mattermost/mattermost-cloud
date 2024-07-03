@@ -47,6 +47,7 @@ type CreateClusterRequest struct {
 	NodeGroupWithSecurityGroup []string                       `json:"nodegroup-with-sg,omitempty"`
 	KmsKeyId                   string                         `json:"kms-key-id,omitempty"`
 	ArgocdClusterRegister      map[string]string              `json:"argocd-register,omitempty"`
+	ExternalClusterSecretName  string                         `json:"external-cluster-secret-name,omitempty"`
 	PgBouncerConfig            *PgBouncerConfig               `json:"pgbouncer-config,omitempty"`
 }
 
@@ -265,6 +266,44 @@ func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 	}
 
 	return &createClusterRequest, nil
+}
+
+// ImportClusterRequest specifies the parameters for importing a new cluster.
+type ImportClusterRequest struct {
+	ExternalClusterSecretName string   `json:"external-cluster-secret-name,omitempty"`
+	Annotations               []string `json:"annotations,omitempty"`
+	AllowInstallations        bool     `json:"allow-installations"`
+	APISecurityLock           bool     `json:"api-security-lock"`
+}
+
+// SetDefaults sets the default values for a cluster import request.
+func (request *ImportClusterRequest) SetDefaults() {}
+
+// Validate validates the values of a cluster import request.
+func (request *ImportClusterRequest) Validate() error {
+	if len(request.ExternalClusterSecretName) == 0 {
+		return errors.New("external cluster secret name is empty")
+	}
+
+	return nil
+}
+
+// NewImportClusterRequestFromReader will create a ImportClusterRequest from an
+// io.Reader with JSON data.
+func NewImportClusterRequestFromReader(reader io.Reader) (*ImportClusterRequest, error) {
+	var importClusterRequest ImportClusterRequest
+	err := json.NewDecoder(reader).Decode(&importClusterRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode import cluster request")
+	}
+
+	importClusterRequest.SetDefaults()
+	err = importClusterRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "import cluster request failed validation")
+	}
+
+	return &importClusterRequest, nil
 }
 
 // GetClustersRequest describes the parameters to request a list of clusters.

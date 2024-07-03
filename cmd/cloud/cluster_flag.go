@@ -154,6 +154,29 @@ func (flags *clusterCreateFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster. If provided and the cluster exists the creation will be retried ignoring other parameters.")
 }
 
+type importClusterRequestOptions struct {
+	secretName         string
+	annotations        []string
+	allowInstallations bool
+}
+
+func (flags *importClusterRequestOptions) addFlags(command *cobra.Command) {
+	command.Flags().StringVar(&flags.secretName, "secret-name", "", "The name of the AWS Secret Manager secret containing the cluster kubeconfig.")
+	command.Flags().BoolVar(&flags.allowInstallations, "allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
+	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
+}
+
+type clusterImportFlags struct {
+	clusterFlags
+	importClusterRequestOptions
+}
+
+func (flags *clusterImportFlags) addFlags(command *cobra.Command) {
+	flags.importClusterRequestOptions.addFlags(command)
+
+	_ = command.MarkFlagRequired("secret-name")
+}
+
 type clusterProvisionFlags struct {
 	clusterFlags
 	utilityFlags

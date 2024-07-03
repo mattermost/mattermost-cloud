@@ -35,7 +35,6 @@ func (provisioner Provisioner) GetClusterResources(cluster *model.Cluster, onlyS
 
 // GetPublicLoadBalancerEndpoint returns the public load balancer endpoint of the NGINX service.
 func (provisioner Provisioner) GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
-
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":         cluster.ID,
 		"nginx-namespace": namespace,

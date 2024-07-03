@@ -190,7 +190,7 @@ func (f *S3MultitenantFilestore) s3FilestoreProvision(store model.InstallationDa
 	}
 	logger.WithField("iam-user-name", *user.UserName).Debug("AWS IAM user access key created")
 
-	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak, logger)
+	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak)
 	if err != nil {
 		return err
 	}
