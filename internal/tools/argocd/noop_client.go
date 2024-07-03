@@ -1,8 +1,6 @@
 package argocd
 
 import (
-	"time"
-
 	argoappv1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 )
 
@@ -12,6 +10,6 @@ func (n *NoOpClient) SyncApplication(gitopsAppName string) (*argoappv1.Applicati
 	return nil, nil
 }
 
-func (n *NoOpClient) WaitForAppHealthy(appName string, timeout time.Duration) error {
+func (n *NoOpClient) WaitForAppHealthy(appName string) error {
 	return nil
 }

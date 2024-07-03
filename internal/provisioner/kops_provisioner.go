@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
@@ -894,7 +893,7 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 		}
 
 		appName := fmt.Sprintf("%s-%s", "gitops-sre", provisioner.awsClient.GetCloudEnvironmentName())
-		err = argocdClient.WaitForAppHealthy(appName, 5*time.Minute)
+		err = argocdClient.WaitForAppHealthy(appName)
 		if err != nil {
 			return errors.Wrap(err, "failed to wait for app to be healthy")
 		}

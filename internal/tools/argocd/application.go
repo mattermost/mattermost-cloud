@@ -11,6 +11,11 @@ import (
 	"github.com/argoproj/gitops-engine/pkg/health"
 )
 
+const (
+	// DefaultTimeout is the default timeout for waiting for an application to be healthy.
+	DefaultTimeout = 420 * time.Second
+)
+
 func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Application, error) {
 	app, err := c.appClient.Sync(context.Background(), &application.ApplicationSyncRequest{
 		Name: &gitopsAppName,
@@ -19,9 +24,7 @@ func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Applicatio
 		return nil, errors.Wrap(err, "failed to sync application.")
 	}
 
-	timeout := time.Second * 420
-
-	err = c.WaitForAppHealthy(gitopsAppName, timeout)
+	err = c.WaitForAppHealthy(gitopsAppName)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to wait for application to be healthy")
 	}
@@ -35,7 +38,7 @@ func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Applicatio
 	return app, nil
 }
 
-func (c *ApiClient) WaitForAppHealthy(appName string, timeout time.Duration) error {
+func (c *ApiClient) WaitForAppHealthy(appName string) error {
 
 	c.logger.Infof("Waiting for application %s to be healthy ...", appName)
 
@@ -55,7 +58,7 @@ func (c *ApiClient) WaitForAppHealthy(appName string, timeout time.Duration) err
 		}
 
 		// Check for timeout
-		if time.Since(startTime) >= timeout {
+		if time.Since(startTime) >= DefaultTimeout {
 			return errors.New("timed out waiting for application to be healthy")
 		}
 
