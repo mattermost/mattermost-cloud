@@ -104,7 +104,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		return errors.Wrap(err, "custom values template file does not exist")
 	}
 
-	err = substituteValues(inputFilePath, outputFilePath, replacements)
+	err = substituteValues(inputFilePath, outputFilePath, replacements, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to substitute values")
 	}
@@ -120,7 +120,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 
 	appName := utilityName + "-sre-" + awsClient.GetCloudEnvironmentName() + "-" + clusterID
 
-	timeout := time.Second * 600
+	timeout := time.Second * 420
 	err = argocdClient.WaitForAppHealthy(appName, timeout)
 	if err != nil {
 		return errors.Wrap(err, "failed to wait for application to be healthy")
@@ -180,13 +180,17 @@ func (group utilityGroup) RemoveUtilityFromArgocd(gitClient git.Client) error {
 
 }
 
-func substituteValues(inputFilePath, outputFilePath string, replacements map[string]string) error {
+func substituteValues(inputFilePath, outputFilePath string, replacements map[string]string, logger log.FieldLogger) error {
 	inputFile, err := os.Open(inputFilePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to open input file for argo utility substitution")
 	}
 	defer inputFile.Close()
 
+	if _, err := os.Stat(outputFilePath); err == nil {
+		logger.Debugf("Output file already exists, skipping substitution for %s", outputFilePath)
+		return nil
+	}
 	outputFile, err := os.Create(outputFilePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to create output file for argo utility substitution")

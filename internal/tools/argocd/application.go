@@ -19,7 +19,7 @@ func (c *ApiClient) SyncApplication(gitopsAppName string) (*argoappv1.Applicatio
 		return nil, errors.Wrap(err, "failed to sync application.")
 	}
 
-	timeout := time.Second * 600
+	timeout := time.Second * 420
 
 	err = c.WaitForAppHealthy(gitopsAppName, timeout)
 	if err != nil {
