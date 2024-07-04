@@ -98,6 +98,47 @@ func SetupTestWithDefaults(testName string) (*Test, error) {
 		AMI:                config.KopsAMI,
 		VPC:                config.VPC,
 		Provisioner:        config.Provisioner,
+		ArgocdClusterRegister: map[string]string{
+			"cluster-type": "customer",
+		},
+		DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
+			"nginx": {
+				Chart: "unmanaged",
+			},
+			"nginx-internal": {
+				Chart: "unmanaged",
+			},
+			"thanos": {
+				Chart: "unmanaged",
+			},
+			"prometheus-operator": {
+				Chart: "unmanaged",
+			},
+			"node-problem-detector": {
+				Chart: "unmanaged",
+			},
+			"cloudprober": {
+				Chart: "unmanaged",
+			},
+			"fluent-bit": {
+				Chart: "unmanaged",
+			},
+			"teleport": {
+				Chart: "unmanaged",
+			},
+			"pgbouncer": {
+				Chart: "unmanaged",
+			},
+			"promtail": {
+				Chart: "unmanaged",
+			},
+			"metrics-server": {
+				Chart: "unmanaged",
+			},
+			"velero": {
+				Chart: "unmanaged",
+			},
+		},
 	}
 
 	if config.Provisioner == model.ProvisionerEKS {
