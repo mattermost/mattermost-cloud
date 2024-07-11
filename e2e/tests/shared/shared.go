@@ -73,7 +73,7 @@ type Test struct {
 	Cleanup           bool
 }
 
-func SetupTestWithDefaults(testName string) (*Test, error) {
+func SetupTestWithDefaults(testName, utiliyManaged string) (*Test, error) {
 	testID := model.NewID()
 	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
@@ -98,47 +98,57 @@ func SetupTestWithDefaults(testName string) (*Test, error) {
 		AMI:                config.KopsAMI,
 		VPC:                config.VPC,
 		Provisioner:        config.Provisioner,
-		ArgocdClusterRegister: map[string]string{
-			"cluster-type": "customer",
-		},
-		DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-			"nginx": {
-				Chart: "unmanaged",
+	}
+
+	if utiliyManaged == "argocd" {
+		createClusterReq = &model.CreateClusterRequest{
+			AllowInstallations: true,
+			Annotations:        testAnnotations(testID),
+			AMI:                config.KopsAMI,
+			VPC:                config.VPC,
+			Provisioner:        config.Provisioner,
+			ArgocdClusterRegister: map[string]string{
+				"cluster-type": "customer",
 			},
-			"nginx-internal": {
-				Chart: "unmanaged",
+			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
+				"nginx": {
+					Chart: "unmanaged",
+				},
+				"nginx-internal": {
+					Chart: "unmanaged",
+				},
+				"thanos": {
+					Chart: "unmanaged",
+				},
+				"prometheus-operator": {
+					Chart: "unmanaged",
+				},
+				"node-problem-detector": {
+					Chart: "unmanaged",
+				},
+				"cloudprober": {
+					Chart: "unmanaged",
+				},
+				"fluentbit": {
+					Chart: "unmanaged",
+				},
+				"teleport": {
+					Chart: "unmanaged",
+				},
+				"pgbouncer": {
+					Chart: "unmanaged",
+				},
+				"promtail": {
+					Chart: "unmanaged",
+				},
+				"metrics-server": {
+					Chart: "unmanaged",
+				},
+				"velero": {
+					Chart: "unmanaged",
+				},
 			},
-			"thanos": {
-				Chart: "unmanaged",
-			},
-			"prometheus-operator": {
-				Chart: "unmanaged",
-			},
-			"node-problem-detector": {
-				Chart: "unmanaged",
-			},
-			"cloudprober": {
-				Chart: "unmanaged",
-			},
-			"fluent-bit": {
-				Chart: "unmanaged",
-			},
-			"teleport": {
-				Chart: "unmanaged",
-			},
-			"pgbouncer": {
-				Chart: "unmanaged",
-			},
-			"promtail": {
-				Chart: "unmanaged",
-			},
-			"metrics-server": {
-				Chart: "unmanaged",
-			},
-			"velero": {
-				Chart: "unmanaged",
-			},
-		},
+		}
 	}
 
 	if config.Provisioner == model.ProvisionerEKS {

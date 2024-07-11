@@ -8,10 +8,11 @@
 package cluster
 
 import (
-	"github.com/pkg/errors"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/mattermost/mattermost-cloud/e2e/tests/shared"
 	"github.com/mattermost/mattermost-cloud/e2e/workflow"
@@ -27,7 +28,7 @@ func TestMain(m *testing.M) {
 
 // SetupClusterLifecycleTest sets up cluster lifecycle test.
 func SetupClusterLifecycleTest() (*shared.Test, error) {
-	test, err := shared.SetupTestWithDefaults("cluster-lifecycle")
+	test, err := shared.SetupTestWithDefaults("cluster-lifecycle", "argocd")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup test environment")
 	}

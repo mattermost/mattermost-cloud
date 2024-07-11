@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 }
 
 func SetupInstallationLifecycleTest() (*shared.Test, error) {
-	test, err := shared.SetupTestWithDefaults("installation-lifecycle")
+	test, err := shared.SetupTestWithDefaults("installation-lifecycle", "")
 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup test environment")
