@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -98,13 +97,19 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 		// Add more replacements as needed
 	}
 
+	// Skip substitution if the output file already exists
+	if _, err = os.Stat(outputFilePath); err == nil {
+		logger.Debugf("Output file already exists, skipping substitution for %s", outputFilePath)
+		return nil
+	}
+
 	// Perform substitution
 	_, err = os.Stat(inputFilePath)
 	if os.IsNotExist(err) {
 		return errors.Wrap(err, "custom values template file does not exist")
 	}
 
-	err = substituteValues(inputFilePath, outputFilePath, replacements)
+	err = substituteValues(inputFilePath, outputFilePath, replacements, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to substitute values")
 	}
@@ -120,8 +125,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 
 	appName := utilityName + "-sre-" + awsClient.GetCloudEnvironmentName() + "-" + clusterID
 
-	timeout := time.Second * 600
-	err = argocdClient.WaitForAppHealthy(appName, timeout)
+	err = argocdClient.WaitForAppHealthy(appName)
 	if err != nil {
 		return errors.Wrap(err, "failed to wait for application to be healthy")
 	}
@@ -180,7 +184,7 @@ func (group utilityGroup) RemoveUtilityFromArgocd(gitClient git.Client) error {
 
 }
 
-func substituteValues(inputFilePath, outputFilePath string, replacements map[string]string) error {
+func substituteValues(inputFilePath, outputFilePath string, replacements map[string]string, logger log.FieldLogger) error {
 	inputFile, err := os.Open(inputFilePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to open input file for argo utility substitution")
