@@ -73,7 +73,7 @@ type Test struct {
 	Cleanup           bool
 }
 
-func SetupTestWithDefaults(testName, utiliyManaged string) (*Test, error) {
+func SetupTestWithDefaults(testName string, argoManagedUtilities bool) (*Test, error) {
 	testID := model.NewID()
 	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
@@ -100,53 +100,47 @@ func SetupTestWithDefaults(testName, utiliyManaged string) (*Test, error) {
 		Provisioner:        config.Provisioner,
 	}
 
-	if utiliyManaged == "argocd" {
-		createClusterReq = &model.CreateClusterRequest{
-			AllowInstallations: true,
-			Annotations:        testAnnotations(testID),
-			AMI:                config.KopsAMI,
-			VPC:                config.VPC,
-			Provisioner:        config.Provisioner,
-			ArgocdClusterRegister: map[string]string{
-				"cluster-type": "customer",
+	if argoManagedUtilities {
+		createClusterReq.ArgocdClusterRegister = map[string]string{
+			"cluster-type": "customer",
+		}
+
+		createClusterReq.DesiredUtilityVersions = map[string]*model.HelmUtilityVersion{
+			model.NginxCanonicalName: {
+				Chart: "unmanaged",
 			},
-			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"nginx": {
-					Chart: "unmanaged",
-				},
-				"nginx-internal": {
-					Chart: "unmanaged",
-				},
-				"thanos": {
-					Chart: "unmanaged",
-				},
-				"prometheus-operator": {
-					Chart: "unmanaged",
-				},
-				"node-problem-detector": {
-					Chart: "unmanaged",
-				},
-				"cloudprober": {
-					Chart: "unmanaged",
-				},
-				"fluentbit": {
-					Chart: "unmanaged",
-				},
-				"teleport": {
-					Chart: "unmanaged",
-				},
-				"pgbouncer": {
-					Chart: "unmanaged",
-				},
-				"promtail": {
-					Chart: "unmanaged",
-				},
-				"metrics-server": {
-					Chart: "unmanaged",
-				},
-				"velero": {
-					Chart: "unmanaged",
-				},
+			model.NginxInternalCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.ThanosCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.PrometheusOperatorCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.NodeProblemDetectorCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.CloudproberCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.FluentbitCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.TeleportCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.PgbouncerCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.PromtailCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.MetricsServerCanonicalName: {
+				Chart: "unmanaged",
+			},
+			model.VeleroCanonicalName: {
+				Chart: "unmanaged",
 			},
 		}
 	}
