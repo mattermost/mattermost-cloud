@@ -107,40 +107,40 @@ func SetupTestWithDefaults(testName string, argoManagedUtilities bool) (*Test, e
 
 		createClusterReq.DesiredUtilityVersions = map[string]*model.HelmUtilityVersion{
 			model.NginxCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.NginxInternalCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.ThanosCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.PrometheusOperatorCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.NodeProblemDetectorCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.CloudproberCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.FluentbitCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.TeleportCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.PgbouncerCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.PromtailCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.MetricsServerCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 			model.VeleroCanonicalName: {
-				Chart: "unmanaged",
+				Chart: model.UnmanagedUtilityVersion,
 			},
 		}
 	}
