@@ -73,7 +73,7 @@ type Test struct {
 	Cleanup           bool
 }
 
-func SetupTestWithDefaults(testName string) (*Test, error) {
+func SetupTestWithDefaults(testName string, argoManagedUtilities bool) (*Test, error) {
 	testID := model.NewID()
 	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
@@ -98,6 +98,51 @@ func SetupTestWithDefaults(testName string) (*Test, error) {
 		AMI:                config.KopsAMI,
 		VPC:                config.VPC,
 		Provisioner:        config.Provisioner,
+	}
+
+	if argoManagedUtilities {
+		createClusterReq.ArgocdClusterRegister = map[string]string{
+			"cluster-type": "customer",
+		}
+
+		createClusterReq.DesiredUtilityVersions = map[string]*model.HelmUtilityVersion{
+			model.NginxCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.NginxInternalCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.ThanosCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.PrometheusOperatorCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.NodeProblemDetectorCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.CloudproberCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.FluentbitCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.TeleportCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.PgbouncerCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.PromtailCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.MetricsServerCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+			model.VeleroCanonicalName: {
+				Chart: model.UnmanagedUtilityVersion,
+			},
+		}
 	}
 
 	if config.Provisioner == model.ProvisionerEKS {
