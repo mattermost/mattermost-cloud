@@ -47,26 +47,31 @@ func sendWebhooks(hooks []*model.Webhook, payload *model.WebhookPayload, logger 
 }
 
 func sendWebhook(hook *model.Webhook, payload *model.WebhookPayload, logger *log.Entry) error {
+	logger = logger.WithField("webhookURL", hook.URL)
+
 	payloadStr, err := payload.ToJSON()
 	if err != nil {
-		logger.WithField("webhookURL", hook.URL).WithError(err).Error("Unable to create payload string to send to webhook")
+		logger.WithError(err).Error("Unable to create payload string to send to webhook")
 		return errors.Wrap(err, "unable to create payload string to send to webhook")
 	}
 
 	req, err := http.NewRequest("POST", hook.URL, bytes.NewBuffer([]byte(payloadStr)))
 	if err != nil {
-		logger.WithField("webhookURL", hook.URL).WithError(err).Error("Unable to create request")
+		logger.WithError(err).Error("Unable to create request")
 		return errors.Wrap(err, "unable to create request from payload")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	for key, value := range hook.Headers.GetHeaders() {
+		if len(value) == 0 {
+			logger.Warnf("Webhook value for key %s is empty", key)
+		}
 		req.Header.Set(key, value)
 	}
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	_, err = client.Do(req)
 	if err != nil {
-		logger.WithField("webhookURL", hook.URL).WithError(err).Error("Unable to send webhook")
+		logger.WithError(err).Error("Unable to send webhook")
 		return errors.Wrap(err, "unable to send webhook")
 	}
 
