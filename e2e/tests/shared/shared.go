@@ -115,9 +115,6 @@ func SetupTestWithDefaults(testName string, argoManagedUtilities bool) (*Test, e
 			model.ThanosCanonicalName: {
 				Chart: model.UnmanagedUtilityVersion,
 			},
-			model.PrometheusOperatorCanonicalName: {
-				Chart: model.UnmanagedUtilityVersion,
-			},
 			model.NodeProblemDetectorCanonicalName: {
 				Chart: model.UnmanagedUtilityVersion,
 			},
