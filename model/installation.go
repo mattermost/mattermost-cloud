@@ -266,6 +266,31 @@ func (i *Installation) GetDatabaseWeight() float64 {
 	return DefaultDatabaseWeight
 }
 
+// RequiresAWSInfrasctructure returns if the installation has a database and
+// filestore that are externally managed or not.
+func (i *Installation) RequiresAWSInfrasctructure() bool {
+	return !i.ExternalDatabase() || !i.ExternalFilestore()
+}
+
+// InternalDatabase returns true if the installation's database is internal
+// to the kubernetes cluster it is running on.
+func (i *Installation) InternalDatabase() bool {
+	return i.Database == InstallationDatabaseMysqlOperator
+}
+
+// ExternalDatabase returns true if the installation's database is fully
+// provisioned by an external service.
+func (i *Installation) ExternalDatabase() bool {
+	return i.Database == InstallationDatabaseExternal
+}
+
+// ExternalFilestore returns true if the installation's filestore is fully
+// provisioned by an external service.
+func (i *Installation) ExternalFilestore() bool {
+	// TODO: There are no external filestore options yet.
+	return false
+}
+
 // IsInGroup returns if the installation is in a group or not.
 func (i *Installation) IsInGroup() bool {
 	return i.GroupID != nil

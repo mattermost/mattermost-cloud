@@ -17,7 +17,8 @@ type Cluster struct {
 	ID                          string
 	State                       string
 	Provider                    string
-	ProviderMetadataAWS         *AWSMetadata `json:"ProviderMetadataAWS,omitempty"`
+	ProviderMetadataAWS         *AWSMetadata              `json:"ProviderMetadataAWS,omitempty"`
+	ProviderMetadataExternal    *ExternalProviderMetadata `json:"ProviderMetadataExternal,omitempty"`
 	Provisioner                 string
 	ProvisionerMetadataKops     *KopsMetadata            `json:"ProvisionerMetadataKops,omitempty"`
 	ProvisionerMetadataEKS      *EKSMetadata             `json:"ProvisionerMetadataEKS,omitempty"`
@@ -50,6 +51,32 @@ func (c *Cluster) ToDTO(annotations []*Annotation) *ClusterDTO {
 		Cluster:     c,
 		Annotations: annotations,
 	}
+}
+
+// VpcID is a safe way to return the VPC ID of the cluster if it has one
+// regardless of the cluster metadata type.
+func (c *Cluster) VpcID() string {
+	var vpcID string
+	switch c.Provisioner {
+	case ProvisionerKops:
+		vpcID = c.ProvisionerMetadataKops.VPC
+	case ProvisionerEKS:
+		vpcID = c.ProvisionerMetadataEKS.VPC
+	case ProvisionerExternal:
+		vpcID = c.ProvisionerMetadataExternal.VPC
+	}
+
+	return vpcID
+}
+
+// HasAWSInfrastructure returns if a cluster is in a standard VPC with our
+// managed database and filestore resources.
+func (c *Cluster) HasAWSInfrastructure() bool {
+	if c.Provider == ProviderExternal {
+		return c.ProviderMetadataExternal.HasAWSInfrastructure
+	}
+
+	return true
 }
 
 // ClusterFromReader decodes a json-encoded cluster from the given io.Reader.

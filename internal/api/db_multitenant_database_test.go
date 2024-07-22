@@ -274,6 +274,10 @@ type mockAWSClient struct {
 	expectedRDSID string
 }
 
+func (m mockAWSClient) EnsureVPCExists(vpcID string) error {
+	return nil
+}
+
 func (m mockAWSClient) SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
 	return nil
 }

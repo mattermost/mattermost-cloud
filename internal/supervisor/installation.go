@@ -705,6 +705,11 @@ func (s *InstallationSupervisor) installationCanBeScheduledOnCluster(cluster *mo
 		return false
 	}
 
+	if installation.RequiresAWSInfrasctructure() && !cluster.HasAWSInfrastructure() {
+		logger.Debugf("Cluster %s can only support installations with external infrastructure", cluster.ID)
+		return false
+	}
+
 	existingClusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		Paging:    model.AllPagesNotDeleted(),
 		ClusterID: cluster.ID,

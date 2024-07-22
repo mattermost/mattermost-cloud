@@ -713,13 +713,9 @@ func prepareClusterUtilities(
 		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
-	var vpc string
-	if cluster.ProvisionerMetadataKops != nil {
-		vpc = cluster.ProvisionerMetadataKops.VPC
-	} else if cluster.ProvisionerMetadataEKS != nil {
-		vpc = cluster.ProvisionerMetadataEKS.VPC
-	} else {
-		return errors.New("cluster metadata is nil cannot determine VPC")
+	vpc := cluster.VpcID()
+	if vpc == "" {
+		return errors.New("cluster metadata returned an empty VPC ID")
 	}
 
 	// TODO: Yeah, so this is definitely a bit of a race condition. We would

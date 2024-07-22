@@ -59,7 +59,7 @@ func NewEKSProvisioner(
 	}
 }
 
-// PrepareCluster is noop for EKSProvisioner.
+// PrepareCluster prepares metadata for EKSProvisioner.
 func (provisioner *EKSProvisioner) PrepareCluster(cluster *model.Cluster) bool {
 	// Don't regenerate the name if already set.
 	if cluster.ProvisionerMetadataEKS.Name != "" {

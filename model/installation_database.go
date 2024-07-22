@@ -185,12 +185,6 @@ func IsSupportedDatabase(database string) bool {
 	return true
 }
 
-// InternalDatabase returns true if the installation's database is internal
-// to the kubernetes cluster it is running on.
-func (i *Installation) InternalDatabase() bool {
-	return i.Database == InstallationDatabaseMysqlOperator
-}
-
 // IsSingleTenantRDS returns true if the given database is single tenant RDS db.
 func IsSingleTenantRDS(database string) bool {
 	switch database {

@@ -271,6 +271,7 @@ func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 // ImportClusterRequest specifies the parameters for importing a new cluster.
 type ImportClusterRequest struct {
 	ExternalClusterSecretName string   `json:"external-cluster-secret-name,omitempty"`
+	VpcID                     string   `json:"vpc-id,omitempty"`
 	Annotations               []string `json:"annotations,omitempty"`
 	AllowInstallations        bool     `json:"allow-installations"`
 	APISecurityLock           bool     `json:"api-security-lock"`
