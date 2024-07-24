@@ -39,9 +39,19 @@ type rawCluster struct {
 type rawClusters []*rawCluster
 
 func buildRawMetadata(cluster *model.Cluster) (*RawClusterMetadata, error) {
-	providerMetadataJSON, err := json.Marshal(cluster.ProviderMetadataAWS)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to marshal ProviderMetadataAWS")
+	var providerMetadataJSON []byte
+	var err error
+
+	if cluster.Provider == model.ProviderExternal {
+		providerMetadataJSON, err = json.Marshal(cluster.ProviderMetadataExternal)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to marshal ProviderMetadataExternal")
+		}
+	} else {
+		providerMetadataJSON, err = json.Marshal(cluster.ProviderMetadataAWS)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to marshal ProviderMetadataAWS")
+		}
 	}
 
 	var provisionerMetadataJSON []byte
@@ -78,9 +88,17 @@ func buildRawMetadata(cluster *model.Cluster) (*RawClusterMetadata, error) {
 
 func (r *rawCluster) toCluster() (*model.Cluster, error) {
 	var err error
-	r.Cluster.ProviderMetadataAWS, err = model.NewAWSMetadata(r.ProviderMetadataRaw)
-	if err != nil {
-		return nil, err
+
+	if r.Provider == model.ProviderExternal {
+		r.Cluster.ProviderMetadataExternal, err = model.NewExternalProviderMetadata(r.ProviderMetadataRaw)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to marshal ProviderMetadataExternal")
+		}
+	} else {
+		r.Cluster.ProviderMetadataAWS, err = model.NewAWSMetadata(r.ProviderMetadataRaw)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if r.Provisioner == "" {

@@ -7,12 +7,15 @@ package aws
 import (
 	"context"
 	"fmt"
+	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/golang/mock/gomock"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func (a *AWSTestSuite) TestFixSubnetTagsForVPC() {
@@ -1384,4 +1387,32 @@ func (a *AWSTestSuite) TestReleaseVPC() {
 		err := a.Mocks.AWS.ReleaseVpc(cluster, logger)
 		a.Assert().NoError(err)
 	})
+}
+
+func TestGetClusterTag(t *testing.T) {
+	kopsCluster := &model.Cluster{
+		ID:                      model.NewID(),
+		Provisioner:             model.ProvisionerKops,
+		ProvisionerMetadataKops: &model.KopsMetadata{Name: "kops-name"},
+	}
+	assert.Equal(t, kopsCluster.ProvisionerMetadataKops.Name, getClusterTag(kopsCluster))
+
+	eksCluster := &model.Cluster{
+		ID:                     model.NewID(),
+		Provisioner:            model.ProvisionerEKS,
+		ProvisionerMetadataEKS: &model.EKSMetadata{Name: "eks-name"},
+	}
+	assert.Equal(t, eksCluster.ProvisionerMetadataEKS.Name, getClusterTag(eksCluster))
+
+	externalCluster := &model.Cluster{
+		ID:                          model.NewID(),
+		Provisioner:                 model.ProvisionerExternal,
+		ProvisionerMetadataExternal: &model.ExternalClusterMetadata{Name: "external-name"},
+	}
+	assert.Equal(t, externalCluster.ProvisionerMetadataExternal.Name, getClusterTag(externalCluster))
+
+	invalidCluster := &model.Cluster{
+		ID: model.NewID(),
+	}
+	assert.Equal(t, "", getClusterTag(invalidCluster))
 }

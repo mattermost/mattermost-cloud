@@ -13,8 +13,10 @@ const ProvisionerExternal = "external"
 // ExternalClusterMetadata is the provisioner metadata stored in a model.Cluster
 // for external clusters.
 type ExternalClusterMetadata struct {
+	Name       string
 	SecretName string
 	Version    string
+	VPC        string   `json:"VPC,omitempty"`
 	Warnings   []string `json:"Warnings,omitempty"`
 }
 
@@ -28,8 +30,9 @@ func (ecm *ExternalClusterMetadata) AddWarning(warning string) {
 	ecm.Warnings = append(ecm.Warnings, warning)
 }
 
-func (ecm *ExternalClusterMetadata) ApplyClusterImportRequest(createRequest *ImportClusterRequest) bool {
-	ecm.SecretName = createRequest.ExternalClusterSecretName
+func (ecm *ExternalClusterMetadata) ApplyClusterImportRequest(importRequest *ImportClusterRequest) bool {
+	ecm.SecretName = importRequest.ExternalClusterSecretName
+	ecm.VPC = importRequest.VpcID
 	return true
 }
 

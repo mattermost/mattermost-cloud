@@ -226,6 +226,7 @@ func executeClusterImportCmd(flags clusterImportFlags) error {
 
 	request := &model.ImportClusterRequest{
 		ExternalClusterSecretName: flags.secretName,
+		VpcID:                     flags.vpcID,
 		Annotations:               flags.annotations,
 		AllowInstallations:        flags.allowInstallations,
 	}

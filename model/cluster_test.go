@@ -30,6 +30,105 @@ func TestClusterClone(t *testing.T) {
 	require.NotEqual(t, cluster, clone)
 }
 
+func TestClusterVpcID(t *testing.T) {
+	tests := []struct {
+		name          string
+		cluster       Cluster
+		expectedVpcID string
+	}{
+		{
+			"kops-vpc-id",
+			Cluster{
+				Provisioner:             ProvisionerKops,
+				ProvisionerMetadataKops: &KopsMetadata{VPC: "kops-id-1"},
+			},
+			"kops-id-1",
+		},
+		{
+			"eks-vpc-id",
+			Cluster{
+				Provisioner:            ProvisionerEKS,
+				ProvisionerMetadataEKS: &EKSMetadata{VPC: "eks-id-1"},
+			},
+			"eks-id-1",
+		},
+		{
+			"external-vpc-id",
+			Cluster{
+				Provisioner:                 ProvisionerExternal,
+				ProvisionerMetadataExternal: &ExternalClusterMetadata{VPC: "external-id-1"},
+			},
+			"external-id-1",
+		},
+		{
+			"invalid",
+			Cluster{
+				Provisioner: "invalid",
+			},
+			"",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expectedVpcID, test.cluster.VpcID())
+		})
+	}
+}
+
+func TestClusterHasAWSInfrastructure(t *testing.T) {
+	tests := []struct {
+		name             string
+		cluster          Cluster
+		expectedHasInfra bool
+	}{
+		{
+			"kops",
+			Cluster{
+				Provider:    ProviderAWS,
+				Provisioner: ProvisionerKops,
+			},
+			true,
+		},
+		{
+			"eks",
+			Cluster{
+				Provider:    ProviderAWS,
+				Provisioner: ProvisionerEKS,
+			},
+			true,
+		},
+		{
+			"external-has-aws-infra",
+			Cluster{
+				Provider: ProviderExternal,
+				ProviderMetadataExternal: &ExternalProviderMetadata{
+					HasAWSInfrastructure: true,
+				},
+				Provisioner: ProvisionerExternal,
+			},
+			true,
+		},
+		{
+			"external-no-aws-infra",
+			Cluster{
+				Provider: ProviderExternal,
+				ProviderMetadataExternal: &ExternalProviderMetadata{
+					HasAWSInfrastructure: false,
+				},
+				Provisioner: ProvisionerExternal,
+			},
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expectedHasInfra, test.cluster.HasAWSInfrastructure())
+		})
+	}
+}
+
 func TestClusterFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
 		cluster, err := ClusterFromReader(bytes.NewReader([]byte(

@@ -207,17 +207,12 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 
 // ClaimVPC claims specified VPC for specified cluster.
 func (a *Client) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {
-	ctx := context.TODO()
-	vpcOut, err := a.Service().ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{VpcIds: []string{vpcID}})
+	vpc, err := a.GetVPC(vpcID)
 	if err != nil {
-		return ClusterResources{}, errors.Wrap(err, "failed to describe vpc")
+		return ClusterResources{}, errors.Wrap(err, "failed to get VPC")
 	}
 
-	if len(vpcOut.Vpcs) == 0 {
-		return ClusterResources{}, fmt.Errorf("couldn't find vpcs")
-	}
-
-	clusterResources, err := a.getClusterResourcesForVPC(vpcID, *vpcOut.Vpcs[0].CidrBlock, logger)
+	clusterResources, err := a.getClusterResourcesForVPC(vpcID, *vpc.CidrBlock, logger)
 	if err != nil {
 		return ClusterResources{}, errors.Wrap(err, "failed to get cluster resources for VPC")
 	}
@@ -718,11 +713,13 @@ func (a *Client) SwitchClusterTags(clusterID string, targetClusterID string, log
 }
 
 func getClusterTag(cluster *model.Cluster) string {
-	if cluster.Provisioner == model.ProvisionerKops {
+	switch cluster.Provisioner {
+	case model.ProvisionerKops:
 		return cluster.ProvisionerMetadataKops.Name
-	}
-	if cluster.Provisioner == model.ProvisionerEKS {
+	case model.ProvisionerEKS:
 		return cluster.ProvisionerMetadataEKS.Name
+	case model.ProvisionerExternal:
+		return cluster.ProvisionerMetadataExternal.Name
 	}
 
 	return ""

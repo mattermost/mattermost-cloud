@@ -142,6 +142,7 @@ type Provisioner interface {
 
 // AwsClient describes the interface required to communicate with the AWS
 type AwsClient interface {
+	EnsureVPCExists(vpcID string) error
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 	SecretsManagerValidateExternalClusterSecret(name string) error
 	SecretsManagerValidateExternalDatabaseSecret(name string) error

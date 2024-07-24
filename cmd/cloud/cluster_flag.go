@@ -156,12 +156,14 @@ func (flags *clusterCreateFlags) addFlags(command *cobra.Command) {
 
 type importClusterRequestOptions struct {
 	secretName         string
+	vpcID              string
 	annotations        []string
 	allowInstallations bool
 }
 
 func (flags *importClusterRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.secretName, "secret-name", "", "The name of the AWS Secret Manager secret containing the cluster kubeconfig.")
+	command.Flags().StringVar(&flags.vpcID, "vpc-id", "", "Optional VPC ID for clusters running in our managed VPCs. This must be provided for allowing installations to be scheduled with our managed backends (ex. pgbouncer and bifrost).")
 	command.Flags().BoolVar(&flags.allowInstallations, "allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
 	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 }

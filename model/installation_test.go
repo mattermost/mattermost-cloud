@@ -7,6 +7,7 @@ package model
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/mattermost/mattermost-cloud/internal/util"
@@ -416,6 +417,45 @@ func TestInstallationGetDatabaseWeight(t *testing.T) {
 	} {
 		t.Run(testCase.installation.State, func(t *testing.T) {
 			assert.Equal(t, testCase.expectedWeight, testCase.installation.GetDatabaseWeight())
+		})
+	}
+}
+
+func TestInstallationRequiresAWSInfrasctructure(t *testing.T) {
+	tests := []struct {
+		installation          Installation
+		expectedRequiresInfra bool
+	}{
+		{
+			Installation{
+				Database:  InstallationDatabaseMultiTenantRDSPostgresPGBouncer,
+				Filestore: InstallationFilestoreBifrost,
+			},
+			true,
+		}, {
+			Installation{
+				Database:  InstallationDatabaseMultiTenantRDSMySQL,
+				Filestore: InstallationFilestoreBifrost,
+			},
+			true,
+		}, {
+			Installation{
+				Database:  InstallationDatabaseExternal,
+				Filestore: InstallationFilestoreBifrost,
+			},
+			true,
+		}, {
+			Installation{
+				Database:  InstallationDatabaseExternal,
+				Filestore: InstallationFilestoreAwsS3,
+			},
+			true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("%s_%s", test.installation.Database, test.installation.Filestore), func(t *testing.T) {
+			assert.Equal(t, test.expectedRequiresInfra, test.installation.RequiresAWSInfrasctructure())
 		})
 	}
 }

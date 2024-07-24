@@ -15,6 +15,25 @@ import (
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
+// GetVPC gets a VPC by ID.
+func (a *Client) GetVPC(vpcID string) (*ec2Types.Vpc, error) {
+	vpcOut, err := a.Service().ec2.DescribeVpcs(context.TODO(), &ec2.DescribeVpcsInput{VpcIds: []string{vpcID}})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to describe vpc")
+	}
+	if len(vpcOut.Vpcs) == 0 {
+		return nil, errors.Errorf("couldn't find vpc %s", vpcID)
+	}
+
+	return &vpcOut.Vpcs[0], nil
+}
+
+// EnsureVPCExists ensures a VPC with the given ID exists.
+func (a *Client) EnsureVPCExists(vpcID string) error {
+	_, err := a.GetVPC(vpcID)
+	return err
+}
+
 // GetCIDRByVPCTag fetches VPC CIDR block by 'Name' tag.
 func (a *Client) GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error) {
 	ctx := context.TODO()

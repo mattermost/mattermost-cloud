@@ -209,16 +209,29 @@ func handleImportCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if importClusterRequest.VpcID != "" {
+		err = c.AwsClient.EnsureVPCExists(importClusterRequest.VpcID)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to ensure VPC ID is valid")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
 
 	cluster := model.Cluster{
 		Provider:                    model.ProviderExternal,
+		ProviderMetadataExternal:    &model.ExternalProviderMetadata{},
 		Provisioner:                 model.ProvisionerExternal,
 		ProvisionerMetadataExternal: &model.ExternalClusterMetadata{},
 		AllowInstallations:          importClusterRequest.AllowInstallations,
 		APISecurityLock:             importClusterRequest.APISecurityLock,
 		State:                       model.ClusterStateCreationRequested,
 	}
+	cluster.ProviderMetadataExternal.ApplyClusterImportRequest(importClusterRequest)
 	cluster.ProvisionerMetadataExternal.ApplyClusterImportRequest(importClusterRequest)
+	if cluster.ProviderMetadataExternal.HasAWSInfrastructure {
+		cluster.PgBouncerConfig = model.NewDefaultPgBouncerConfig()
+	}
 
 	annotations, err := model.AnnotationsFromStringSlice(importClusterRequest.Annotations)
 	if err != nil {
