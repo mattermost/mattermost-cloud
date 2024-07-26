@@ -156,7 +156,7 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 	}
 
 	if doUpdate {
-		err = c.updateDNSRecord(zoneID, recordToUpdate.ID, record, logger)
+		err = c.updateDNSRecord(zoneID, recordToUpdate.ID, record)
 		if err != nil {
 			return errors.Wrap(err, "failed to update existing DNS record at Cloudflare")
 		}
@@ -165,7 +165,7 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 	return nil
 }
 
-func (c *Client) updateDNSRecord(zoneID string, id string, record cf.DNSRecord, logger logrus.FieldLogger) error {
+func (c *Client) updateDNSRecord(zoneID string, id string, record cf.DNSRecord) error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 	_, err := c.cfClient.UpdateDNSRecord(ctx, cf.ZoneIdentifier(zoneID), cf.UpdateDNSRecordParams{
@@ -175,7 +175,7 @@ func (c *Client) updateDNSRecord(zoneID string, id string, record cf.DNSRecord, 
 		Content: record.Content,
 		TTL:     record.TTL,
 		Proxied: record.Proxied,
-		Comment: record.Comment,
+		Comment: &record.Comment,
 		Tags:    record.Tags,
 	})
 	if err != nil {
