@@ -31,6 +31,13 @@ const (
 	// cluster running in that VPC.
 	VpcClusterIDTagKey = "tag:" + ClusterIDTagKey
 
+	// VpcClusterTypeTagKey is the tag key used determine which type of k8s
+	// cluster will be used in the VPC.
+	VpcClusterTypeTagKey = "tag:CloudClusterType"
+
+	// VpcClusterTypeTagValueKops is the tag value for a kops cluster type.
+	VpcClusterTypeTagValueKops = "kops"
+
 	// VpcClusterOwnerKey is the tag key  used to store the owner of the
 	// cluster's human name so that the VPC's owner can be identified
 	VpcClusterOwnerKey = "tag:CloudClusterOwner"
