@@ -332,6 +332,10 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 			Name:   aws.String(VpcAvailableTagKey),
 			Values: []string{VpcAvailableTagValueTrue},
 		},
+		{
+			Name:   aws.String(VpcClusterTypeTagKey),
+			Values: []string{VpcClusterTypeTagValueKops},
+		},
 	}
 
 	vpcs, err := a.GetVpcsWithFilters(vpcFilters)
