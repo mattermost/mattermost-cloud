@@ -70,7 +70,7 @@ func (u *unmanaged) CreateOrUpgrade() error {
 
 	switch u.Name() {
 	case model.PgbouncerCanonicalName:
-		err = deployManifests(k8sClient, u.logger)
+		err = DeployPgbouncerManifests(k8sClient, u.logger)
 		if err != nil {
 			return err
 		}
