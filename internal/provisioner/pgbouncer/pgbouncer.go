@@ -16,6 +16,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const pgbouncerConfigmapDataKey = "pgbouncer.ini"
+
 const baseIni = `
 [pgbouncer]
 listen_addr = *
@@ -125,10 +127,17 @@ func UpdatePGBouncerConfigMap(ctx context.Context, vpc string, store model.Clust
 	if err != nil {
 		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
 	}
-	if configMap.Data["pgbouncer.ini"] != ini {
+	if _, ok := configMap.Data[pgbouncerConfigmapDataKey]; !ok {
+		logger.Warnf("No configmap key %s found for pgbouncer configmap; setting key with blank value", pgbouncerConfigmapDataKey)
+		if configMap.Data == nil {
+			configMap.Data = make(map[string]string)
+		}
+		configMap.Data[pgbouncerConfigmapDataKey] = ""
+	}
+	if configMap.Data[pgbouncerConfigmapDataKey] != ini {
 		logger.Debug("Updating pgbouncer.ini with new database configuration")
 
-		configMap.Data["pgbouncer.ini"] = ini
+		configMap.Data[pgbouncerConfigmapDataKey] = ini
 		_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Update(ctx, configMap, metav1.UpdateOptions{})
 		if err != nil {
 			return errors.Wrap(err, "failed to update configmap pgbouncer-configmap")

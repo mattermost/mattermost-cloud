@@ -89,7 +89,7 @@ func (p *pgbouncer) CreateOrUpgrade() error {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
 
-	err = deployManifests(k8sClient, p.logger)
+	err = DeployPgbouncerManifests(k8sClient, p.logger)
 	if err != nil {
 		return err
 	}
@@ -144,8 +144,9 @@ func (p *pgbouncer) Name() string {
 	return model.PgbouncerCanonicalName
 }
 
-// deployManifests deploy pgbouncer manifests if they don't exist: pgbouncer-configmap and pgbouncer-userlist-secret
-func deployManifests(k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+// DeployManifests deploy pgbouncer manifests if they don't exist:
+// pgbouncer-configmap and pgbouncer-userlist-secret
+func DeployPgbouncerManifests(k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	logger = logger.WithField("pgbouncer-action", "create-manifests")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(180)*time.Second)
@@ -168,7 +169,7 @@ func deployManifests(k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 		}
 		err = k8sClient.CreateFromFile(file, "")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to create pgbouncer-configmap")
 		}
 	} else if err != nil {
 		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")

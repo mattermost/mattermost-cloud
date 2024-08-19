@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -105,9 +106,24 @@ func (provisioner *ExternalProvisioner) DeleteNodegroups(cluster *model.Cluster)
 	return nil
 }
 
-// ProvisionCluster is no-op for external clusters.
+// ProvisionCluster runs provisioning tasks for external clusters.
 func (provisioner *ExternalProvisioner) ProvisionCluster(cluster *model.Cluster) error {
-	provisioner.logger.WithField("cluster", cluster.ID).Info("Cluster is managed externally; skipping provision...")
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	logger.Info("Provisioning cluster")
+
+	k8sClient, err := provisioner.getKubeClient(cluster)
+	if err != nil {
+		return err
+	}
+	if cluster.HasAWSInfrastructure() {
+		logger.Info("Provisioning resources for AWS infrastructure")
+
+		err = utility.DeployPgbouncerManifests(k8sClient, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to deploy pgbouncer manifests")
+		}
+	}
 
 	return nil
 }

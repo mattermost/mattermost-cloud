@@ -554,8 +554,7 @@ func (provisioner *EKSProvisioner) isMigrationRequired(oldNodeGroup *eksTypes.No
 		return true
 	}
 
-	if oldNodeGroup.InstanceTypes != nil && len(oldNodeGroup.InstanceTypes) > 0 &&
-		oldNodeGroup.InstanceTypes[0] != ngChangeRequest.InstanceType {
+	if len(oldNodeGroup.InstanceTypes) > 0 && oldNodeGroup.InstanceTypes[0] != ngChangeRequest.InstanceType {
 		return true
 	}
 

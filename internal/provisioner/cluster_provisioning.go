@@ -394,14 +394,11 @@ func provisionCluster(
 	}
 
 	// Sync PGBouncer configmap if there is any change
-	var vpc string
-	if cluster.Provisioner == model.ProvisionerKops {
-		vpc = cluster.ProvisionerMetadataKops.VPC
-	} else if cluster.Provisioner == model.ProvisionerEKS {
-		vpc = cluster.ProvisionerMetadataEKS.VPC
-	} else {
-		return errors.New("cannot get metadata from unknown provisioner")
+	vpc := cluster.VpcID()
+	if vpc == "" {
+		return errors.New("cluster metadata returned an empty VPC ID")
 	}
+
 	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
 	defer cancel()
 	err = pgbouncer.UpdatePGBouncerConfigMap(ctx, vpc, store, cluster.PgBouncerConfig, k8sClient, logger)
