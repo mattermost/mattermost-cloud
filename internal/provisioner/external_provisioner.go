@@ -117,7 +117,7 @@ func (provisioner *ExternalProvisioner) ProvisionCluster(cluster *model.Cluster)
 		return err
 	}
 	if cluster.HasAWSInfrastructure() {
-		logger.Info("Provisiong resources for AWS infrastructure")
+		logger.Info("Provisioning resources for AWS infrastructure")
 
 		err = utility.DeployPgbouncerManifests(k8sClient, logger)
 		if err != nil {
