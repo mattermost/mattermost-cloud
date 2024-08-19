@@ -11,11 +11,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func parseEnvVarInput(rawInput []string, clear bool) (model.EnvVarMap, error) {
-	if len(rawInput) != 0 && clear {
+func parseEnvVarInput(rawInput []string, clearEnv bool) (model.EnvVarMap, error) {
+	if len(rawInput) != 0 && clearEnv {
 		return nil, errors.New("both mattermost-env and mattermost-env-clear were set; use one or the other")
 	}
-	if clear {
+	if clearEnv {
 		// An empty non-nil map is what the API expects for a full env wipe.
 		return make(model.EnvVarMap), nil
 	}

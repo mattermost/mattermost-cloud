@@ -1068,8 +1068,7 @@ func TestResizeCluster(t *testing.T) {
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, errTest)
 
-		max := int64(1)
-		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeMaxCount: &max})
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeMaxCount: util.IToP(1)})
 		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
@@ -1079,9 +1078,10 @@ func TestResizeCluster(t *testing.T) {
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, errTest)
 
-		min := int64(10)
-		max := int64(5)
-		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeMinCount: &min, NodeMaxCount: &max})
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{
+			NodeMinCount: util.IToP(10),
+			NodeMaxCount: util.IToP(5),
+		})
 		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
