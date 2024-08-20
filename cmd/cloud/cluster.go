@@ -306,6 +306,7 @@ func newCmdClusterUpdate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+			flags.clusterPatchRequestChanges.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -314,12 +315,9 @@ func newCmdClusterUpdate() *cobra.Command {
 }
 
 func executeClusterUpdateCmd(flags clusterUpdateFlags) error {
-
 	client := createClient(flags.clusterFlags)
 
-	request := &model.UpdateClusterRequest{
-		AllowInstallations: flags.allowInstallations,
-	}
+	request := flags.GetPatchClusterRequest()
 
 	if flags.dryRun {
 		return runDryRun(request)
@@ -595,7 +593,7 @@ func executeClusterListCmd(flags clusterListFlags) error {
 }
 
 func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]string) {
-	keys := []string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "AMI ID/NAME", "NETWORKING", "VPC", "STATUS"}
+	keys := []string{"ID", "NAME", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "AMI ID/NAME", "NETWORKING", "VPC", "STATUS"}
 	values := make([][]string, 0, len(clusters))
 
 	for _, cluster := range clusters {
@@ -632,7 +630,7 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 		}
 
 		values = append(values, []string{
-			cluster.ID, cluster.State,
+			cluster.ID, cluster.Name, cluster.State,
 			versionEntry, masterEntry, workerEntry, amiEntry, networkingEntry, vpcEntry,
 			status,
 		})

@@ -2239,4 +2239,12 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.48.0"), semver.MustParse("0.49.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE Cluster ADD COLUMN Name TEXT NOT NULL DEFAULT '';`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

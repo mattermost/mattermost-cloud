@@ -15,6 +15,7 @@ import (
 // Cluster represents a Kubernetes cluster.
 type Cluster struct {
 	ID                          string
+	Name                        string
 	State                       string
 	Provider                    string
 	ProviderMetadataAWS         *AWSMetadata              `json:"ProviderMetadataAWS,omitempty"`
@@ -77,6 +78,20 @@ func (c *Cluster) HasAWSInfrastructure() bool {
 	}
 
 	return true
+}
+
+func (c *Cluster) ApplyClusterUpdatePatch(patchRequest *UpdateClusterRequest) bool {
+	var applied bool
+	if patchRequest.Name != nil && *patchRequest.Name != c.Name {
+		applied = true
+		c.Name = *patchRequest.Name
+	}
+	if patchRequest.AllowInstallations != nil && *patchRequest.AllowInstallations != c.AllowInstallations {
+		applied = true
+		c.AllowInstallations = *patchRequest.AllowInstallations
+	}
+
+	return applied
 }
 
 // ClusterFromReader decodes a json-encoded cluster from the given io.Reader.

@@ -18,7 +18,7 @@ var clusterSelect sq.SelectBuilder
 
 func init() {
 	clusterSelect = sq.
-		Select("Cluster.ID", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
+		Select("Cluster.ID", "Name", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
 			"UtilityMetadataRaw", "PgBouncerConfig", "State", "AllowInstallations", "CreateAt", "DeleteAt",
 			"APISecurityLock", "SchedulingLockAcquiredBy", "SchedulingLockAcquiredAt", "LockAcquiredBy", "LockAcquiredAt").
 		From("Cluster")
@@ -256,6 +256,7 @@ func (sqlStore *SQLStore) createCluster(execer execer, cluster *model.Cluster) e
 		Insert("Cluster").
 		SetMap(map[string]interface{}{
 			"ID":                       cluster.ID,
+			"Name":                     cluster.Name,
 			"State":                    cluster.State,
 			"Provider":                 cluster.Provider,
 			"ProviderMetadataRaw":      rawMetadata.ProviderMetadataRaw,
@@ -290,6 +291,7 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *model.Cluster) error {
 		Update("Cluster").
 		SetMap(map[string]interface{}{
 			"State":                  cluster.State,
+			"Name":                   cluster.Name,
 			"Provider":               cluster.Provider,
 			"ProviderMetadataRaw":    rawMetadata.ProviderMetadataRaw,
 			"Provisioner":            cluster.Provisioner,

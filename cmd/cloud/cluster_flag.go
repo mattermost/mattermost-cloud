@@ -286,17 +286,43 @@ func (flags *pgBouncerConfigOptions) GetPatchPgBouncerConfig() *model.PatchPgBou
 	return &request
 }
 
+func (flags *clusterPatchRequestChanges) addFlags(command *cobra.Command) {
+	flags.nameChanged = command.Flags().Changed("name")
+	flags.allowInstallationsChanged = command.Flags().Changed("allow-installations")
+}
+
+type clusterPatchRequestChanges struct {
+	nameChanged               bool
+	allowInstallationsChanged bool
+}
+
 type clusterUpdateFlags struct {
 	clusterFlags
+	clusterPatchRequestChanges
 	cluster            string
+	name               string
 	allowInstallations bool
 }
 
 func (flags *clusterUpdateFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be updated.")
+	command.Flags().StringVar(&flags.name, "name", "", "An optional name value to identify the cluster.")
 	command.Flags().BoolVar(&flags.allowInstallations, "allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
 
 	_ = command.MarkFlagRequired("cluster")
+}
+
+func (flags *clusterUpdateFlags) GetPatchClusterRequest() *model.UpdateClusterRequest {
+	request := model.UpdateClusterRequest{}
+
+	if flags.nameChanged {
+		request.Name = &flags.name
+	}
+	if flags.allowInstallationsChanged {
+		request.AllowInstallations = &flags.allowInstallations
+	}
+
+	return &request
 }
 
 type rotatorConfig struct {
