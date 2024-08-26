@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -125,6 +126,59 @@ func TestClusterHasAWSInfrastructure(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			assert.Equal(t, test.expectedHasInfra, test.cluster.HasAWSInfrastructure())
+		})
+	}
+}
+
+func TestClusterApplyClusterUpdatePatch(t *testing.T) {
+	tests := []struct {
+		name            string
+		cluster         Cluster
+		patch           *UpdateClusterRequest
+		expectedApply   bool
+		expectedCluster Cluster
+	}{
+		{
+			"empty patch",
+			Cluster{},
+			&UpdateClusterRequest{},
+			false,
+			Cluster{},
+		},
+		{
+			"name only",
+			Cluster{},
+			&UpdateClusterRequest{Name: util.SToP("new1")},
+			true,
+			Cluster{Name: "new1"},
+		},
+		{
+			"allow installations only",
+			Cluster{},
+			&UpdateClusterRequest{AllowInstallations: util.BToP(true)},
+			true,
+			Cluster{AllowInstallations: true},
+		},
+		{
+			"all values",
+			Cluster{},
+			&UpdateClusterRequest{
+				Name:               util.SToP("new2"),
+				AllowInstallations: util.BToP(true),
+			},
+			true,
+			Cluster{
+				Name:               "new2",
+				AllowInstallations: true,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			applied := test.cluster.ApplyClusterUpdatePatch(test.patch)
+			assert.Equal(t, test.expectedApply, applied)
+			assert.Equal(t, test.expectedCluster, test.cluster)
 		})
 	}
 }

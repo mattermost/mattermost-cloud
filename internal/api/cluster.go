@@ -344,8 +344,7 @@ func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http
 		return
 	}
 
-	if clusterDTO.AllowInstallations != updateClusterRequest.AllowInstallations {
-		clusterDTO.AllowInstallations = updateClusterRequest.AllowInstallations
+	if clusterDTO.ApplyClusterUpdatePatch(updateClusterRequest) {
 		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update cluster")

@@ -931,12 +931,12 @@ func TestUpdateClusterConfiguration(t *testing.T) {
 		require.NoError(t, errTest)
 	})
 
-	t.Run("while stable", func(t *testing.T) {
+	t.Run("while stable, allow installations", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
 		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, errTest)
 
-		clusterResp, errTest := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{AllowInstallations: false})
+		clusterResp, errTest := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{AllowInstallations: util.BToP(false)})
 		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
@@ -944,6 +944,20 @@ func TestUpdateClusterConfiguration(t *testing.T) {
 		require.NoError(t, errTest)
 		assert.Equal(t, model.ClusterStateStable, cluster2.State)
 		assert.False(t, cluster2.AllowInstallations)
+		assert.Empty(t, cluster2.Name)
+		assert.True(t, containsAnnotation("my-annotation", cluster2.Annotations))
+	})
+
+	t.Run("while stable, change name", func(t *testing.T) {
+		clusterResp, errTest := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{Name: util.SToP("newname")})
+		require.NoError(t, errTest)
+		assert.NotNil(t, clusterResp)
+
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		assert.Equal(t, model.ClusterStateStable, cluster2.State)
+		assert.False(t, cluster2.AllowInstallations)
+		assert.Equal(t, "newname", cluster2.Name)
 		assert.True(t, containsAnnotation("my-annotation", cluster2.Annotations))
 	})
 }

@@ -322,7 +322,8 @@ func (request *GetClustersRequest) ApplyToURL(u *url.URL) {
 
 // UpdateClusterRequest specifies the parameters available for updating a cluster.
 type UpdateClusterRequest struct {
-	AllowInstallations bool
+	Name               *string
+	AllowInstallations *bool
 }
 
 // NewUpdateClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.
