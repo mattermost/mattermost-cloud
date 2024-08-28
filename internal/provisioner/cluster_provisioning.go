@@ -396,7 +396,10 @@ func provisionCluster(
 	// Sync PGBouncer configmap if there is any change
 	vpc := cluster.VpcID()
 	if vpc == "" {
-		return errors.New("cluster metadata returned an empty VPC ID")
+		vpc, err = awsClient.GetClaimedVPC(cluster.ID, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to lookup cluster VPC")
+		}
 	}
 
 	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
