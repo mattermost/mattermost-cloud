@@ -6,7 +6,9 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -25,6 +27,7 @@ func newCmdClusterInstallation() *cobra.Command {
 	cmd.AddCommand(newCmdClusterInstallationStatus())
 	cmd.AddCommand(newCmdClusterInstallationMMCTL())
 	cmd.AddCommand(newCmdClusterInstallationMattermostCLI())
+	cmd.AddCommand(newCmdClusterInstallationPPROF())
 	cmd.AddCommand(newCmdClusterInstallationMigration())
 
 	return cmd
@@ -282,6 +285,44 @@ func newCmdClusterInstallationMattermostCLI() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "failed to run mattermost CLI command")
 			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+		},
+	}
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdClusterInstallationPPROF() *cobra.Command {
+	var flags clusterInstallationPPROFFlags
+
+	cmd := &cobra.Command{
+		Use:   "pprof",
+		Short: "Gather pprof data from a cluster installation",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			client := createClient(flags.clusterFlags)
+
+			output, err := client.ExecClusterInstallationPPROF(flags.clusterInstallationID)
+			if err != nil {
+				return errors.Wrap(err, "failed to run mattermost CLI command")
+			}
+			if output == nil {
+				return errors.Wrap(err, "no debug data returned")
+			}
+
+			filename := fmt.Sprintf("%s.%s.prof.zip", flags.clusterInstallationID, time.Now().Format("2006-01-02.15-04-05.MST"))
+			err = os.WriteFile(filename, output, 0644)
+			if err != nil {
+				return errors.Wrap(err, "failed to save debug zip")
+			}
+
+			fmt.Printf("Debug data saved to %s\n", filename)
+
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {

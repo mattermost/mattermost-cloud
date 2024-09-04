@@ -31,6 +31,7 @@ func (m *mockMetrics) ObserveAPIEndpointDuration(handler, method string, statusC
 
 type mockProvisioner struct {
 	Output       []byte
+	DebugData    model.ClusterInstallationDebugData
 	ExecError    error
 	CommandError error
 }
@@ -65,6 +66,10 @@ func (s *mockProvisioner) ExecMattermostCLI(*model.Cluster, *model.ClusterInstal
 	}
 
 	return s.Output, s.CommandError
+}
+
+func (s *mockProvisioner) ExecClusterInstallationPPROF(*model.Cluster, *model.ClusterInstallation) (model.ClusterInstallationDebugData, error, error) {
+	return s.DebugData, s.ExecError, s.CommandError
 }
 
 func (s *mockProvisioner) GetClusterResources(*model.Cluster, bool, log.FieldLogger) (*k8s.ClusterResources, error) {

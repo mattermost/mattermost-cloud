@@ -72,6 +72,20 @@ func (provisioner Provisioner) ExecMattermostCLI(cluster *model.Cluster, cluster
 	return output, nil
 }
 
+func (provisioner Provisioner) ExecClusterInstallationPPROF(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (model.ClusterInstallationDebugData, error, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	k8sClient, err := provisioner.k8sClient(cluster)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get kube client")
+	}
+
+	return getClusterInstallationProf(k8sClient, clusterInstallation, logger)
+}
+
 // ExecClusterInstallationJob creates job executing command on cluster installation.
 func (provisioner Provisioner) ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error {
 	logger := provisioner.logger.WithFields(log.Fields{
@@ -177,8 +191,63 @@ func execClusterInstallationCLI(k8sClient *k8s.KubeClient, clusterInstallation *
 	return output, execErr, nil
 }
 
-func execCLI(k8sClient *k8s.KubeClient, namespace, podName, containerName string, args ...string) ([]byte, error) {
+func getClusterInstallationProf(k8sClient *k8s.KubeClient, clusterInstallation *model.ClusterInstallation, logger log.FieldLogger) (model.ClusterInstallationDebugData, error, error) {
+	ctx := context.TODO()
+	podList, err := k8sClient.Clientset.CoreV1().Pods(clusterInstallation.Namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "app=mattermost",
+		FieldSelector: "status.phase=Running",
+	})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to query mattermost pods")
+	}
 
+	if len(podList.Items) == 0 {
+		return nil, nil, errors.New("failed to find mattermost pods on which to exec")
+	}
+
+	var clusterInstallationDebugData model.ClusterInstallationDebugData
+	for _, pod := range podList.Items {
+		if len(pod.Spec.Containers) == 0 {
+			return nil, nil, errors.Errorf("failed to find containers in pod %s", pod.Name)
+		}
+
+		args := []string{"curl", "--silent", "http://localhost:8067/debug/pprof/heap"}
+		container := pod.Spec.Containers[0]
+		logger.Debugf("Executing `%s` on pod %s: container=%s, image=%s, phase=%s", strings.Join(args, " "), pod.Name, container.Name, container.Image, pod.Status.Phase)
+
+		now := time.Now()
+		heapBytes, execErr := execCLI(k8sClient, clusterInstallation.Namespace, pod.Name, container.Name, args...)
+		if execErr != nil {
+			logger.WithError(execErr).Warnf("Command `%s` on pod %s finished in %.0f seconds, but encountered an error", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
+			return nil, execErr, nil
+		} else {
+			logger.Debugf("Command `%s` on pod %s finished in %.0f seconds", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
+		}
+
+		args = []string{"curl", "--silent", "http://localhost:8067/debug/pprof/goroutine"}
+		container = pod.Spec.Containers[0]
+		logger.Debugf("Executing `%s` on pod %s: container=%s, image=%s, phase=%s", strings.Join(args, " "), pod.Name, container.Name, container.Image, pod.Status.Phase)
+
+		now = time.Now()
+		goroutineBytes, execErr := execCLI(k8sClient, clusterInstallation.Namespace, pod.Name, container.Name, args...)
+		if execErr != nil {
+			logger.WithError(execErr).Warnf("Command `%s` on pod %s finished in %.0f seconds, but encountered an error", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
+			return nil, execErr, nil
+		} else {
+			logger.Debugf("Command `%s` on pod %s finished in %.0f seconds", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
+		}
+
+		clusterInstallationDebugData = append(clusterInstallationDebugData, model.PodDebugData{
+			Name:          pod.Name,
+			GoroutineProf: goroutineBytes,
+			HeapProf:      heapBytes,
+		})
+	}
+
+	return clusterInstallationDebugData, nil, nil
+}
+
+func execCLI(k8sClient *k8s.KubeClient, namespace, podName, containerName string, args ...string) ([]byte, error) {
 	execRequest := k8sClient.Clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).

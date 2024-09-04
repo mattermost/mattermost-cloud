@@ -137,6 +137,7 @@ type Provisioner interface {
 	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error)
 	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+	ExecClusterInstallationPPROF(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (model.ClusterInstallationDebugData, error, error)
 	GetClusterInstallationStatus(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (*model.ClusterInstallationStatus, error)
 }
 

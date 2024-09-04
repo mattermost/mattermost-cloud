@@ -98,6 +98,17 @@ func (flags *clusterInstallationMattermostCLIFlags) addFlags(command *cobra.Comm
 	_ = command.MarkFlagRequired("command")
 }
 
+type clusterInstallationPPROFFlags struct {
+	clusterFlags
+	clusterInstallationID string
+}
+
+func (flags *clusterInstallationPPROFFlags) addFlags(command *cobra.Command) {
+	command.Flags().StringVar(&flags.clusterInstallationID, "cluster-installation", "", "The id of the cluster installation.")
+
+	_ = command.MarkFlagRequired("cluster-installation")
+}
+
 type clusterInstallationMigrationFlags struct {
 	clusterFlags
 	installation  string

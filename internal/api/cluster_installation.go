@@ -5,8 +5,11 @@
 package api
 
 import (
+	"archive/zip"
 	"fmt"
 	"net/http"
+	"os"
+	"path"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/common"
@@ -35,6 +38,7 @@ func initClusterInstallation(apiRouter *mux.Router, context *Context) {
 	clusterInstallationRouter.Handle("/config", addContext(handleSetClusterInstallationConfig)).Methods("PUT")
 	clusterInstallationRouter.Handle("/exec/{command}", addContext(handleRunClusterInstallationExecCommand)).Methods("POST")
 	clusterInstallationRouter.Handle("/mattermost_cli", addContext(handleRunClusterInstallationMattermostCLI)).Methods("POST")
+	clusterInstallationRouter.Handle("/pprof", addContext(handleRunClusterInstallationGetPPROF)).Methods("GET")
 	clusterInstallationRouter.Handle("/status", addContext(handleGetClusterInstallationStatus)).Methods("GET")
 }
 
@@ -313,6 +317,96 @@ func handleRunClusterInstallationExecCommand(c *Context, w http.ResponseWriter, 
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(output)
+}
+
+// handleRunClusterInstallationGetPPROF responds to POST /api/cluster_installation/{cluster_installation}/pprof,
+// running pprof commands on all pods and returning the output as a dubug zip file.
+func handleRunClusterInstallationGetPPROF(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterInstallationID := vars["cluster_installation"]
+	c.Logger = c.Logger.WithField("cluster_installation", clusterInstallationID)
+
+	clusterInstallation, err := c.Store.GetClusterInstallation(clusterInstallationID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if clusterInstallation == nil {
+		c.Logger.Error("cluster installation not found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if clusterInstallation.IsDeleted() {
+		c.Logger.Error("cluster installation is deleted")
+		w.WriteHeader(http.StatusGone)
+		return
+	}
+
+	if clusterInstallation.APISecurityLock {
+		logSecurityLockConflict("cluster-installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	cluster, err := c.Store.GetCluster(clusterInstallation.ClusterID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if cluster == nil {
+		c.Logger.Errorf("failed to find cluster %s associated with cluster installation", clusterInstallation.ClusterID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	debugData, execErr, err := c.Provisioner.ExecClusterInstallationPPROF(cluster, clusterInstallation)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to prepare command execution")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if execErr != nil {
+		c.Logger.WithError(execErr).Error("failed to execute command")
+		w.WriteHeader(http.StatusConflict)
+		return
+	}
+
+	// Create a temporary zipfile which will be cleaned up after being sent.
+	tempDir, err := os.MkdirTemp("", "pprof-")
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create temporary pprof directory")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer os.RemoveAll(tempDir)
+
+	tempZipPath := path.Join(tempDir, fmt.Sprintf("%s.tempprof.zip", clusterInstallationID))
+	tempZipFile, err := os.Create(tempZipPath)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create temporary pprof zip file")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	zipFileWriter := zip.NewWriter(tempZipFile)
+	err = populateZipfile(zipFileWriter, debugData.ToFileData())
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to populate temporary pprof zip file")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	debugBytes, err := os.ReadFile(tempZipPath)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to read temporary pprof zip file")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(debugBytes)
 }
 
 // handleRunClusterInstallationMattermostCLI responds to POST /api/cluster_installation/{cluster_installation}/mattermost_cli, running a Mattermost CLI command and returning any output.

@@ -6,6 +6,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
@@ -43,6 +44,45 @@ type ClusterInstallationStatus struct {
 	ReadyPod          *int32 `json:"ReadyPod,omitempty"`
 	StartedPod        *int32 `json:"StartedPod,omitempty"`
 	ReadyLocalServer  *int32 `json:"ReadyLocalServer,omitempty"`
+}
+
+type ClusterInstallationDebugData []PodDebugData
+
+func (d *ClusterInstallationDebugData) ToFileData() []FileData {
+	files := []FileData{}
+	for _, podDebugData := range *d {
+		files = append(files,
+			podDebugData.GetHeapProfFile(),
+			podDebugData.GetGoroutinesProfFile(),
+		)
+	}
+
+	return files
+}
+
+type PodDebugData struct {
+	Name          string
+	HeapProf      []byte
+	GoroutineProf []byte
+}
+
+func (pd *PodDebugData) GetHeapProfFile() FileData {
+	return FileData{
+		Filename: fmt.Sprintf("%s.heap.prof", pd.Name),
+		Body:     pd.HeapProf,
+	}
+}
+
+func (pd *PodDebugData) GetGoroutinesProfFile() FileData {
+	return FileData{
+		Filename: fmt.Sprintf("%s.goroutine.prof", pd.Name),
+		Body:     pd.GoroutineProf,
+	}
+}
+
+type FileData struct {
+	Filename string
+	Body     []byte
 }
 
 // MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.
