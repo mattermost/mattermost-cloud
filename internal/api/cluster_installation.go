@@ -360,7 +360,7 @@ func handleRunClusterInstallationGetPPROF(c *Context, w http.ResponseWriter, r *
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+c.Logger = c.Logger.WithField("cluster_id", cluster.ID)
 	debugData, execErr, err := c.Provisioner.ExecClusterInstallationPPROF(cluster, clusterInstallation)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to prepare command execution")
