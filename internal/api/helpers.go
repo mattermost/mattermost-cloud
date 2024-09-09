@@ -5,8 +5,10 @@
 package api
 
 import (
+	"archive/zip"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/model"
 
@@ -104,4 +106,25 @@ func parseDeletionLocked(u *url.URL) (*bool, error) {
 	}
 
 	return &locked, nil
+}
+
+func populateZipfile(w *zip.Writer, fileDatas []model.FileData) error {
+	defer w.Close()
+	for _, fd := range fileDatas {
+		f, err := w.CreateHeader(&zip.FileHeader{
+			Name:     fd.Filename,
+			Method:   zip.Deflate,
+			Modified: time.Now(),
+		})
+
+		if err != nil {
+			return err
+		}
+
+		_, err = f.Write(fd.Body)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -581,6 +581,86 @@ func TestRunClusterInstallationMattermostCLI(t *testing.T) {
 	})
 }
 
+func TestRunClusterInstallationGetPPROF(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	mProvisioner := &mockProvisioner{DebugData: model.ClusterInstallationDebugData{
+		{
+			Name:          "pod1",
+			HeapProf:      []byte(model.NewID()),
+			GoroutineProf: []byte(model.NewID()),
+		},
+		{
+			Name:          "pod2",
+			HeapProf:      []byte(model.NewID()),
+			GoroutineProf: []byte(model.NewID()),
+		},
+		{
+			Name:          "pod3",
+			HeapProf:      []byte(model.NewID()),
+			GoroutineProf: []byte(model.NewID()),
+		},
+	}}
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:       sqlStore,
+		Supervisor:  &mockSupervisor{},
+		Provisioner: mProvisioner,
+		Metrics:     &mockMetrics{},
+		Logger:      logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	cluster := &model.Cluster{}
+	err := sqlStore.CreateCluster(cluster, nil)
+	require.NoError(t, err)
+
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      cluster.ID,
+		InstallationID: model.NewID(),
+	}
+	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	t.Run("success", func(t *testing.T) {
+		bytes, errTest := client.ExecClusterInstallationPPROF(clusterInstallation1.ID)
+		require.NoError(t, errTest)
+		require.NotEmpty(t, bytes)
+	})
+
+	t.Run("unknown cluster installation", func(t *testing.T) {
+		bytes, errTest := client.ExecClusterInstallationPPROF(model.NewID())
+		require.EqualError(t, errTest, "failed with status code 404")
+		require.Empty(t, bytes)
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		errTest := sqlStore.LockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, errTest)
+
+		bytes, errTest := client.ExecClusterInstallationPPROF(clusterInstallation1.ID)
+		require.EqualError(t, errTest, "failed with status code 403")
+		require.Empty(t, bytes)
+
+		errTest = sqlStore.UnlockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, errTest)
+	})
+
+	t.Run("cluster installation deleted", func(t *testing.T) {
+		errTest := sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
+		require.NoError(t, errTest)
+
+		bytes, errTest := client.ExecClusterInstallationPPROF(clusterInstallation1.ID)
+		require.Error(t, errTest)
+		require.Empty(t, bytes)
+	})
+}
+
 func TestMigrateClusterInstallations(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
@@ -1189,8 +1269,8 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		_, err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.EqualError(t, err, "failed with status code 404")
 	})
-
 }
+
 func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
