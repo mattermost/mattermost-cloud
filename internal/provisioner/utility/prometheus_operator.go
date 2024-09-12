@@ -97,7 +97,8 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 			Name: "thanos-objstore-config",
 		},
 		StringData: map[string]string{
-			"thanos.yaml": string(secret),
+			"thanos.yaml":  string(secret),
+			"objstore.yml": string(secret),
 		},
 	}
 
