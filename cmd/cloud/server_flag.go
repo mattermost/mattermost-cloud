@@ -108,36 +108,6 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 
 }
 
-type pgBouncerConfig struct {
-	minPoolSize                   int64
-	defaultPoolSize               int64
-	reservePoolSize               int64
-	maxClientConnections          int64
-	maxDatabaseConnectionsPerPool int64
-	serverIdleTimeout             int64
-	serverLifetime                int64
-	serverResetQueryAlways        int64
-}
-
-func (flags *pgBouncerConfig) addFlags(command *cobra.Command) {
-	command.Flags().Int64Var(&flags.minPoolSize, "min-proxy-db-pool-size", 1, "Deprecated")
-	command.Flags().MarkDeprecated("min-proxy-db-pool-size", "PgBouncer config is now set on clusters")
-	command.Flags().Int64Var(&flags.defaultPoolSize, "default-proxy-db-pool-size", 5, "Deprecated")
-	command.Flags().MarkDeprecated("default-proxy-db-pool-size", "PgBouncer config is now set on clusters")
-	command.Flags().Int64Var(&flags.reservePoolSize, "reserve-proxy-db-pool-size", 10, "Deprecated")
-	command.Flags().MarkDeprecated("reserve-proxy-db-pool-size", "PgBouncer config is now set on clusters")
-	command.Flags().Int64Var(&flags.maxClientConnections, "max-client-connections", 20000, "Deprecated")
-	command.Flags().MarkDeprecated("max-client-connections", "PgBouncer config is now set on clusters")
-	command.Flags().Int64Var(&flags.maxDatabaseConnectionsPerPool, "max-proxy-db-connections-per-pool", 20, "Deprecated")
-	command.Flags().MarkDeprecated("max-proxy-db-connections-per-pool", "PgBouncer config is now set on clusters")
-	command.Flags().Int64Var(&flags.serverIdleTimeout, "server-idle-timeout", 30, "Deprecated")
-	command.Flags().MarkDeprecated("server-idle-timeout", "PgBouncer config is now set on clusters")
-	command.Flags().Int64Var(&flags.serverLifetime, "server-lifetime", 300, "Deprecated")
-	command.Flags().MarkDeprecated("server-lifetime", "PgBouncer config is now set on clusters")
-	command.Flags().Int64Var(&flags.serverResetQueryAlways, "server-reset-query-always", 0, "Deprecated")
-	command.Flags().MarkDeprecated("server-reset-query-always", "PgBouncer config is now set on clusters")
-}
-
 type installationOptions struct {
 	keepDatabaseData              bool
 	keepFileStoreData             bool
@@ -198,7 +168,6 @@ type serverFlags struct {
 	supervisorOptions
 	schedulingOptions
 	provisioningParams
-	pgBouncerConfig
 	installationOptions
 	dbUtilizationSettings
 	serverFlagChanged
@@ -207,7 +176,6 @@ type serverFlags struct {
 	metricsPort int
 
 	debug                    bool
-	debugHelm                bool
 	devMode                  bool
 	machineLogs              bool
 	enableLogStacktrace      bool
@@ -228,7 +196,6 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	flags.supervisorOptions.addFlags(command)
 	flags.schedulingOptions.addFlags(command)
 	flags.provisioningParams.addFlags(command)
-	flags.pgBouncerConfig.addFlags(command)
 	flags.installationOptions.addFlags(command)
 	flags.dbUtilizationSettings.addFlags(command)
 
@@ -236,7 +203,6 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.Flags().IntVar(&flags.metricsPort, "metrics-port", 8076, "Port on which the metrics server should be listening.")
 
 	command.Flags().BoolVar(&flags.debug, "debug", false, "Whether to output debug logs.")
-	command.Flags().BoolVar(&flags.debugHelm, "debug-helm", false, "Whether to include Helm output in debug logs.")
 	command.Flags().BoolVar(&flags.devMode, "dev", false, "Set sane defaults for development")
 	command.Flags().BoolVar(&flags.machineLogs, "machine-readable-logs", false, "Output the logs in machine readable format.")
 	command.Flags().BoolVar(&flags.enableLogStacktrace, "enable-log-stacktrace", false, "Add stacktrace in error logs.")

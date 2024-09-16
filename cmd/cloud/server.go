@@ -237,10 +237,6 @@ func executeServerCmd(flags serverFlags) error {
 		"deploy-mysql-operator":                         flags.deployMySQLOperator,
 		"deploy-minio-operator":                         flags.deployMinioOperator,
 		"ndots-value":                                   flags.ndotsDefaultValue,
-		"maxDatabaseConnectionsPerPool":                 flags.maxDatabaseConnectionsPerPool,
-		"defaultPoolSize":                               flags.defaultPoolSize,
-		"minPoolSize":                                   flags.minPoolSize,
-		"maxClientConnections":                          flags.maxClientConnections,
 		"disable-db-init-check":                         flags.disableDBInitCheck,
 		"enable-route53":                                flags.enableRoute53,
 		"disable-dns-updates":                           flags.disableDNSUpdates,
@@ -587,13 +583,7 @@ func checkRequirements(logger logrus.FieldLogger) error {
 // deprecationWarnings performs all checks for deprecated settings and warns if
 // any are found.
 func deprecationWarnings(logger logrus.FieldLogger, flags serverFlags) {
-	if flags.debugHelm {
-		logger.Warn("The debug-helm flag has been deprecated")
-	}
 
-	// Generic warning for old flags.
-	// TODO: Remove after deployments are updated.
-	logger.Warn("All pgbouncer config.ini flags have been deprecated. Review server flags to ensure you are not setting any as they will be removed later.")
 }
 
 // getHumanReadableID  represents  a  best  effort  attempt  to  retrieve  an
