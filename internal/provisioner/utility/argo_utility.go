@@ -88,7 +88,7 @@ func ProvisionUtilityArgocd(utilityName, tempDir, clusterID string, allowCIDRRan
 
 	replacements := map[string]string{
 		"<VPC_ID>":                  vpc,
-		"<CERTFICATE_ARN>":          *certificate.ARN,
+		"<CERTIFICATE_ARN>":         *certificate.ARN,
 		"<PRIVATE_CERTIFICATE_ARN>": *privateCertificate.ARN,
 		"<CLUSTER_ID>":              clusterID,
 		"<ENV>":                     awsClient.GetCloudEnvironmentName(),
