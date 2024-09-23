@@ -2,7 +2,7 @@ module github.com/mattermost/mattermost-cloud
 
 go 1.22.0
 
-toolchain go1.22.5
+toolchain go1.22.7
 
 require (
 	github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
