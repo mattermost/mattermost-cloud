@@ -31,7 +31,11 @@ ENV CLOUD=/mattermost-cloud/cloud \
   USER_UID=10001 \
   USER_NAME=cloud
 
-RUN  apk update && apk add libc6-compat && apk add ca-certificates
+RUN  apk update && apk add libc6-compat \
+                           ca-certificates \
+                           mandoc \
+                           aws-cli \
+                           && rm -rf /var/cache/apk/*
 COPY --from=build /mattermost-cloud/build/terraform /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kops /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/helm /usr/local/bin/
