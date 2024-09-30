@@ -29,14 +29,12 @@ LABEL name="Mattermost Cloud" \
 
 ENV CLOUD=/mattermost-cloud/cloud \
   USER_UID=10001 \
-  USER_NAME=cloud \
-  HOME=/mattermost-cloud
+  USER_NAME=cloud
 
 RUN  apk update && apk add libc6-compat \
                            ca-certificates \
                            mandoc \
                            aws-cli \
-                           shadow \
                            && rm -rf /var/cache/apk/*
 COPY --from=build /mattermost-cloud/build/terraform /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kops /usr/local/bin/
@@ -46,11 +44,11 @@ COPY --from=build /mattermost-cloud/helm-charts /mattermost-cloud/helm-charts
 COPY --from=build /mattermost-cloud/manifests /mattermost-cloud/manifests
 COPY --from=build /mattermost-cloud/build/_output/${TARGETARCH}/bin/cloud /mattermost-cloud/cloud
 COPY --from=build /mattermost-cloud/build/bin /usr/local/bin
-RUN useradd ${USER_NAME} -u ${USER_UID} -d ${HOME} -s /sbin/nologin
+RUN chown -R ${USER_UID}:${USER_UID} /mattermost-cloud/
 RUN  /usr/local/bin/user_setup
 WORKDIR /mattermost-cloud/
 
-USER ${USER_NAME}
+USER ${USER_UID}
 
 EXPOSE 8075
 EXPOSE 8076
