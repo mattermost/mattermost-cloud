@@ -4,6 +4,8 @@ set -euo pipefail
 # ensure $HOME exists and is accessible by group 0 (we don't know what the runtime UID will be)
 mkdir -p ${HOME}
 chown ${USER_UID}:0 ${HOME}
+chown ${USER_UID}:0 /mattermost-cloud
+chown ${USER_UID}:0 /.aws
 chmod ug+rwx ${HOME}
 
 # runtime user will need to be able to self-insert in /etc/passwd
