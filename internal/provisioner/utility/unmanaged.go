@@ -211,10 +211,6 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
 			return err
 		}
-	case model.PromtailCanonicalName:
-		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
-			return err
-		}
 	case model.VeleroCanonicalName:
 		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
 			return err

@@ -130,9 +130,6 @@ func SetupTestWithDefaults(testName string, argoManagedUtilities bool) (*Test, e
 			model.PgbouncerCanonicalName: {
 				Chart: model.UnmanagedUtilityVersion,
 			},
-			model.PromtailCanonicalName: {
-				Chart: model.UnmanagedUtilityVersion,
-			},
 			model.MetricsServerCanonicalName: {
 				Chart: model.UnmanagedUtilityVersion,
 			},
