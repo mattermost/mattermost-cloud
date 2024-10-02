@@ -6,7 +6,7 @@ mkdir -p ${HOME}
 chown ${USER_UID}:0 ${HOME}
 chown ${USER_UID}:0 /mattermost-cloud
 # ensure /.aws exists and is accessible by group USER_UID
-mkdir /.aws
+mkdir -p /.aws
 chown ${USER_UID}:0 /.aws
 chmod ug+rwx ${HOME}
 
