@@ -158,6 +158,18 @@ type serverFlagChanged struct {
 	isKeepFileStoreDataChanged bool
 }
 
+type serverAuthFlags struct {
+	ClientIDs []string
+	Issuer    string
+	Audience  string
+}
+
+func (flags *serverAuthFlags) addFlags(command *cobra.Command) {
+	command.Flags().StringSliceVar(&flags.ClientIDs, "client-ids", []string{}, "The list of OAuth2 client IDs to allow.")
+	command.Flags().StringVar(&flags.Issuer, "issuer", "", "The OAuth2 issuer URL.")
+	command.Flags().StringVar(&flags.Audience, "audience", "", "The OAuth2 audience.")
+}
+
 func (flags *serverFlagChanged) addFlags(command *cobra.Command) {
 	flags.isDebugChanged = command.Flags().Changed("debug")
 	flags.isKeepDatabaseDataChanged = command.Flags().Changed("keep-database-data")
@@ -171,6 +183,7 @@ type serverFlags struct {
 	installationOptions
 	dbUtilizationSettings
 	serverFlagChanged
+	serverAuthFlags
 
 	listen      string
 	metricsPort int
@@ -198,6 +211,7 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	flags.provisioningParams.addFlags(command)
 	flags.installationOptions.addFlags(command)
 	flags.dbUtilizationSettings.addFlags(command)
+	flags.serverAuthFlags.addFlags(command)
 
 	command.Flags().StringVar(&flags.listen, "listen", ":8075", "The interface and port on which to listen.")
 	command.Flags().IntVar(&flags.metricsPort, "metrics-port", 8076, "Port on which the metrics server should be listening.")

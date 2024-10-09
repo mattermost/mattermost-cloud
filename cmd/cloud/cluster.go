@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -83,7 +84,7 @@ func newCmdClusterCreate() *cobra.Command {
 		Short: "Create a cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeClusterCreateCmd(flags)
+			return executeClusterCreateCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -95,8 +96,8 @@ func newCmdClusterCreate() *cobra.Command {
 	return cmd
 }
 
-func executeClusterCreateCmd(flags clusterCreateFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterCreateCmd(ctx context.Context, flags clusterCreateFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	if flags.cluster != "" {
 		err := client.RetryCreateCluster(flags.cluster)
@@ -210,7 +211,7 @@ func newCmdClusterImport() *cobra.Command {
 		Short: "Import an exisiting cluster that is managed externally.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeClusterImportCmd(flags)
+			return executeClusterImportCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -221,8 +222,8 @@ func newCmdClusterImport() *cobra.Command {
 	return cmd
 }
 
-func executeClusterImportCmd(flags clusterImportFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterImportCmd(ctx context.Context, flags clusterImportFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	request := &model.ImportClusterRequest{
 		ExternalClusterSecretName: flags.secretName,
@@ -255,7 +256,7 @@ func newCmdClusterProvision() *cobra.Command {
 		Short: "Provision/Re-provision a cluster's k8s resources.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeClusterProvisionCmd(flags)
+			return executeClusterProvisionCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -267,8 +268,8 @@ func newCmdClusterProvision() *cobra.Command {
 	return cmd
 }
 
-func executeClusterProvisionCmd(flags clusterProvisionFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterProvisionCmd(ctx context.Context, flags clusterProvisionFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	request := &model.ProvisionClusterRequest{
 		Force:                  flags.reprovisionAllUtilities,
@@ -302,7 +303,7 @@ func newCmdClusterUpdate() *cobra.Command {
 		Short: "Updates a cluster's configuration.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeClusterUpdateCmd(flags)
+			return executeClusterUpdateCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -314,8 +315,8 @@ func newCmdClusterUpdate() *cobra.Command {
 	return cmd
 }
 
-func executeClusterUpdateCmd(flags clusterUpdateFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterUpdateCmd(ctx context.Context, flags clusterUpdateFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	request := flags.GetPatchClusterRequest()
 
@@ -344,7 +345,7 @@ func newCmdClusterUpgrade() *cobra.Command {
 		Short: "Upgrade k8s on a cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeClusterUpgradeCmd(flags)
+			return executeClusterUpgradeCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -356,8 +357,8 @@ func newCmdClusterUpgrade() *cobra.Command {
 	return cmd
 }
 
-func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterUpgradeCmd(ctx context.Context, flags clusterUpgradeFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	rotatorConfig := getRotatorConfigFromFlags(flags.rotatorConfig)
 
@@ -403,7 +404,7 @@ func newCmdClusterResize() *cobra.Command {
 		Short: "Resize a k8s cluster",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeClusterResizeCmd(flags)
+			return executeClusterResizeCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -414,8 +415,8 @@ func newCmdClusterResize() *cobra.Command {
 	return cmd
 }
 
-func executeClusterResizeCmd(flags clusterResizeFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterResizeCmd(ctx context.Context, flags clusterResizeFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	rotatorConfig := getRotatorConfigFromFlags(flags.rotatorConfig)
 
@@ -471,7 +472,7 @@ func newCmdClusterDelete() *cobra.Command {
 		Short: "Delete a cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeClusterDeleteCmd(flags)
+			return executeClusterDeleteCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -482,8 +483,8 @@ func newCmdClusterDelete() *cobra.Command {
 	return cmd
 }
 
-func executeClusterDeleteCmd(flags clusterDeleteFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterDeleteCmd(ctx context.Context, flags clusterDeleteFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	err := client.DeleteCluster(flags.cluster)
 	if err != nil {
@@ -501,7 +502,7 @@ func newCmdClusterGet() *cobra.Command {
 		Short: "Get a particular cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeClusterGetCmd(flags)
+			return executeClusterGetCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -512,8 +513,8 @@ func newCmdClusterGet() *cobra.Command {
 	return cmd
 }
 
-func executeClusterGetCmd(flags clusterGetFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterGetCmd(ctx context.Context, flags clusterGetFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	cluster, err := client.GetCluster(flags.cluster)
 	if err != nil {
@@ -537,7 +538,7 @@ func newCmdClusterList() *cobra.Command {
 		Short: "List created clusters.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeClusterListCmd(flags)
+			return executeClusterListCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -548,8 +549,8 @@ func newCmdClusterList() *cobra.Command {
 	return cmd
 }
 
-func executeClusterListCmd(flags clusterListFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterListCmd(ctx context.Context, flags clusterListFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -664,7 +665,7 @@ func newCmdClusterUtilities() *cobra.Command {
 		Short: "Show metadata regarding utility services running in a cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			metadata, err := client.GetClusterUtilities(flags.cluster)
 			if err != nil {

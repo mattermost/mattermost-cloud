@@ -5,6 +5,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -31,7 +33,7 @@ func newCmdClusterAnnotationAdd() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			return executeClusterAnnotationAddCmd(flags)
+			return executeClusterAnnotationAddCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -42,9 +44,9 @@ func newCmdClusterAnnotationAdd() *cobra.Command {
 	return cmd
 }
 
-func executeClusterAnnotationAddCmd(flags clusterAnnotationAddFlags) error {
+func executeClusterAnnotationAddCmd(ctx context.Context, flags clusterAnnotationAddFlags) error {
 
-	client := createClient(flags.clusterFlags)
+	client := createClient(ctx, flags.clusterFlags)
 
 	request := newAddAnnotationsRequest(flags.annotations)
 
@@ -73,7 +75,7 @@ func newCmdClusterAnnotationDelete() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			if err := client.DeleteClusterAnnotation(flags.cluster, flags.annotation); err != nil {
 				return errors.Wrap(err, "failed to delete cluster annotations")

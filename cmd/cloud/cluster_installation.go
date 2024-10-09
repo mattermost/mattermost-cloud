@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -42,7 +43,7 @@ func newCmdClusterInstallationGet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			clusterInstallation, err := client.GetClusterInstallation(flags.clusterInstallationID)
 			if err != nil {
@@ -72,7 +73,7 @@ func newCmdClusterInstallationList() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			return executeClusterInstallationListCmd(flags)
+			return executeClusterInstallationListCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -83,8 +84,8 @@ func newCmdClusterInstallationList() *cobra.Command {
 	return cmd
 }
 
-func executeClusterInstallationListCmd(flags clusterInstallationListFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterInstallationListCmd(ctx context.Context, flags clusterInstallationListFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -152,7 +153,7 @@ func newCmdClusterInstallationConfigGet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			clusterInstallationConfig, err := client.GetClusterInstallationConfig(flags.clusterInstallationID)
 			if err != nil {
@@ -182,7 +183,7 @@ func newCmdClusterInstallationConfigSet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			config := make(map[string]interface{})
 			keyParts := strings.Split(flags.key, ".")
@@ -220,7 +221,7 @@ func newCmdClusterInstallationStatus() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			clusterInstallation, err := client.GetClusterInstallationStatus(flags.clusterInstallationID)
 			if err != nil {
@@ -250,7 +251,7 @@ func newCmdClusterInstallationMMCTL() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			output, err := client.ExecClusterInstallationCLI(flags.clusterInstallationID, "mmctl", strings.Split(flags.subcommand, " "))
 			fmt.Println(string(output))
@@ -278,7 +279,7 @@ func newCmdClusterInstallationMattermostCLI() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			output, err := client.RunMattermostCLICommandOnClusterInstallation(flags.clusterInstallationID, strings.Split(flags.subcommand, " "))
 			fmt.Println(string(output))
@@ -305,7 +306,7 @@ func newCmdClusterInstallationPPROF() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			output, err := client.ExecClusterInstallationPPROF(flags.clusterInstallationID)
 			if err != nil {
@@ -343,7 +344,7 @@ func newCmdClusterInstallationMigration() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			return executeClusterInstallationMigrationCmd(flags)
+			return executeClusterInstallationMigrationCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -357,9 +358,9 @@ func newCmdClusterInstallationMigration() *cobra.Command {
 	return cmd
 }
 
-func executeClusterInstallationMigrationCmd(flags clusterInstallationMigrationFlags) error {
+func executeClusterInstallationMigrationCmd(ctx context.Context, flags clusterInstallationMigrationFlags) error {
 
-	client := createClient(flags.clusterFlags)
+	client := createClient(ctx, flags.clusterFlags)
 
 	response, err := client.MigrateClusterInstallation(
 		&model.MigrateClusterInstallationRequest{
@@ -388,7 +389,7 @@ func newCmdClusterInstallationDNSMigration() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			return executeClusterInstallationDNSMigrationCmd(flags)
+			return executeClusterInstallationDNSMigrationCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -399,8 +400,8 @@ func newCmdClusterInstallationDNSMigration() *cobra.Command {
 	return cmd
 }
 
-func executeClusterInstallationDNSMigrationCmd(flags clusterInstallationDNSMigrationFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterInstallationDNSMigrationCmd(ctx context.Context, flags clusterInstallationDNSMigrationFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	response, err := client.MigrateDNS(
 		&model.MigrateClusterInstallationRequest{
@@ -427,7 +428,7 @@ func newCmdDeleteInActiveClusterInstallation() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			return executeDeleteInActiveClusterInstallationCmd(flags)
+			return executeDeleteInActiveClusterInstallationCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -438,9 +439,9 @@ func newCmdDeleteInActiveClusterInstallation() *cobra.Command {
 	return cmd
 }
 
-func executeDeleteInActiveClusterInstallationCmd(flags inActiveClusterInstallationDeleteFlags) error {
+func executeDeleteInActiveClusterInstallationCmd(ctx context.Context, flags inActiveClusterInstallationDeleteFlags) error {
 
-	client := createClient(flags.clusterFlags)
+	client := createClient(ctx, flags.clusterFlags)
 
 	if len(flags.clusterInstallationID) != 0 {
 		deletedCI, err := client.DeleteInActiveClusterInstallationByID(flags.clusterInstallationID)
@@ -476,7 +477,7 @@ func newCmdClusterRolesPostMigrationSwitch() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			return executeClusterRolesPostMigrationSwitchCmd(flags)
+			return executeClusterRolesPostMigrationSwitchCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -487,8 +488,8 @@ func newCmdClusterRolesPostMigrationSwitch() *cobra.Command {
 	return cmd
 }
 
-func executeClusterRolesPostMigrationSwitchCmd(flags clusterRolesPostMigrationSwitchFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeClusterRolesPostMigrationSwitchCmd(ctx context.Context, flags clusterRolesPostMigrationSwitchFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	response, err := client.SwitchClusterRoles(
 		&model.MigrateClusterInstallationRequest{

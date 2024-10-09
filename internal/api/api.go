@@ -5,6 +5,8 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gorilla/mux"
 )
 
@@ -12,6 +14,11 @@ import (
 func Register(rootRouter *mux.Router, context *Context) {
 	// api handler at /api
 	apiRouter := rootRouter.PathPrefix("/api").Subrouter()
+
+	authMiddleware := func(next http.Handler) http.Handler {
+		return AuthMiddleware(next, context) // Pass the context to AuthMiddleware
+	}
+	apiRouter.Use(authMiddleware)
 	initCluster(apiRouter, context)
 	initInstallation(apiRouter, context)
 	initClusterInstallation(apiRouter, context)

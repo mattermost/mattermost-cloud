@@ -5,8 +5,11 @@
 package main
 
 import (
+	"context"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/cmd/cloud/clicontext"
+	"github.com/mattermost/mattermost-cloud/internal/auth"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
@@ -58,14 +61,33 @@ func runDryRun(request interface{}) error {
 	return nil
 }
 
-func createClient(flags clusterFlags) *model.Client {
+func createClient(ctx context.Context, flags clusterFlags) *model.Client {
+	// header := make(map[string]string, len(flags.headers) + 1) // +1 for the Authorization header
+	headers := map[string]string{}
+	serverAddress := ""
+
+	if address := ctx.Value(clicontext.ContextKeyServerURL); address != nil {
+		serverAddress = address.(string)
+	}
+
 	if len(flags.headers) > 0 {
-		headers := make(map[string]string, len(flags.headers))
+		// headers := make(map[string]string, len(flags.headers))
 		for key, value := range flags.headers {
 			headers[key] = value
 		}
-		return model.NewClientWithHeaders(flags.serverAddress, headers)
+		return model.NewClientWithHeaders(serverAddress, headers)
 	}
 
-	return model.NewClient(flags.serverAddress)
+	if authContext := ctx.Value(auth.ContextKeyAuthData); authContext != nil {
+		authData := authContext.(*auth.AuthorizationResponse)
+		if authData != nil {
+			headers["Authorization"] = "Bearer " + authData.AccessToken
+		}
+	}
+
+	if len(headers) > 0 {
+		return model.NewClientWithHeaders(serverAddress, headers)
+	}
+
+	return model.NewClient(serverAddress)
 }

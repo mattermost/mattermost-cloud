@@ -5,6 +5,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -33,7 +35,7 @@ func newCmdInstallationBackupCreate() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			backup, err := client.CreateInstallationBackup(flags.installationID)
 			if err != nil {
@@ -60,7 +62,7 @@ func newCmdInstallationBackupList() *cobra.Command {
 		Short: "List installation backups.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeInstallationBackupListCmd(flags)
+			return executeInstallationBackupListCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -72,8 +74,8 @@ func newCmdInstallationBackupList() *cobra.Command {
 	return cmd
 }
 
-func executeInstallationBackupListCmd(flags installationBackupListFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeInstallationBackupListCmd(ctx context.Context, flags installationBackupListFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -138,7 +140,7 @@ func newCmdInstallationBackupGet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			backup, err := client.GetInstallationBackup(flags.backupID)
 			if err != nil {
@@ -166,7 +168,7 @@ func newCmdInstallationBackupDelete() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			if err := client.DeleteInstallationBackup(flags.backupID); err != nil {
 				return errors.Wrap(err, "failed to delete backup")

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,7 +27,7 @@ func newCmdDashboard() *cobra.Command {
 		Short: "View an auto-refreshing dashboard of all cloud server resources.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeDashboardCmd(flags)
+			return executeDashboardCmd(command.Context(), flags)
 		},
 	}
 
@@ -35,8 +36,8 @@ func newCmdDashboard() *cobra.Command {
 	return cmd
 }
 
-func executeDashboardCmd(flags dashboardFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeDashboardCmd(ctx context.Context, flags dashboardFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 	if flags.refreshSeconds < 1 {
 		return errors.Errorf("refresh seconds (%d) must be set to 1 or higher", flags.refreshSeconds)
 	}
