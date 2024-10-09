@@ -62,7 +62,6 @@ func runDryRun(request interface{}) error {
 }
 
 func createClient(ctx context.Context, flags clusterFlags) *model.Client {
-	// header := make(map[string]string, len(flags.headers) + 1) // +1 for the Authorization header
 	headers := map[string]string{}
 	serverAddress := ""
 
@@ -71,7 +70,6 @@ func createClient(ctx context.Context, flags clusterFlags) *model.Client {
 	}
 
 	if len(flags.headers) > 0 {
-		// headers := make(map[string]string, len(flags.headers))
 		for key, value := range flags.headers {
 			headers[key] = value
 		}

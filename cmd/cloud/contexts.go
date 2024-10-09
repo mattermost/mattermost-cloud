@@ -46,7 +46,6 @@ func newCmdContextList() *cobra.Command {
 				fmt.Printf("  Server URL: %s\n", ctx.ServerURL)
 				fmt.Printf("  Client ID: %s\n", ctx.ClientID)
 				fmt.Printf("  Org URL: %s\n", ctx.OrgURL)
-				// You can add more details here if needed (e.g., auth data)
 			}
 
 			return nil
