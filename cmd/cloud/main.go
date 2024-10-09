@@ -25,6 +25,7 @@ func isCommandThatSkipsAuth(cmd *cobra.Command) bool {
 	return cmd.Use == "migrate" || cmd.Use == "server" || cmd.Use == "login" || cmd.Parent().Use == "contexts"
 }
 
+// TODO: Add support for --context flag to all commands that can use a context different from current one
 var rootCmd = &cobra.Command{
 	Use:   "cloud",
 	Short: "Cloud is a tool to provision, manage, and monitor Kubernetes clusters.",
