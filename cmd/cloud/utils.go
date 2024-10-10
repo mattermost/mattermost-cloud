@@ -65,7 +65,7 @@ func createClient(ctx context.Context, flags clusterFlags) *model.Client {
 	headers := map[string]string{}
 	serverAddress := ""
 
-	if address := ctx.Value(clicontext.ContextKeyServerURL); address != nil {
+	if address := ctx.Value(clicontext.ContextKeyServerURL{}); address != nil {
 		serverAddress = address.(string)
 	}
 
@@ -76,7 +76,7 @@ func createClient(ctx context.Context, flags clusterFlags) *model.Client {
 		return model.NewClientWithHeaders(serverAddress, headers)
 	}
 
-	if authContext := ctx.Value(auth.ContextKeyAuthData); authContext != nil {
+	if authContext := ctx.Value(auth.ContextKeyAuthData{}); authContext != nil {
 		authData := authContext.(*auth.AuthorizationResponse)
 		if authData != nil {
 			headers["Authorization"] = "Bearer " + authData.AccessToken

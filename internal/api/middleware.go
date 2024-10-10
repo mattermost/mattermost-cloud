@@ -9,6 +9,8 @@ import (
 	jwtverifier "github.com/okta/okta-jwt-verifier-golang"
 )
 
+type ContextKeyUserID struct{}
+
 func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -55,7 +57,7 @@ func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 		log.Printf("%+v", token.Claims)
 
 		// Add user ID to request context for use in handlers
-		ctx := context.WithValue(r.Context(), "userID", userID)
+		ctx := context.WithValue(r.Context(), ContextKeyUserID{}, userID)
 		r = r.WithContext(ctx)
 
 		// Log the request and user ID

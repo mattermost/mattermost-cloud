@@ -2,7 +2,7 @@ package auth
 
 import "time"
 
-const ContextKeyAuthData = "authData"
+type ContextKeyAuthData struct{}
 
 type ServerConfig struct {
 	Issuer    string   `json:"issuer"`

@@ -240,7 +240,6 @@ func newCmdContextCreate() *cobra.Command {
 }
 
 type deleteContextFlags struct {
-	clusterFlags
 	contextName string
 }
 

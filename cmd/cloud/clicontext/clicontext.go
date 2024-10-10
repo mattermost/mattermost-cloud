@@ -9,7 +9,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/auth"
 )
 
-const ContextKeyServerURL = "server_url"
+type ContextKeyServerURL struct{}
 
 type CLIContext struct {
 	AuthData  *auth.AuthorizationResponse `json:"auth_data"`
@@ -67,7 +67,7 @@ func ReadContexts() (*Contexts, error) {
 	contextFilePath := filepath.Join(homeDir, ".cloud", "contexts.json")
 
 	var contextsData Contexts
-	if _, err := os.Stat(contextFilePath); errors.Is(err, os.ErrNotExist) {
+	if _, statErr := os.Stat(contextFilePath); errors.Is(statErr, os.ErrNotExist) {
 		contextsData = bootstrapFirstContext()
 		WriteContexts(&contextsData)
 		return &contextsData, nil

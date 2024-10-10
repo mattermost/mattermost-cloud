@@ -59,12 +59,12 @@ var rootCmd = &cobra.Command{
 				}
 				authData.ExpiresAt = authData.GetExpiresAt()
 
-				cmd.SetContext(context.WithValue(cmd.Context(), auth.ContextKeyAuthData, authData))
+				cmd.SetContext(context.WithValue(cmd.Context(), auth.ContextKeyAuthData{}, authData))
 			}
 
 			// Update disk copy of context with new auth data if any
 			contexts.UpdateContext(contexts.CurrentContext, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL)
-			cmd.SetContext(context.WithValue(cmd.Context(), clicontext.ContextKeyServerURL, currentContext.ServerURL))
+			cmd.SetContext(context.WithValue(cmd.Context(), clicontext.ContextKeyServerURL{}, currentContext.ServerURL))
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
