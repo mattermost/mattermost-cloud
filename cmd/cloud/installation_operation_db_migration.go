@@ -5,6 +5,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -35,7 +37,7 @@ func newCmdInstallationDBMigrationRequest() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			request := &model.InstallationDBMigrationRequest{
 				InstallationID:         flags.installationID,
@@ -72,7 +74,7 @@ func newCmdInstallationDBMigrationsList() *cobra.Command {
 		Short: "List installation database migration operations",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeInstallationDBMigrationsList(flags)
+			return executeInstallationDBMigrationsList(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -85,8 +87,8 @@ func newCmdInstallationDBMigrationsList() *cobra.Command {
 
 }
 
-func executeInstallationDBMigrationsList(flags installationDBMigrationsListFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeInstallationDBMigrationsList(ctx context.Context, flags installationDBMigrationsListFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -149,7 +151,7 @@ func newCmdInstallationDBMigrationGet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			migrationOperation, err := client.GetInstallationDBMigrationOperation(flags.dbMigrationID)
 			if err != nil {
@@ -176,7 +178,7 @@ func newCmdInstallationDBMigrationCommit() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			migrationOperation, err := client.CommitInstallationDBMigration(flags.dbMigrationID)
 			if err != nil {
@@ -205,7 +207,7 @@ func newCmdInstallationDBMigrationRollback() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			migrationOperation, err := client.RollbackInstallationDBMigration(flags.dbMigrationID)
 			if err != nil {

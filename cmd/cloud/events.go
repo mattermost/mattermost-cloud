@@ -5,6 +5,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -43,7 +45,7 @@ func newCmdStateChangeEventList() *cobra.Command {
 		Short: "Fetch state change events managed by the provisioning server.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeStateChangeEventListCmd(flags)
+			return executeStateChangeEventListCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.eventFlags.addFlags(cmd)
@@ -55,8 +57,8 @@ func newCmdStateChangeEventList() *cobra.Command {
 	return cmd
 }
 
-func executeStateChangeEventListCmd(flags stateChangeEventListFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeStateChangeEventListCmd(ctx context.Context, flags stateChangeEventListFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 

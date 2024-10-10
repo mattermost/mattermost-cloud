@@ -12,13 +12,11 @@ func setClusterFlags(command *cobra.Command) {
 }
 
 type clusterFlags struct {
-	serverAddress string
-	headers       map[string]string
-	dryRun        bool
+	headers map[string]string
+	dryRun  bool
 }
 
 func (flags *clusterFlags) addFlags(command *cobra.Command) {
-	flags.serverAddress, _ = command.Flags().GetString("server")
 	flags.headers, _ = command.Flags().GetStringToString("header")
 	flags.dryRun, _ = command.Flags().GetBool("dry-run")
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/gorilla/mux"
 	awat "github.com/mattermost/awat/model"
 	"github.com/mattermost/mattermost-cloud/internal/api"
+	"github.com/mattermost/mattermost-cloud/internal/auth"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
@@ -390,6 +391,17 @@ func executeServerCmd(flags serverFlags) error {
 		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerObj, eventsProducer, logger))
 	}
 
+	serverAuthConfig := &auth.ServerConfig{
+		ClientIDs: flags.ClientIDs,
+		Issuer:    flags.Issuer,
+		Audience:  flags.Audience,
+	}
+
+	if !serverAuthConfig.IsValid() {
+		logger.Warn("Auth server configuration is invalid; auth server will not be enabled")
+		serverAuthConfig = nil
+	}
+
 	// Setup the supervisor to effect any requested changes. It is wrapped in a
 	// scheduler to trigger it periodically in addition to being poked by the API
 	// layer.
@@ -444,6 +456,7 @@ func executeServerCmd(flags serverFlags) error {
 		Metrics:                           cloudMetrics,
 		InstallationDeletionExpiryDefault: flags.installationDeletionPendingTime,
 		Logger:                            logger,
+		AuthConfig:                        serverAuthConfig,
 	})
 
 	srv := &http.Server{

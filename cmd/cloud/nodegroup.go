@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
@@ -32,7 +33,7 @@ func newCmdClusterNodegroupCreate() *cobra.Command {
 		Short: "Create new nodegroups in an existing cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return addNodegroup(flags)
+			return addNodegroup(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -44,8 +45,8 @@ func newCmdClusterNodegroupCreate() *cobra.Command {
 	return cmd
 }
 
-func addNodegroup(flags clusterNodegroupsCreateFlags) error {
-	client := createClient(flags.clusterFlags)
+func addNodegroup(ctx context.Context, flags clusterNodegroupsCreateFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	if len(flags.nodegroups) == 0 {
 		return fmt.Errorf("nodegroups must be provided")
@@ -97,7 +98,7 @@ func newCmdClusterNodegroupDelete() *cobra.Command {
 		Short: "Delete a nodegroup from an existing cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return deleteNodegroup(flags)
+			return deleteNodegroup(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -109,8 +110,8 @@ func newCmdClusterNodegroupDelete() *cobra.Command {
 	return cmd
 }
 
-func deleteNodegroup(flags clusterNodegroupDeleteFlags) error {
-	client := createClient(flags.clusterFlags)
+func deleteNodegroup(ctx context.Context, flags clusterNodegroupDeleteFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	if len(flags.nodegroup) == 0 {
 		return fmt.Errorf("nodegroup must be provided")

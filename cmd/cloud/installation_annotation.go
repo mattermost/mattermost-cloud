@@ -30,7 +30,7 @@ func newCmdInstallationAnnotationAdd() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			request := newAddAnnotationsRequest(flags.annotations)
 
@@ -68,7 +68,7 @@ func newCmdInstallationAnnotationDelete() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			if err := client.DeleteInstallationAnnotation(flags.installationID, flags.annotation); err != nil {
 				return errors.Wrap(err, "failed to delete installation annotations")
