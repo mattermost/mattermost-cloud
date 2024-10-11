@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"fmt"
+
+	"golang.org/x/oauth2"
 )
 
 var ErrAuthTokenExpired = fmt.Errorf("authorization token expired")
@@ -12,14 +14,21 @@ func EnsureValidAuthData(ctx context.Context, auth *AuthorizationResponse, orgUR
 		return nil, nil
 	}
 
-	if auth.IsExpired() {
-		updatedAuth, err := Refresh(ctx, orgURL, clientID, auth.RefreshToken)
-		if err != nil {
-			return nil, fmt.Errorf("failed to refresh authentication token: %w", err)
-		}
-
-		return updatedAuth, err
+	config := &oauth2.Config{
+		ClientID: clientID,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  orgURL + "/oauth2/default/v1/device/authorize",
+			TokenURL: orgURL + "/oauth2/default/v1/token",
+		},
+		Scopes: []string{"openid", "profile", "offline_access"},
 	}
+
+	newToken, err := Refresh(ctx, config, auth.RefreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	auth.AccessToken = newToken.AccessToken
 
 	return auth, nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,21 +11,22 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"golang.org/x/oauth2"
 )
 
-func waitForAuthorization(ctx context.Context, orgURL string, clientID string, code string) (AuthorizationResponse, error) {
-	values := url.Values{
-		"client_id":   {clientID},
-		"device_code": {code},
-		"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
-	}
+func waitForAuthorization(ctx context.Context, config *oauth2.Config, deviceCode string) (AuthorizationResponse, error) {
 	for {
-		var token AuthorizationResponse
+		// Prepare the token request
+		values := url.Values{
+			"client_id":   {config.ClientID},
+			"device_code": {deviceCode},
+			"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
+		}
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, orgURL+"/oauth2/default/v1/token", strings.NewReader(values.Encode()))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, config.Endpoint.TokenURL, strings.NewReader(values.Encode()))
 		if err != nil {
-			return token,
-				fmt.Errorf("failed to create request: %w", err)
+			return AuthorizationResponse{}, fmt.Errorf("failed to create request: %w", err)
 		}
 
 		req.Header.Set("Accept", "application/json")
@@ -36,33 +36,25 @@ func waitForAuthorization(ctx context.Context, orgURL string, clientID string, c
 		resp, err := client.Do(req)
 		if err != nil {
 			log.Print(err)
-			return token, nil
+			return AuthorizationResponse{}, nil
 		}
 		defer resp.Body.Close()
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
+		var token AuthorizationResponse
+		if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
 			log.Print(err)
-			return token, nil
-
+			return AuthorizationResponse{}, nil
 		}
-
-		err = json.Unmarshal(body, &token)
-		if err != nil {
-			log.Print(err)
-			return token, nil
-		}
-
-		fmt.Println(string(body))
+		fmt.Printf("%+v\n", token)
 
 		switch token.Error {
 		case "":
-			// if error is empty, we got a token
+			// Successfully received a token
 			return token, nil
 		case "authorization_pending":
-			// do nothing, just wait
+			// Do nothing, just wait
 		case "access_denied":
-			return token, fmt.Errorf("Access denied")
+			return token, fmt.Errorf("access denied")
 		default:
 			return token, fmt.Errorf("authorization failed: %v", token.Error)
 		}
@@ -73,115 +65,66 @@ func waitForAuthorization(ctx context.Context, orgURL string, clientID string, c
 		case <-time.After(time.Duration(2) * time.Second):
 			// next loop iteration
 		}
-
 	}
 }
 
-func Refresh(ctx context.Context, orgURL, clientID, refreshToken string) (*AuthorizationResponse, error) {
-	var token AuthorizationResponse
-
-	values := url.Values{
-		"client_id":     {clientID},
-		"refresh_token": {refreshToken},
-		"grant_type":    {"refresh_token"},
-		"scope":         {"openid profile offline_access"},
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, orgURL+"/oauth2/default/v1/token", strings.NewReader(values.Encode()))
+func Refresh(ctx context.Context, config *oauth2.Config, refreshToken string) (*oauth2.Token, error) {
+	tokenSource := config.TokenSource(ctx, &oauth2.Token{RefreshToken: refreshToken})
+	newToken, err := tokenSource.Token()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to refresh token: %w", err)
 	}
 
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Print(err)
-		return nil, nil
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Print(err)
-		return nil, nil
-	}
-
-	err = json.Unmarshal(body, &token)
-	if err != nil {
-		log.Print(err)
-		return &token, nil
-	}
-
-	if token.Error != "" {
-		return &token, fmt.Errorf("authorization failed: %v", token.Error)
-	}
-
-	return &token, nil
+	return newToken, nil
 }
 
 func Login(ctx context.Context, orgURL string, clientID string) (AuthorizationResponse, error) {
-	var login AuthorizationResponse
-	fullUrl := orgURL + "/oauth2/default/v1/device/authorize"
+	config := &oauth2.Config{
+		ClientID: clientID,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  orgURL + "/oauth2/default/v1/device/authorize",
+			TokenURL: orgURL + "/oauth2/default/v1/token",
+		},
+		Scopes: []string{"openid", "profile", "offline_access"},
+	}
 
 	values := url.Values{
 		"client_id": {clientID},
 		"scope":     {"openid profile offline_access"},
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullUrl, strings.NewReader(values.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, config.Endpoint.AuthURL, strings.NewReader(values.Encode()))
 	if err != nil {
-		log.Print(err)
-		return login, nil
+		return AuthorizationResponse{}, fmt.Errorf("failed to create request: %w", err)
 	}
-
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Print(err)
-		return login, nil
+		return AuthorizationResponse{}, fmt.Errorf("failed to get device code: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Print(err)
-		return login, nil
-
-	}
-
 	var loginResponse LoginResponse
-
-	err = json.Unmarshal(body, &loginResponse)
-	if err != nil {
-		log.Print(err)
-		return login, nil
+	if err := json.NewDecoder(resp.Body).Decode(&loginResponse); err != nil {
+		return AuthorizationResponse{}, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	fmt.Println(string(body))
-	err = openbrowser(loginResponse.VerificationURIComplete)
-	if err != nil {
-		log.Print(err)
-	}
-
-	fmt.Println("-------------------------------------------------------------")
-	fmt.Println("If your browser isn't already open, copy and past the following URL directly:")
-	fmt.Println(loginResponse.VerificationURIComplete)
+	fmt.Println("Please visit:", loginResponse.VerificationURIComplete)
 	fmt.Println("Code:", loginResponse.UserCode)
-	fmt.Println("-------------------------------------------------------------")
 
-	login, err = waitForAuthorization(ctx, orgURL, clientID, loginResponse.DeviceCode)
-	if err != nil {
+	if err := openbrowser(loginResponse.VerificationURIComplete); err != nil {
 		log.Print(err)
-		return login, nil
 	}
 
-	return login, nil
+	authResponse, err := waitForAuthorization(ctx, config, loginResponse.DeviceCode)
+	if err != nil {
+		return AuthorizationResponse{}, fmt.Errorf("failed to get authorization: %w", err)
+	}
+
+	authResponse.ExpiresAt = authResponse.GetExpiresAt()
+	return authResponse, nil
 }
 
 func openbrowser(url string) error {
