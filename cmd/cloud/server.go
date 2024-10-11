@@ -392,9 +392,8 @@ func executeServerCmd(flags serverFlags) error {
 	}
 
 	serverAuthConfig := &auth.ServerConfig{
-		ClientIDs: flags.ClientIDs,
-		Issuer:    flags.Issuer,
-		Audience:  flags.Audience,
+		Issuer:   flags.Issuer,
+		Audience: flags.Audience,
 	}
 
 	if !serverAuthConfig.IsValid() {

@@ -23,19 +23,13 @@ func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 		tokenString := r.Header.Get("Authorization")
 		if tokenString == "" {
 			http.Error(w, "Authorization header missing", http.StatusUnauthorized)
-
 			return
 		}
-
-		apiContext.Logger.Println("AuthConfig")
-		apiContext.Logger.Println(apiContext.AuthConfig)
 
 		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
 		toValidate := map[string]string{}
-		toValidate["cid"] = apiContext.AuthConfig.ClientIDs[0]
 		toValidate["aud"] = apiContext.AuthConfig.Audience
-		// TODO: validate audience as well
 
 		jwtVerifierSetup := jwtverifier.JwtVerifier{
 			Issuer:           apiContext.AuthConfig.Issuer,
@@ -52,7 +46,15 @@ func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 		}
 
 		// Extract user ID (or other claims)
-		userID := token.Claims["uid"].(string) // Type assertion to string
+		var userID string
+		if uid, ok := token.Claims["uid"]; ok {
+			userID = uid.(string)
+		} else if sub, ok := token.Claims["sub"]; ok {
+			userID = sub.(string)
+		} else {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
 
 		log.Printf("%+v", token.Claims)
 

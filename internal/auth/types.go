@@ -5,13 +5,13 @@ import "time"
 type ContextKeyAuthData struct{}
 
 type ServerConfig struct {
-	Issuer    string   `json:"issuer"`
-	ClientIDs []string `json:"client_ids"`
-	Audience  string   `json:"audience"`
+	Issuer   string `json:"issuer"`
+	ClientID string `json:"client_ids"` // TODO: I think this can just be removed
+	Audience string `json:"audience"`
 }
 
 func (s ServerConfig) IsValid() bool {
-	return s.Issuer != "" && len(s.ClientIDs) > 0 && s.Audience != ""
+	return s.Issuer != "" && s.Audience != ""
 }
 
 type LoginResponse struct {

@@ -23,7 +23,7 @@ func waitForAuthorization(ctx context.Context, orgURL string, clientID string, c
 	for {
 		var token AuthorizationResponse
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, orgURL+"/oauth2/v1/token", strings.NewReader(values.Encode()))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, orgURL+"/oauth2/default/v1/token", strings.NewReader(values.Encode()))
 		if err != nil {
 			return token,
 				fmt.Errorf("failed to create request: %w", err)
@@ -87,7 +87,7 @@ func Refresh(ctx context.Context, orgURL, clientID, refreshToken string) (*Autho
 		"scope":         {"openid profile offline_access"},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, orgURL+"/oauth2/v1/token", strings.NewReader(values.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, orgURL+"/oauth2/default/v1/token", strings.NewReader(values.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -124,7 +124,7 @@ func Refresh(ctx context.Context, orgURL, clientID, refreshToken string) (*Autho
 
 func Login(ctx context.Context, orgURL string, clientID string) (AuthorizationResponse, error) {
 	var login AuthorizationResponse
-	fullUrl := orgURL + "/oauth2/v1/device/authorize"
+	fullUrl := orgURL + "/oauth2/default/v1/device/authorize"
 
 	values := url.Values{
 		"client_id": {clientID},
