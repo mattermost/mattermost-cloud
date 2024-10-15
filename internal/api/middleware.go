@@ -62,9 +62,6 @@ func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 		ctx := context.WithValue(r.Context(), ContextKeyUserID{}, userID)
 		r = r.WithContext(ctx)
 
-		// Log the request and user ID
-		log.Printf("User %s accessed %s %s", userID, r.Method, r.URL)
-
 		next.ServeHTTP(w, r)
 	})
 }
