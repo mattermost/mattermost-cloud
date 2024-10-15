@@ -28,11 +28,18 @@ func (h contextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ww := NewWrappedWriter(w)
 	context := h.context.Clone()
 	context.RequestID = model.NewID()
+
+	userID := ""
+	if r.Context().Value(ContextKeyUserID{}) != nil {
+		userID = r.Context().Value(ContextKeyUserID{}).(string)
+	}
+
 	context.Logger = context.Logger.WithFields(log.Fields{
 		"handler": h.handlerName,
 		"method":  r.Method,
 		"path":    r.URL.Path,
 		"request": context.RequestID,
+		"user_id": userID,
 	})
 
 	h.handler(context, ww, r)
