@@ -60,7 +60,7 @@ require (
 	k8s.io/api v0.30.3
 	k8s.io/apiextensions-apiserver v0.30.3
 	k8s.io/apimachinery v0.30.3
-	k8s.io/client-go v1.5.2
+	k8s.io/client-go v0.31.1
 	k8s.io/kube-aggregator v0.30.3
 )
 
