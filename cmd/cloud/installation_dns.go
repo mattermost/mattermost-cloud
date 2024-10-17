@@ -32,7 +32,7 @@ func newCmdInstallationDNSAdd() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			request := &model.AddDNSRecordRequest{
 				DNS: flags.dnsName,
@@ -72,7 +72,7 @@ func newCmdInstallationDNSSetPrimary() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			installation, err := client.SetInstallationDomainPrimary(flags.installationID, flags.domainNameID)
 			if err != nil {
@@ -104,7 +104,7 @@ func newCmdInstallationDNSDelete() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			installation, err := client.DeleteInstallationDNS(flags.installationID, flags.domainNameID)
 			if err != nil {

@@ -16,10 +16,6 @@ type webhookFlags struct {
 	clusterFlags
 }
 
-func (flags *webhookFlags) addFlags(command *cobra.Command) {
-	flags.serverAddress, _ = command.Flags().GetString("server")
-}
-
 type webhookCreateFlag struct {
 	webhookFlags
 	ownerID        string
