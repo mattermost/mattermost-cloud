@@ -42,6 +42,8 @@ func (h contextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"user_id": userID,
 	})
 
+	context.Logger.Debug("Handling Request")
+
 	h.handler(context, ww, r)
 
 	elapsed := float64(time.Since(start)) / float64(time.Second)

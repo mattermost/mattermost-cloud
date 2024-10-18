@@ -56,8 +56,6 @@ func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 			return
 		}
 
-		log.Printf("%+v", token.Claims)
-
 		// Add user ID to request context for use in handlers
 		ctx := context.WithValue(r.Context(), ContextKeyUserID{}, userID)
 		r = r.WithContext(ctx)
