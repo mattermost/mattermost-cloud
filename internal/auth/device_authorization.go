@@ -107,15 +107,15 @@ func Login(ctx context.Context, orgURL string, clientID string) (AuthorizationRe
 	defer resp.Body.Close()
 
 	var loginResponse LoginResponse
-	if err := json.NewDecoder(resp.Body).Decode(&loginResponse); err != nil {
-		return AuthorizationResponse{}, fmt.Errorf("failed to decode response: %w", err)
+	if dErr := json.NewDecoder(resp.Body).Decode(&loginResponse); dErr != nil {
+		return AuthorizationResponse{}, fmt.Errorf("failed to decode response: %w", dErr)
 	}
 
 	fmt.Println("Please visit:", loginResponse.VerificationURIComplete)
 	fmt.Println("Code:", loginResponse.UserCode)
 
-	if err := openbrowser(loginResponse.VerificationURIComplete); err != nil {
-		log.Print(err)
+	if oErr := openbrowser(loginResponse.VerificationURIComplete); oErr != nil {
+		fmt.Println("Unable to open browser: %w", oErr)
 	}
 
 	authResponse, err := waitForAuthorization(ctx, config, loginResponse.DeviceCode)
