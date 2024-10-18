@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
@@ -53,7 +54,7 @@ func newCmdDatabaseMultitenantList() *cobra.Command {
 		Short: "List known multitenant databases.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeDatabaseMultitenantListCmd(flags)
+			return executeDatabaseMultitenantListCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -65,8 +66,8 @@ func newCmdDatabaseMultitenantList() *cobra.Command {
 	return cmd
 }
 
-func executeDatabaseMultitenantListCmd(flags databaseMultiTenantListFlag) error {
-	client := createClient(flags.clusterFlags)
+func executeDatabaseMultitenantListCmd(ctx context.Context, flags databaseMultiTenantListFlag) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -120,7 +121,7 @@ func newCmdDatabaseMultitenantGet() *cobra.Command {
 		Short: "Get a particular multitenant database.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			multitenantDatabase, err := client.GetMultitenantDatabase(flags.multitenantDatabaseID)
 			if err != nil {
@@ -150,7 +151,7 @@ func newCmdDatabaseMultitenantUpdate() *cobra.Command {
 		Short: "Update an multitenant database's configuration",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			request := &model.PatchMultitenantDatabaseRequest{}
 			if flags.isMaxInstallationsChanged {
@@ -187,7 +188,7 @@ func newCmdDatabaseMultitenantDelete() *cobra.Command {
 		Short: "Delete an multitenant database's configuration",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			if err := client.DeleteMultitenantDatabase(flags.multitenantDatabaseID, flags.force); err != nil {
 				return errors.Wrap(err, "failed to delete multitenant database")
@@ -225,7 +226,7 @@ func newCmdDatabaseLogicalList() *cobra.Command {
 		Short: "List logical databases.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeDatabaseLogicalListCmd(flags)
+			return executeDatabaseLogicalListCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -237,8 +238,8 @@ func newCmdDatabaseLogicalList() *cobra.Command {
 	return cmd
 }
 
-func executeDatabaseLogicalListCmd(flags databaseLogicalListFlag) error {
-	client := createClient(flags.clusterFlags)
+func executeDatabaseLogicalListCmd(ctx context.Context, flags databaseLogicalListFlag) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -291,7 +292,7 @@ func newCmdDatabaseLogicalGet() *cobra.Command {
 		Short: "Get a particular logical database.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			logicalDatabase, err := client.GetLogicalDatabase(flags.logicalDatabaseID)
 			if err != nil {
@@ -321,7 +322,7 @@ func newCmdDatabaseLogicalDelete() *cobra.Command {
 		Short: "Delete an empty PGBouncer logical database",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			if err := client.DeleteLogicalDatabase(flags.logicalDatabaseID); err != nil {
 				return errors.Wrap(err, "failed to delete logical database")
@@ -358,7 +359,7 @@ func newCmdDatabaseSchemaList() *cobra.Command {
 		Short: "List database schemas.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeDatabaseSchemaListCmd(flags)
+			return executeDatabaseSchemaListCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -370,8 +371,8 @@ func newCmdDatabaseSchemaList() *cobra.Command {
 	return cmd
 }
 
-func executeDatabaseSchemaListCmd(flags databaseSchemaListFlag) error {
-	client := createClient(flags.clusterFlags)
+func executeDatabaseSchemaListCmd(ctx context.Context, flags databaseSchemaListFlag) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -425,7 +426,7 @@ func newCmdDatabaseSchemaGet() *cobra.Command {
 		Short: "Get a particular database schema.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			databaseSchema, err := client.GetDatabaseSchema(flags.databaseSchemaID)
 			if err != nil {
@@ -453,9 +454,9 @@ func newCmdDatabaseValidationReport() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "validation-report",
 		Short: "Run a report that compares installation and database records to ensure there is a complete match.",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cmd.SilenceUsage = true
-			return executeDatabaseValidationReportCmd(flags)
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeDatabaseValidationReportCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
@@ -467,8 +468,8 @@ func newCmdDatabaseValidationReport() *cobra.Command {
 	return cmd
 }
 
-func executeDatabaseValidationReportCmd(flags clusterFlags) error {
-	client := createClient(flags)
+func executeDatabaseValidationReportCmd(ctx context.Context, flags clusterFlags) error {
+	client := createClient(ctx, flags)
 
 	installations, err := client.GetInstallations(&model.GetInstallationsRequest{
 		Paging: model.AllPagesNotDeleted(),
@@ -533,7 +534,7 @@ func newCmdDatabaseMultitenantReport() *cobra.Command {
 		Short: "Get a report of deployment details for a given multitenant database",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeMultiTenantDatabaseReportCmd(flags)
+			return executeMultiTenantDatabaseReportCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -545,8 +546,8 @@ func newCmdDatabaseMultitenantReport() *cobra.Command {
 	return cmd
 }
 
-func executeMultiTenantDatabaseReportCmd(flags databaseMultiTenantReportFlag) error {
-	client := createClient(flags.clusterFlags)
+func executeMultiTenantDatabaseReportCmd(ctx context.Context, flags databaseMultiTenantReportFlag) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	multitenantDatabase, err := client.GetMultitenantDatabase(flags.multitenantDatabaseID)
 	if err != nil {
