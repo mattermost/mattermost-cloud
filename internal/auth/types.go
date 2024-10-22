@@ -5,9 +5,11 @@ import "time"
 type ContextKeyAuthData struct{}
 
 type ServerConfig struct {
-	Issuer   string `json:"issuer"`
-	ClientID string `json:"client_ids"` // TODO: I think this can just be removed
-	Audience string `json:"audience"`
+	Issuer                               string   `json:"issuer"`
+	ClientID                             string   `json:"client_ids"` // TODO: I think this can just be removed
+	RestrictedClientIDs                  []string `json:"restricted_client_ids"`
+	RestrictedClientAllowedEndpointsList []string `json:"restricted_endpoints"`
+	Audience                             string   `json:"audience"`
 }
 
 func (s ServerConfig) IsValid() bool {

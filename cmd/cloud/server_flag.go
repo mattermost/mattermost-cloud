@@ -159,15 +159,19 @@ type serverFlagChanged struct {
 }
 
 type serverAuthFlags struct {
-	Issuer        string
-	Audience      string
-	TokenEndpoint string
+	Issuer                               string
+	Audience                             string
+	TokenEndpoint                        string
+	RestrictedClientIDs                  []string
+	RestrictedClientAllowedEndpointsList []string
 }
 
 func (flags *serverAuthFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.Issuer, "issuer", "", "The OAuth2 issuer URL.")
 	command.Flags().StringVar(&flags.Audience, "audience", "", "The OAuth2 audience.")
 	command.Flags().StringVar(&flags.TokenEndpoint, "token-endpoint", "", "The OAuth2 token endpoint.")
+	command.Flags().StringSliceVar(&flags.RestrictedClientIDs, "restricted-client-ids", []string{}, "The list of restricted client IDs.")
+	command.Flags().StringSliceVar(&flags.RestrictedClientAllowedEndpointsList, "restricted-client-allowed-endpoints", []string{}, "The list of restricted endpoints.")
 }
 
 func (flags *serverFlagChanged) addFlags(command *cobra.Command) {

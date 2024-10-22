@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 
 	jwtverifier "github.com/okta/okta-jwt-verifier-golang"
@@ -56,10 +57,55 @@ func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 			return
 		}
 
+		clientID := token.Claims["cid"].(string)
+		endpoint := r.URL.Path
+		apiContext.Logger.Println(clientID)
+		apiContext.Logger.Println(apiContext.AuthConfig.RestrictedClientIDs)
+		apiContext.Logger.Println(apiContext.AuthConfig.RestrictedClientAllowedEndpointsList)
+
+		if !isAccessAllowed(clientID, endpoint, apiContext.AuthConfig.RestrictedClientIDs, apiContext.AuthConfig.RestrictedClientAllowedEndpointsList) {
+			http.Error(w, "Access denied", http.StatusForbidden)
+			return
+		}
+
 		// Add user ID to request context for use in handlers
 		ctx := context.WithValue(r.Context(), ContextKeyUserID{}, userID)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func isAccessAllowed(clientID string, endpoint string, restrictedClientIDs []string, restrictedEndpoints []string) bool {
+	if isRestrictedClient(clientID, restrictedClientIDs) {
+		if !isRestrictedAllowedEndpoint(endpoint, restrictedEndpoints) {
+			return false
+		}
+	}
+	return true
+}
+
+func isRestrictedClient(clientID string, restrictedClientIDs []string) bool {
+	for _, id := range restrictedClientIDs {
+		if id == clientID {
+			return true
+		}
+	}
+	return false
+}
+
+func isRestrictedAllowedEndpoint(endpoint string, restrictedEndpoints []string) bool {
+
+	for _, e := range restrictedEndpoints {
+		// Check if the endpoint is a regex pattern (for exact matches, or others)
+		if strings.HasPrefix(e, "^") && strings.HasSuffix(e, "$") {
+			if matched, _ := regexp.MatchString(e, endpoint); matched {
+				return true
+			}
+			// Otherwise, it's treated as a wildcard prefix match
+		} else if strings.HasPrefix(endpoint, e) {
+			return true // Access denied for prefix match
+		}
+	}
+	return false
 }
