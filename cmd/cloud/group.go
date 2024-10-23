@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -46,7 +47,7 @@ func newCmdGroupCreate() *cobra.Command {
 		Short: "Create a group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			envVarMap, err := parseEnvVarInput(flags.mattermostEnv, false)
 			if err != nil {
 				return err
@@ -91,7 +92,7 @@ func newCmdGroupUpdate() *cobra.Command {
 		Short: "Update the group metadata.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeGroupUpdateCmd(flags)
+			return executeGroupUpdateCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -104,8 +105,8 @@ func newCmdGroupUpdate() *cobra.Command {
 	return cmd
 }
 
-func executeGroupUpdateCmd(flags groupUpdateFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeGroupUpdateCmd(ctx context.Context, flags groupUpdateFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	envVarMap, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
 	if err != nil {
@@ -155,7 +156,7 @@ func newCmdGroupDelete() *cobra.Command {
 		Short: "Delete a group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.DeleteGroup(flags.groupID); err != nil {
 				return errors.Wrap(err, "failed to delete group")
 			}
@@ -179,7 +180,7 @@ func newCmdGroupGet() *cobra.Command {
 		Short: "Get a particular group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			group, err := client.GetGroup(flags.groupID)
 			if err != nil {
 				return errors.Wrap(err, "failed to query group")
@@ -208,7 +209,7 @@ func newCmdGroupList() *cobra.Command {
 		Short: "List created groups.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeGroupListCmd(flags)
+			return executeGroupListCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -220,8 +221,8 @@ func newCmdGroupList() *cobra.Command {
 	return cmd
 }
 
-func executeGroupListCmd(flags groupListFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeGroupListCmd(ctx context.Context, flags groupListFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 	groups, err := client.GetGroups(&model.GetGroupsRequest{
@@ -258,7 +259,7 @@ func newCmdGroupGetStatus() *cobra.Command {
 		Short: "Get a particular group's status.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			groupStatus, err := client.GetGroupStatus(flags.groupID)
 			if err != nil {
 				return errors.Wrap(err, "failed to query group status")
@@ -287,7 +288,7 @@ func newCmdGroupJoin() *cobra.Command {
 		Short: "Join an installation to the given group, leaving any existing group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			err := client.JoinGroup(flags.groupID, flags.installationID)
 			if err != nil {
 				return errors.Wrap(err, "failed to join group")
@@ -312,7 +313,7 @@ func newCmdGroupAssign() *cobra.Command {
 		Short: "Assign an installation to the group based on annotations, leaving any existing group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			err := client.AssignGroup(flags.installationID, model.AssignInstallationGroupRequest{GroupSelectionAnnotations: flags.annotations})
 			if err != nil {
 				return errors.Wrap(err, "failed to assign group")
@@ -338,7 +339,7 @@ func newCmdGroupLeave() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			request := &model.LeaveGroupRequest{RetainConfig: flags.retainConfig}
 			if err := client.LeaveGroup(flags.installationID, request); err != nil {
 				return errors.Wrap(err, "failed to leave group")
@@ -364,7 +365,7 @@ func newCmdGroupListStatus() *cobra.Command {
 		Short: "Get Status from all groups.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags)
+			client := createClient(command.Context(), flags)
 			groupStatus, err := client.GetGroupsStatus()
 			if err != nil {
 				return errors.Wrap(err, "failed to query group status")

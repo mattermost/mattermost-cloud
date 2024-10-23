@@ -13,7 +13,6 @@ type workbenchFlags struct {
 }
 
 func (flags *workbenchFlags) addFlags(command *cobra.Command) {
-	flags.serverAddress, _ = command.Flags().GetString("server")
 	flags.s3StateStore, _ = command.Flags().GetString("state-store")
 }
 
