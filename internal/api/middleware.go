@@ -7,10 +7,17 @@ import (
 	"regexp"
 	"strings"
 
-	jwtverifier "github.com/okta/okta-jwt-verifier-golang"
+	keyfunc "github.com/MicahParks/keyfunc/v3"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 type ContextKeyUserID struct{}
+
+type CustomClaims struct {
+	Oid   string `json:"oid"`
+	AppID string `json:"appid"`
+	jwt.RegisteredClaims
+}
 
 func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -29,47 +36,42 @@ func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 
 		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
-		toValidate := map[string]string{}
-		toValidate["aud"] = apiContext.AuthConfig.Audience
-
-		jwtVerifierSetup := jwtverifier.JwtVerifier{
-			Issuer:           apiContext.AuthConfig.Issuer,
-			ClaimsToValidate: toValidate,
-		}
-
-		verifier := jwtVerifierSetup.New()
-
-		token, err := verifier.VerifyAccessToken(tokenString)
+		k, err := keyfunc.NewDefaultCtx(r.Context(), []string{apiContext.AuthConfig.JWKSURL})
 		if err != nil {
-			log.Printf("Error verifying token: %v", err)
+			log.Printf("Error creating keyfunc: %v", err)
+			http.Error(w, "Failed to create keyfunc", http.StatusInternalServerError)
+			return
+		}
+
+		// Parse and validate the JWT
+		token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, k.Keyfunc, jwt.WithAudience(apiContext.AuthConfig.Audience), jwt.WithIssuer(apiContext.AuthConfig.Issuer))
+
+		if err != nil || !token.Valid {
+			log.Printf("Error validating token: %v", err)
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
 
-		// Extract user ID (or other claims)
-		var userID string
-		if uid, ok := token.Claims["uid"]; ok {
-			userID = uid.(string)
-		} else if sub, ok := token.Claims["sub"]; ok {
-			userID = sub.(string)
-		} else {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
+		var uid string
+		var cid string
+		if claims, ok := token.Claims.(*CustomClaims); ok {
+			uid = claims.Oid
+			cid = claims.AppID
+
+			if uid == "" {
+				// If the user ID is missing, this is a client credentials token, so use the cid as the uid
+				uid = cid
+			}
 		}
 
-		clientID := token.Claims["cid"].(string)
 		endpoint := r.URL.Path
-		apiContext.Logger.Println(clientID)
-		apiContext.Logger.Println(apiContext.AuthConfig.RestrictedClientIDs)
-		apiContext.Logger.Println(apiContext.AuthConfig.RestrictedClientAllowedEndpointsList)
-
-		if !isAccessAllowed(clientID, endpoint, apiContext.AuthConfig.RestrictedClientIDs, apiContext.AuthConfig.RestrictedClientAllowedEndpointsList) {
+		if !isAccessAllowed(cid, endpoint, apiContext.AuthConfig.RestrictedClientIDs, apiContext.AuthConfig.RestrictedClientAllowedEndpointsList) {
 			http.Error(w, "Access denied", http.StatusForbidden)
 			return
 		}
 
 		// Add user ID to request context for use in handlers
-		ctx := context.WithValue(r.Context(), ContextKeyUserID{}, userID)
+		ctx := context.WithValue(r.Context(), ContextKeyUserID{}, uid)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)

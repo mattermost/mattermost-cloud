@@ -164,6 +164,7 @@ type serverAuthFlags struct {
 	TokenEndpoint                        string
 	RestrictedClientIDs                  []string
 	RestrictedClientAllowedEndpointsList []string
+	JWKSURL                              string
 }
 
 func (flags *serverAuthFlags) addFlags(command *cobra.Command) {
@@ -172,6 +173,7 @@ func (flags *serverAuthFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.TokenEndpoint, "token-endpoint", "", "The OAuth2 token endpoint.")
 	command.Flags().StringSliceVar(&flags.RestrictedClientIDs, "restricted-client-ids", []string{}, "The list of restricted client IDs.")
 	command.Flags().StringSliceVar(&flags.RestrictedClientAllowedEndpointsList, "restricted-client-allowed-endpoints", []string{}, "The list of restricted endpoints.")
+	command.Flags().StringVar(&flags.JWKSURL, "jwks-url", "", "The URL of the JWKS endpoint.")
 }
 
 func (flags *serverFlagChanged) addFlags(command *cobra.Command) {

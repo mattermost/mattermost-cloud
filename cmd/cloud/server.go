@@ -396,6 +396,7 @@ func executeServerCmd(flags serverFlags) error {
 		Audience:                             flags.Audience,
 		RestrictedClientIDs:                  flags.RestrictedClientIDs,
 		RestrictedClientAllowedEndpointsList: flags.RestrictedClientAllowedEndpointsList,
+		JWKSURL:                              flags.JWKSURL,
 	}
 
 	if !serverAuthConfig.IsValid() {

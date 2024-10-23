@@ -10,6 +10,7 @@ type ServerConfig struct {
 	RestrictedClientIDs                  []string `json:"restricted_client_ids"`
 	RestrictedClientAllowedEndpointsList []string `json:"restricted_endpoints"`
 	Audience                             string   `json:"audience"`
+	JWKSURL                              string   `json:"jwks_url"`
 }
 
 func (s ServerConfig) IsValid() bool {
