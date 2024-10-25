@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -14,13 +15,20 @@ func EnsureValidAuthData(ctx context.Context, auth *AuthorizationResponse, orgUR
 		return nil, nil
 	}
 
-	config := &oauth2.Config{
-		ClientID: clientID,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  orgURL + "/oauth2/default/v1/device/authorize",
-			TokenURL: orgURL + "/oauth2/default/v1/token",
-		},
-		Scopes: []string{"openid", "profile", "offline_access"},
+	config, err := NewOAuth2Config(ctx, orgURL, clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	token := &oauth2.Token{
+		AccessToken:  auth.AccessToken,
+		RefreshToken: auth.RefreshToken,
+		Expiry:       time.Unix(auth.ExpiresAt, 0),
+	}
+
+	// If the token is valid, no need to refresh
+	if token.Valid() {
+		return auth, nil
 	}
 
 	newToken, err := Refresh(ctx, config, auth.RefreshToken)

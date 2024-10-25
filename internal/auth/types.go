@@ -24,6 +24,7 @@ type LoginResponse struct {
 	ExpiresIn               int    `json:"expires_in"`
 	Interval                int    `json:"interval"`
 	VerificationURIComplete string `json:"verification_uri_complete"`
+	Message                 string `json:"message"`
 }
 
 type AuthorizationResponse struct {

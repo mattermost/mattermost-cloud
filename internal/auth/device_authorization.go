@@ -45,8 +45,6 @@ func waitForAuthorization(ctx context.Context, config *oauth2.Config, deviceCode
 			log.Print(err)
 			return AuthorizationResponse{}, nil
 		}
-		fmt.Printf("%+v\n", token)
-
 		switch token.Error {
 		case "":
 			// Successfully received a token
@@ -68,29 +66,59 @@ func waitForAuthorization(ctx context.Context, config *oauth2.Config, deviceCode
 	}
 }
 
+func NewOAuth2Config(ctx context.Context, orgURL string, clientID string) (*oauth2.Config, error) {
+	return &oauth2.Config{
+		ClientID: clientID,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  orgURL + "/oauth2/v2.0/devicecode",
+			TokenURL: orgURL + "/oauth2/v2.0/token",
+		},
+		Scopes: []string{"openid", "profile", "offline_access", "api://provisioner/provisioner"},
+	}, nil
+}
+
 func Refresh(ctx context.Context, config *oauth2.Config, refreshToken string) (*oauth2.Token, error) {
-	tokenSource := config.TokenSource(ctx, &oauth2.Token{RefreshToken: refreshToken})
-	newToken, err := tokenSource.Token()
-	if err != nil {
-		return nil, fmt.Errorf("failed to refresh token: %w", err)
+	data := url.Values{
+		"client_id":     {config.ClientID},
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {refreshToken},
+		"scope":         {strings.Join(config.Scopes, " ")},
 	}
 
-	return newToken, nil
+	req, err := http.NewRequest("POST", config.Endpoint.TokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
+	}
+
+	var token oauth2.Token
+	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &token, nil
 }
 
 func Login(ctx context.Context, orgURL string, clientID string) (AuthorizationResponse, error) {
-	config := &oauth2.Config{
-		ClientID: clientID,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  orgURL + "/oauth2/default/v1/device/authorize",
-			TokenURL: orgURL + "/oauth2/default/v1/token",
-		},
-		Scopes: []string{"openid", "profile", "offline_access"},
+	config, err := NewOAuth2Config(ctx, orgURL, clientID)
+	if err != nil {
+		return AuthorizationResponse{}, fmt.Errorf("failed to create config: %w", err)
 	}
 
 	values := url.Values{
-		"client_id": {clientID},
-		"scope":     {"openid profile offline_access"},
+		"client_id": {config.ClientID},
+		"scope":     {strings.Join(config.Scopes, " ")},
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, config.Endpoint.AuthURL, strings.NewReader(values.Encode()))
 	if err != nil {
@@ -111,11 +139,11 @@ func Login(ctx context.Context, orgURL string, clientID string) (AuthorizationRe
 		return AuthorizationResponse{}, fmt.Errorf("failed to decode response: %w", dErr)
 	}
 
-	fmt.Println("Please visit:", loginResponse.VerificationURIComplete)
-	fmt.Println("Code:", loginResponse.UserCode)
-
-	if oErr := openbrowser(loginResponse.VerificationURIComplete); oErr != nil {
+	if oErr := openbrowser(loginResponse.VerificationURI); oErr != nil {
 		fmt.Println("Unable to open browser: %w", oErr)
+		fmt.Println(loginResponse.Message)
+	} else {
+		fmt.Println("Please enter the following code in the browser: ", loginResponse.UserCode)
 	}
 
 	authResponse, err := waitForAuthorization(ctx, config, loginResponse.DeviceCode)
@@ -124,6 +152,8 @@ func Login(ctx context.Context, orgURL string, clientID string) (AuthorizationRe
 	}
 
 	authResponse.ExpiresAt = authResponse.GetExpiresAt()
+	fmt.Println("Authentication successful")
+
 	return authResponse, nil
 }
 
