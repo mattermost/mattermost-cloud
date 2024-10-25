@@ -56,7 +56,7 @@ func NewClientWithOAuth(address string, headers map[string]string, clientID, cli
 		oauthConfig: &clientcredentials.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
-			Scopes:       []string{"offline_access"},
+			Scopes:       []string{"offline_access api://provisioner/provisioner"},
 			TokenURL:     tokenEndpoint,
 			EndpointParams: url.Values{
 				"grant_type": {"client_credentials"},
