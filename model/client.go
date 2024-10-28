@@ -56,7 +56,7 @@ func NewClientWithOAuth(address string, headers map[string]string, clientID, cli
 		oauthConfig: &clientcredentials.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
-			Scopes:       []string{"offline_access api://provisioner/provisioner"},
+			Scopes:       []string{"offline_access api://provisioner/.default"},
 			TokenURL:     tokenEndpoint,
 			EndpointParams: url.Values{
 				"grant_type": {"client_credentials"},
@@ -113,8 +113,6 @@ func (c *Client) getToken() (*oauth2.Token, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(c.token)
 
 	return c.token, nil
 }
