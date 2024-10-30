@@ -7,15 +7,16 @@ import (
 )
 
 type Application struct {
-	Name            string   `yaml:"name"`
-	Namespace       string   `yaml:"namespace"`
-	Repo            string   `yaml:"repo"`
-	Path            string   `yaml:"path"`
-	Revision        string   `yaml:"revision"`
-	Helm            Helm     `yaml:"helm"`
-	ServerSideApply bool     `yaml:"serverSideApply,omitempty"`
-	Replace         bool     `yaml:"replace,omitempty"`
-	ClusterLabels   []Labels `yaml:"cluster_labels"`
+	Name              string             `yaml:"name"`
+	Namespace         string             `yaml:"namespace"`
+	Repo              string             `yaml:"repo"`
+	Path              string             `yaml:"path"`
+	Revision          string             `yaml:"revision"`
+	Helm              Helm               `yaml:"helm"`
+	ServerSideApply   bool               `yaml:"serverSideApply,omitempty"`
+	Replace           bool               `yaml:"replace,omitempty"`
+	IgnoreDifferences []IgnoreDifference `yaml:"ignoreDifferences,omitempty"`
+	ClusterLabels     []Labels           `yaml:"cluster_labels"`
 }
 
 type Helm struct {
@@ -26,6 +27,13 @@ type Helm struct {
 type Labels struct {
 	ClusterType string `yaml:"cluster-type,omitempty"`
 	ClusterID   string `yaml:"cluster-id,omitempty"`
+}
+
+type IgnoreDifference struct {
+	Kind         string   `yaml:"kind"`
+	Name         string   `yaml:"name"`
+	Namespace    string   `yaml:"namespace"`
+	JsonPointers []string `yaml:"jsonPointers"`
 }
 
 // ReadArgoApplicationFile take a argocd application file and load it into Application struct

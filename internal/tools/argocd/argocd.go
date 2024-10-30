@@ -13,13 +13,15 @@ type ArgocdClusterLabels struct {
 }
 
 type ArgocdClusterRegisterParameters struct {
-	Name      string              `yaml:"name"`
-	Type      string              `yaml:"type"`
-	Labels    ArgocdClusterLabels `yaml:"labels"`
-	APIServer string              `yaml:"api_server"`
-	CertData  string              `yaml:"certData"`
-	CaData    string              `yaml:"caData"`
-	KeyData   string              `yaml:"keyData"`
+	Name          string              `yaml:"name"`
+	Type          string              `yaml:"type"`
+	Labels        ArgocdClusterLabels `yaml:"labels"`
+	APIServer     string              `yaml:"api_server"`
+	ArgoCDRoleARN string              `yaml:"argoCDRoleARN,omitempty"`
+	ClusterName   string              `yaml:"clusterName,omitempty"`
+	CertData      string              `yaml:"certData,omitempty"`
+	CaData        string              `yaml:"caData,omitempty"`
+	KeyData       string              `yaml:"keyData,omitempty"`
 }
 
 type Argock8sRegister struct {
