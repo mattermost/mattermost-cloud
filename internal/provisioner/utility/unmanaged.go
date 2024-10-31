@@ -219,6 +219,10 @@ func (u *unmanaged) CreateOrUpgrade() error {
 		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
 			return err
 		}
+	case model.MetricsServerCanonicalName:
+		if err := u.utiliyArgocdDeploy(u.Name()); err != nil {
+			return err
+		}
 	default:
 		u.logger.WithFields(log.Fields{
 			"unmanaged-action": "skip",
