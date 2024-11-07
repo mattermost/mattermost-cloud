@@ -148,7 +148,7 @@ func TestGetActualVersion(t *testing.T) {
 				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
-				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-10.3.16"},
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-12.4.34"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.1"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.15.5"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},
@@ -173,7 +173,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "fluent-bit-0.9"}, version)
 
 	version = c.ActualUtilityVersion(TeleportCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-kube-agent-10.3.16"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-kube-agent-12.4.34"}, version)
 
 	version = c.ActualUtilityVersion(PgbouncerCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "pgbouncer-1.2.1"}, version)
@@ -222,7 +222,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
-				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-10.3.16"},
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-12.4.34"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.1"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.15.5"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.3.0"},

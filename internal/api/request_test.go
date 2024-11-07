@@ -33,7 +33,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"nginx-internal":        {Chart: "4.11.1", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "54.2.2", ValuesPath: ""},
 				"thanos":                {Chart: "13.2.2", ValuesPath: ""},
-				"teleport":              {Chart: "10.3.16", ValuesPath: ""},
+				"teleport":              {Chart: "12.4.34", ValuesPath: ""},
 				"pgbouncer":             {Chart: "1.2.1", ValuesPath: ""},
 				"promtail":              {Chart: "6.15.5", ValuesPath: ""},
 				"rtcd":                  {Chart: "1.3.0", ValuesPath: ""},
