@@ -51,8 +51,6 @@ func waitForAuthorization(ctx context.Context, config *oauth2.Config, deviceCode
 			return token, nil
 		case "authorization_pending":
 			// Do nothing, just wait
-		case "access_denied":
-			return token, fmt.Errorf("access denied")
 		default:
 			return token, fmt.Errorf("authorization failed: %v", token.Error)
 		}

@@ -269,8 +269,8 @@ func newCmdContextDelete() *cobra.Command {
 
 			if len(contexts.Contexts) == 0 {
 				contexts.CurrentContext = ""
-			} else {
-				// Set the Current Context to the first context in the map
+			} else if contextName == contexts.CurrentContext {
+				// Deleted the current context, so set context to first one in the map
 				contexts.CurrentContext = reflect.ValueOf(contexts.Contexts).MapKeys()[0].String()
 			}
 

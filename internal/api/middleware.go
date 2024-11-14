@@ -64,7 +64,7 @@ func AuthMiddleware(next http.Handler, apiContext *Context) http.Handler {
 			}
 		}
 
-		endpoint := r.URL.Path
+		endpoint := r.URL.EscapedPath()
 		if !isAccessAllowed(cid, endpoint, apiContext.AuthConfig.RestrictedClientIDs, apiContext.AuthConfig.RestrictedClientAllowedEndpointsList) {
 			http.Error(w, "Access denied", http.StatusForbidden)
 			return

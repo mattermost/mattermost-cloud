@@ -37,6 +37,8 @@ func EnsureValidAuthData(ctx context.Context, auth *AuthorizationResponse, orgUR
 	}
 
 	auth.AccessToken = newToken.AccessToken
+	auth.RefreshToken = newToken.RefreshToken
+	auth.ExpiresAt = newToken.Expiry.Unix()
 
 	return auth, nil
 }
