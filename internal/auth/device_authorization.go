@@ -75,7 +75,7 @@ func NewOAuth2Config(ctx context.Context, orgURL string, clientID string) (*oaut
 	}, nil
 }
 
-func Refresh(ctx context.Context, config *oauth2.Config, refreshToken string) (*oauth2.Token, error) {
+func Refresh(ctx context.Context, config *oauth2.Config, refreshToken string) (*AuthorizationResponse, error) {
 	data := url.Values{
 		"client_id":     {config.ClientID},
 		"grant_type":    {"refresh_token"},
@@ -100,7 +100,7 @@ func Refresh(ctx context.Context, config *oauth2.Config, refreshToken string) (*
 		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
 	}
 
-	var token oauth2.Token
+	var token AuthorizationResponse
 	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}

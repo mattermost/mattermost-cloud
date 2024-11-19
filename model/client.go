@@ -106,7 +106,6 @@ func (c *Client) getToken() (*oauth2.Token, error) {
 		return c.token, nil
 	}
 
-	fmt.Println(c.oauthConfig)
 	// If no valid token, fetch a new one
 	var err error
 	c.token, err = c.oauthConfig.TokenSource(context.Background()).Token()
