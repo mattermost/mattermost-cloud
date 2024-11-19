@@ -63,7 +63,10 @@ var rootCmd = &cobra.Command{
 			}
 
 			// Update disk copy of context with new auth data if any
-			contexts.UpdateContext(contexts.CurrentContext, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL)
+			err = contexts.UpdateContext(contexts.CurrentContext, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL)
+			if err != nil {
+				logger.WithError(err).Fatal("Failed to update context with new auth data.")
+			}
 			cmd.SetContext(context.WithValue(cmd.Context(), clicontext.ContextKeyServerURL{}, currentContext.ServerURL))
 		}
 	},

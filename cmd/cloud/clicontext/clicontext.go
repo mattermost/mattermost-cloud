@@ -33,7 +33,7 @@ func (c *Contexts) Current() *CLIContext {
 	return &context
 }
 
-func (c *Contexts) UpdateContext(contextName string, authData *auth.AuthorizationResponse, clientID, orgURL, alias, serverURL string) {
+func (c *Contexts) UpdateContext(contextName string, authData *auth.AuthorizationResponse, clientID, orgURL, alias, serverURL string) error {
 	c.Contexts[contextName] = CLIContext{
 		AuthData:  authData,
 		ClientID:  clientID,
@@ -42,7 +42,22 @@ func (c *Contexts) UpdateContext(contextName string, authData *auth.Authorizatio
 		ServerURL: serverURL,
 	}
 
-	WriteContexts(c)
+	return WriteContexts(c)
+}
+
+func contextFileDirectory() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Join(homeDir, ".cloud")
+}
+
+func contextFileSystemPath() string {
+	contextDir := contextFileDirectory()
+
+	return filepath.Join(contextDir, "contexts.json")
 }
 
 func bootstrapFirstContext() Contexts {
@@ -55,22 +70,16 @@ func bootstrapFirstContext() Contexts {
 		Alias:     "local",
 	}
 	return contexts
-
 }
 
 func ReadContexts() (*Contexts, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-
-	contextFilePath := filepath.Join(homeDir, ".cloud", "contexts.json")
+	contextFilePath := contextFileSystemPath()
 
 	var contextsData Contexts
 	if _, statErr := os.Stat(contextFilePath); errors.Is(statErr, os.ErrNotExist) {
 		contextsData = bootstrapFirstContext()
-		WriteContexts(&contextsData)
-		return &contextsData, nil
+		wErr := WriteContexts(&contextsData)
+		return &contextsData, wErr
 	}
 
 	data, err := os.ReadFile(contextFilePath)
@@ -87,12 +96,16 @@ func ReadContexts() (*Contexts, error) {
 }
 
 func WriteContexts(contexts *Contexts) error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return err
+	// create the .cloud directory if it doesn't exist
+	cloudDir := contextFileDirectory()
+	if _, err := os.Stat(cloudDir); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(cloudDir, 0700)
+		if err != nil {
+			return err
+		}
 	}
 
-	contextFilePath := filepath.Join(homeDir, ".cloud", "contexts.json")
+	contextFilePath := contextFileSystemPath()
 	file, err := os.Create(contextFilePath)
 	if err != nil {
 		return err

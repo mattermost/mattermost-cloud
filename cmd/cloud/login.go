@@ -52,8 +52,8 @@ func newCmdLogin() *cobra.Command {
 
 			context.AuthData = &login
 
-			contexts.UpdateContext(contextName, context.AuthData, context.ClientID, context.OrgURL, context.Alias, context.ServerURL)
-			return nil
+			err = contexts.UpdateContext(contextName, context.AuthData, context.ClientID, context.OrgURL, context.Alias, context.ServerURL)
+			return err
 		},
 	}
 
