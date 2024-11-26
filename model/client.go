@@ -6,20 +6,27 @@ package model
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 
 	"github.com/pkg/errors"
+	"golang.org/x/oauth2"
+	clientcredentials "golang.org/x/oauth2/clientcredentials"
 )
 
 // Client is the programmatic interface to the provisioning server API.
 type Client struct {
-	address    string
-	headers    map[string]string
-	httpClient *http.Client
+	address     string
+	headers     map[string]string
+	httpClient  *http.Client
+	oauthConfig *clientcredentials.Config
+	token       *oauth2.Token
+	tokenMutex  sync.Mutex
 }
 
 // NewClient creates a client to the provisioning server at the given address.
@@ -39,6 +46,74 @@ func NewClientWithHeaders(address string, headers map[string]string) *Client {
 		headers:    headers,
 		httpClient: &http.Client{},
 	}
+}
+
+func NewClientWithOAuth(address string, headers map[string]string, clientID, clientSecret, tokenEndpoint string) *Client {
+	c := &Client{
+		address:    address,
+		headers:    headers,
+		httpClient: &http.Client{},
+		oauthConfig: &clientcredentials.Config{
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			Scopes:       []string{"offline_access api://provisioner/.default"},
+			TokenURL:     tokenEndpoint,
+			EndpointParams: url.Values{
+				"grant_type": {"client_credentials"},
+			},
+		},
+	}
+	c.httpClient.Transport = &authTransport{client: c}
+	return c
+}
+
+// authTransport is a custom RoundTripper that adds OAuth tokens to requests.
+type authTransport struct {
+	client *Client
+}
+
+func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Get the current token
+	token, err := t.client.getToken()
+	if err != nil {
+		return nil, err
+	}
+
+	// Add the token to the request header
+	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+
+	// Add any additional headers
+	for key, value := range t.client.headers {
+		req.Header.Set(key, value)
+	}
+
+	// Use a new HTTP client to make the request
+	client := &http.Client{Transport: http.DefaultTransport}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (c *Client) getToken() (*oauth2.Token, error) {
+	c.tokenMutex.Lock()
+	defer c.tokenMutex.Unlock()
+
+	// Check if we already have a valid token
+	if c.token != nil && c.token.Valid() {
+		return c.token, nil
+	}
+
+	// If no valid token, fetch a new one
+	var err error
+	c.token, err = c.oauthConfig.TokenSource(context.Background()).Token()
+	if err != nil {
+		return nil, err
+	}
+
+	return c.token, nil
 }
 
 // closeBody ensures the Body of an http.Response is properly closed.

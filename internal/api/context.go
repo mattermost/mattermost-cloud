@@ -7,6 +7,7 @@ package api
 import (
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/auth"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -189,6 +190,7 @@ type Context struct {
 	InstallationDeletionExpiryDefault time.Duration
 	RequestID                         string
 	Environment                       string
+	AuthConfig                        *auth.ServerConfig
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.

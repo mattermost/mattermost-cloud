@@ -10,10 +10,6 @@ type securityFlags struct {
 	clusterFlags
 }
 
-func (flags *securityFlags) addFlags(command *cobra.Command) {
-	flags.serverAddress, _ = command.Flags().GetString("server")
-}
-
 func setSecurityClusterFlags(command *cobra.Command) {
 	command.PersistentFlags().String("cluster", "", "The id of the cluster.")
 	_ = command.MarkPersistentFlagRequired("cluster")
@@ -25,7 +21,6 @@ type securityClusterFlags struct {
 }
 
 func (flags *securityClusterFlags) addFlags(command *cobra.Command) {
-	flags.securityFlags.addFlags(command)
 	flags.clusterID, _ = command.Flags().GetString("cluster")
 }
 

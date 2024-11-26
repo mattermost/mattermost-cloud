@@ -158,6 +158,24 @@ type serverFlagChanged struct {
 	isKeepFileStoreDataChanged bool
 }
 
+type serverAuthFlags struct {
+	Issuer                               string
+	Audience                             string
+	TokenEndpoint                        string
+	RestrictedClientIDs                  []string
+	RestrictedClientAllowedEndpointsList []string
+	JWKSURL                              string
+}
+
+func (flags *serverAuthFlags) addFlags(command *cobra.Command) {
+	command.Flags().StringVar(&flags.Issuer, "issuer", "", "The OAuth2 issuer URL.")
+	command.Flags().StringVar(&flags.Audience, "audience", "", "The OAuth2 audience.")
+	command.Flags().StringVar(&flags.TokenEndpoint, "token-endpoint", "", "The OAuth2 token endpoint.")
+	command.Flags().StringSliceVar(&flags.RestrictedClientIDs, "restricted-client-ids", []string{}, "The list of restricted client IDs.")
+	command.Flags().StringSliceVar(&flags.RestrictedClientAllowedEndpointsList, "restricted-client-allowed-endpoints", []string{}, "The list of restricted endpoints.")
+	command.Flags().StringVar(&flags.JWKSURL, "jwks-url", "", "The URL of the JWKS endpoint.")
+}
+
 func (flags *serverFlagChanged) addFlags(command *cobra.Command) {
 	flags.isDebugChanged = command.Flags().Changed("debug")
 	flags.isKeepDatabaseDataChanged = command.Flags().Changed("keep-database-data")
@@ -171,6 +189,7 @@ type serverFlags struct {
 	installationOptions
 	dbUtilizationSettings
 	serverFlagChanged
+	serverAuthFlags
 
 	listen      string
 	metricsPort int
@@ -198,6 +217,7 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	flags.provisioningParams.addFlags(command)
 	flags.installationOptions.addFlags(command)
 	flags.dbUtilizationSettings.addFlags(command)
+	flags.serverAuthFlags.addFlags(command)
 
 	command.Flags().StringVar(&flags.listen, "listen", ":8075", "The interface and port on which to listen.")
 	command.Flags().IntVar(&flags.metricsPort, "metrics-port", 8076, "Port on which the metrics server should be listening.")

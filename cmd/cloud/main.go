@@ -6,10 +6,13 @@
 package main
 
 import (
+	"context"
 	"os"
 	"strings"
 
 	_ "github.com/golang/mock/mockgen/model"
+	"github.com/mattermost/mattermost-cloud/cmd/cloud/clicontext"
+	"github.com/mattermost/mattermost-cloud/internal/auth"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -18,11 +21,54 @@ import (
 
 var instanceID string
 
+func isCommandThatSkipsAuth(cmd *cobra.Command) bool {
+	return cmd.Use == "migrate" || cmd.Use == "server" || cmd.Use == "login" || cmd.Parent().Use == "contexts"
+}
+
+// TODO: Add support for --context flag to all commands that can use a context different from current one
 var rootCmd = &cobra.Command{
 	Use:   "cloud",
 	Short: "Cloud is a tool to provision, manage, and monitor Kubernetes clusters.",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		populateEnv(cmd)
+		if !isCommandThatSkipsAuth(cmd) {
+			contexts, err := clicontext.ReadContexts()
+			if err != nil {
+				logger.WithError(err).Fatal("Failed to read contexts from disk.")
+				return
+			}
+
+			currentContext := contexts.Current()
+			if currentContext == nil {
+				logger.Fatal("No current context set. Use 'cloud contexts set' to set the current context.")
+				return
+			}
+
+			// If there's no Client ID configured, don't mess with authentication
+			var authData *auth.AuthorizationResponse
+			if currentContext.ClientID != "" {
+				authData, err = auth.EnsureValidAuthData(cmd.Context(), currentContext.AuthData, currentContext.OrgURL, currentContext.ClientID)
+				if err != nil {
+					logger.WithError(err).Fatal("Failed to ensure valid authentication data.")
+					return
+				}
+
+				if authData == nil {
+					logger.Fatal("Failed to authenticate.")
+					return
+				}
+				authData.ExpiresAt = authData.GetExpiresAt()
+
+				cmd.SetContext(context.WithValue(cmd.Context(), auth.ContextKeyAuthData{}, authData))
+			}
+
+			// Update disk copy of context with new auth data if any
+			err = contexts.UpdateContext(contexts.CurrentContext, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL)
+			if err != nil {
+				logger.WithError(err).Fatal("Failed to update context with new auth data.")
+			}
+			cmd.SetContext(context.WithValue(cmd.Context(), clicontext.ContextKeyServerURL{}, currentContext.ServerURL))
+		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return newCmdServer().RunE(cmd, args)
@@ -56,6 +102,8 @@ func init() {
 	rootCmd.AddCommand(newCmdDashboard())
 	rootCmd.AddCommand(newCmdEvents())
 	rootCmd.AddCommand(newCmdSubscription())
+	rootCmd.AddCommand(newCmdLogin())
+	rootCmd.AddCommand(newCmdContexts())
 }
 
 func main() {

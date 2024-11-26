@@ -30,7 +30,7 @@ func newCmdGroupAnnotationAdd() *cobra.Command {
 		Short: "Adds annotations to the group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			request := newAddAnnotationsRequest(flags.annotations)
 			if flags.dryRun {
 				return runDryRun(request)
@@ -65,7 +65,7 @@ func newCmdGroupAnnotationDelete() *cobra.Command {
 		Short: "Deletes Annotation from the group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.DeleteGroupAnnotation(flags.groupID, flags.annotation); err != nil {
 				return errors.Wrap(err, "failed to delete group annotations")
 			}

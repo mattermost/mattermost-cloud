@@ -33,9 +33,9 @@ func newCmdWorkbenchCluster() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Export kops and terraform files into a workbench directory",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cmd.SilenceUsage = true
-			return executeWorkbenchClusterCmd(flags)
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeWorkbenchClusterCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.workbenchFlags.addFlags(cmd)
@@ -47,10 +47,10 @@ func newCmdWorkbenchCluster() *cobra.Command {
 	return cmd
 }
 
-func executeWorkbenchClusterCmd(flags workbenchClusterFlag) error {
+func executeWorkbenchClusterCmd(ctx context.Context, flags workbenchClusterFlag) error {
 	// TODO: add support for EKS
 
-	client := createClient(flags.clusterFlags)
+	client := createClient(ctx, flags.clusterFlags)
 	cluster, err := client.GetCluster(flags.clusterID)
 	if err != nil {
 		return errors.Wrap(err, "failed to query cluster")

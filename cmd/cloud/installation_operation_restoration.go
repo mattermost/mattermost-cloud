@@ -5,6 +5,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -32,7 +34,7 @@ func newCmdInstallationRestorationRequest() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			installationDTO, err := client.RestoreInstallationDatabase(flags.installationID, flags.backupID)
 			if err != nil {
@@ -60,7 +62,7 @@ func newCmdInstallationRestorationsListCmd() *cobra.Command {
 		Short: "List installation database restoration operations",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeInstallationRestorationsList(flags)
+			return executeInstallationRestorationsList(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -72,8 +74,8 @@ func newCmdInstallationRestorationsListCmd() *cobra.Command {
 	return cmd
 }
 
-func executeInstallationRestorationsList(flags installationRestorationsListFlags) error {
-	client := createClient(flags.clusterFlags)
+func executeInstallationRestorationsList(ctx context.Context, flags installationRestorationsListFlags) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 
@@ -140,7 +142,7 @@ func newCmdInstallationRestorationGetCmd() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			restorationOperation, err := client.GetInstallationDBRestoration(flags.restorationID)
 			if err != nil {
 				return errors.Wrap(err, "failed to get installation database restoration")

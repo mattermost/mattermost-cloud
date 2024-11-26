@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -38,7 +39,7 @@ func newCmdWebhookCreate() *cobra.Command {
 		Short: "Create a webhook.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			var headers model.Headers
 			for key, value := range flags.headers {
@@ -90,7 +91,7 @@ func newCmdWebhookGet() *cobra.Command {
 		Short: "Get a particular webhook.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 
 			webhook, err := client.GetWebhook(flags.webhookID)
 			if err != nil {
@@ -120,7 +121,7 @@ func newCmdWebhookList() *cobra.Command {
 		Short: "List created webhooks.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			return executeWebhookListCmd(flags)
+			return executeWebhookListCmd(command.Context(), flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.webhookFlags.addFlags(cmd)
@@ -132,8 +133,8 @@ func newCmdWebhookList() *cobra.Command {
 	return cmd
 }
 
-func executeWebhookListCmd(flags webhookListFlag) error {
-	client := createClient(flags.clusterFlags)
+func executeWebhookListCmd(ctx context.Context, flags webhookListFlag) error {
+	client := createClient(ctx, flags.clusterFlags)
 
 	paging := getPaging(flags.pagingFlags)
 	webhooks, err := client.GetWebhooks(&model.GetWebhooksRequest{
@@ -168,7 +169,7 @@ func newCmdWebhookDelete() *cobra.Command {
 		Short: "Delete a webhook.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.DeleteWebhook(flags.webhookID); err != nil {
 				return errors.Wrap(err, "failed to delete webhook")
 			}

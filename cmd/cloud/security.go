@@ -49,7 +49,7 @@ func newCmdSecurityClusterLock() *cobra.Command {
 		Short: "Lock API changes on a given cluster",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.LockAPIForCluster(flags.clusterID); err != nil {
 				return errors.Wrap(err, "failed to lock cluster API")
 			}
@@ -73,7 +73,7 @@ func newCmdSecurityClusterUnlock() *cobra.Command {
 		Short: "Unlock API changes on a given cluster",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.UnlockAPIForCluster(flags.clusterID); err != nil {
 				return errors.Wrap(err, "failed to unlock cluster API")
 			}
@@ -113,7 +113,7 @@ func newCmdSecurityInstallationLock() *cobra.Command {
 		Short: "Lock API changes on a given installation",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.LockAPIForInstallation(flags.installationID); err != nil {
 				return errors.Wrap(err, "failed to lock installation API")
 			}
@@ -137,7 +137,7 @@ func newCmdSecurityInstallationUnlock() *cobra.Command {
 		Short: "Unlock API changes on a given installation",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.UnlockAPIForInstallation(flags.installationID); err != nil {
 				return errors.Wrap(err, "failed to unlock installation API")
 			}
@@ -161,7 +161,7 @@ func newCmdSecurityInstallationDeletionUnlock() *cobra.Command {
 		Short: "Unlock deletion lock on installation, allowing it to be deleted",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.UnlockDeletionLockForInstallation(flags.installationID); err != nil {
 				return errors.Wrap(err, "failed to unlock installation deletion lock")
 			}
@@ -184,7 +184,7 @@ func newCmdSecurityInstallationDeletionLock() *cobra.Command {
 		Short: "Lock deletion lock on installation, preventing it from being deleted until unlocked",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.LockDeletionLockForInstallation(flags.installationID); err != nil {
 				return errors.Wrap(err, "failed to lock installation deletion lock")
 			}
@@ -222,7 +222,7 @@ func newCmdSecurityClusterInstallationLock() *cobra.Command {
 		Short: "Lock API changes on a given cluster installation",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.LockAPIForClusterInstallation(flags.clusterInstallationID); err != nil {
 				return errors.Wrap(err, "failed to lock cluster installation API")
 			}
@@ -246,7 +246,7 @@ func newCmdSecurityClusterInstallationUnlock() *cobra.Command {
 		Short: "Unlock API changes on a given cluster installation",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.UnlockAPIForClusterInstallation(flags.clusterInstallationID); err != nil {
 				return errors.Wrap(err, "failed to unlock cluster installation API")
 			}
@@ -284,7 +284,7 @@ func newCmdSecurityGroupLock() *cobra.Command {
 		Short: "Lock API changes on a given group",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.LockAPIForGroup(flags.groupID); err != nil {
 				return errors.Wrap(err, "failed to lock group API")
 			}
@@ -308,7 +308,7 @@ func newCmdSecurityGroupUnlock() *cobra.Command {
 		Short: "Unlock API changes on a given group",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.UnlockAPIForGroup(flags.groupID); err != nil {
 				return errors.Wrap(err, "failed to unlock group API")
 			}
@@ -346,7 +346,7 @@ func newCmdSecurityBackupLock() *cobra.Command {
 		Short: "Lock API changes on a given backup",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.LockAPIForBackup(flags.backupID); err != nil {
 				return errors.Wrap(err, "failed to lock backup API")
 			}
@@ -370,7 +370,7 @@ func newCmdSecurityBackupUnlock() *cobra.Command {
 		Short: "Unlock API changes on a given backup",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			client := createClient(flags.clusterFlags)
+			client := createClient(command.Context(), flags.clusterFlags)
 			if err := client.UnlockAPIForBackup(flags.backupID); err != nil {
 				return errors.Wrap(err, "failed to unlock backup API")
 			}
