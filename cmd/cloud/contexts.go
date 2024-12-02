@@ -82,8 +82,9 @@ func newCmdContextGet() *cobra.Command {
 
 type updateContextFlags struct {
 	createContextFlags
-	Context   string
-	ClearAuth bool
+	Context              string
+	ClearAuth            bool
+	ConfirmationRequired bool
 }
 
 func (f *updateContextFlags) addFlags(command *cobra.Command) {
@@ -91,6 +92,7 @@ func (f *updateContextFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&f.Context, "context", "", "Name of the context to update")
 	command.MarkFlagRequired("context")
 	command.Flags().BoolVar(&f.ClearAuth, "clear-auth", false, "Turns off authentication for this context")
+	command.Flags().BoolVar(&f.ConfirmationRequired, "confirmation-required", false, "Require confirmation for commands run in this context")
 }
 
 func newCmdContextUpdate() *cobra.Command {
@@ -107,6 +109,7 @@ func newCmdContextUpdate() *cobra.Command {
 			Alias := flags.Alias
 			clearAuth := flags.ClearAuth
 			contextName := flags.Context
+			confirmationRequired := flags.ConfirmationRequired
 
 			contexts, err := clicontext.ReadContexts()
 			if err != nil {
@@ -133,6 +136,10 @@ func newCmdContextUpdate() *cobra.Command {
 
 			if Alias != "" && context.Alias != Alias {
 				context.Alias = Alias
+			}
+
+			if confirmationRequired != context.ConfirmationRequired {
+				context.ConfirmationRequired = confirmationRequired
 			}
 
 			if !skipAuth && !clearAuth && clientID != "" && orgURL != "" {
@@ -163,11 +170,12 @@ func newCmdContextUpdate() *cobra.Command {
 
 type createContextFlags struct {
 	clusterFlags
-	ClientID  string
-	OrgURL    string
-	SkipAuth  bool
-	Alias     string
-	ServerURL string
+	ClientID             string
+	OrgURL               string
+	SkipAuth             bool
+	Alias                string
+	ServerURL            string
+	ConfirmationRequired bool
 }
 
 func (f *createContextFlags) addFlags(command *cobra.Command) {
@@ -189,6 +197,7 @@ func newCmdContextCreate() *cobra.Command {
 			orgURL := flags.OrgURL
 			skipAuth := flags.SkipAuth
 			Alias := flags.Alias
+			confirmationRequired := flags.ConfirmationRequired
 			contextName := ""
 
 			if Alias != "" {
@@ -217,11 +226,12 @@ func newCmdContextCreate() *cobra.Command {
 			}
 
 			contexts.Contexts[contextName] = clicontext.CLIContext{
-				ClientID:  clientID,
-				OrgURL:    orgURL,
-				AuthData:  authData,
-				Alias:     Alias,
-				ServerURL: serverAddress,
+				ClientID:             clientID,
+				OrgURL:               orgURL,
+				AuthData:             authData,
+				Alias:                Alias,
+				ServerURL:            serverAddress,
+				ConfirmationRequired: confirmationRequired,
 			}
 
 			contexts.CurrentContext = contextName

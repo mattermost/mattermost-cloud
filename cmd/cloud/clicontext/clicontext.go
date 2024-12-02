@@ -12,11 +12,12 @@ import (
 type ContextKeyServerURL struct{}
 
 type CLIContext struct {
-	AuthData  *auth.AuthorizationResponse `json:"auth_data"`
-	ClientID  string                      `json:"client_id"`
-	OrgURL    string                      `json:"org_url"`
-	ServerURL string                      `json:"server_url"`
-	Alias     string                      `json:"alias"`
+	AuthData             *auth.AuthorizationResponse `json:"auth_data"`
+	ClientID             string                      `json:"client_id"`
+	OrgURL               string                      `json:"org_url"`
+	ServerURL            string                      `json:"server_url"`
+	Alias                string                      `json:"alias"`
+	ConfirmationRequired bool                        `json:"confirmation_required"`
 }
 
 type Contexts struct {
@@ -33,13 +34,14 @@ func (c *Contexts) Current() *CLIContext {
 	return &context
 }
 
-func (c *Contexts) UpdateContext(contextName string, authData *auth.AuthorizationResponse, clientID, orgURL, alias, serverURL string) error {
+func (c *Contexts) UpdateContext(contextName string, authData *auth.AuthorizationResponse, clientID, orgURL, alias, serverURL string, confirmationRequired bool) error {
 	c.Contexts[contextName] = CLIContext{
-		AuthData:  authData,
-		ClientID:  clientID,
-		OrgURL:    orgURL,
-		Alias:     alias,
-		ServerURL: serverURL,
+		AuthData:             authData,
+		ClientID:             clientID,
+		OrgURL:               orgURL,
+		Alias:                alias,
+		ServerURL:            serverURL,
+		ConfirmationRequired: confirmationRequired,
 	}
 
 	return WriteContexts(c)
