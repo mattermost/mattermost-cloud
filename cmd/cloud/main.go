@@ -38,7 +38,19 @@ var rootCmd = &cobra.Command{
 				return
 			}
 
-			currentContext := contexts.Current()
+			contextOverride, _ := cmd.Flags().GetString("context")
+
+			var currentContext *clicontext.CLIContext
+			if contextOverride != "" {
+				currentContext = contexts.Get(contextOverride)
+				if currentContext == nil {
+					logger.Fatalf("Context '%s' does not exist.", contextOverride)
+					return
+				}
+			} else {
+				currentContext = contexts.Current()
+			}
+
 			if currentContext == nil {
 				logger.Fatal("No current context set. Use 'cloud contexts set' to set the current context.")
 				return
@@ -63,7 +75,7 @@ var rootCmd = &cobra.Command{
 			}
 
 			// Update disk copy of context with new auth data if any
-			err = contexts.UpdateContext(contexts.CurrentContext, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL)
+			err = contexts.UpdateContext(currentContext.Alias, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL)
 			if err != nil {
 				logger.WithError(err).Fatal("Failed to update context with new auth data.")
 			}
@@ -88,6 +100,8 @@ func init() {
 	}
 
 	_ = rootCmd.MarkFlagRequired("database")
+
+	rootCmd.PersistentFlags().String("context", viper.GetString("context"), "Override the current context")
 
 	rootCmd.AddCommand(newCmdServer())
 	rootCmd.AddCommand(newCmdCluster())

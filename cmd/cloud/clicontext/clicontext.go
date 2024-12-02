@@ -33,6 +33,15 @@ func (c *Contexts) Current() *CLIContext {
 	return &context
 }
 
+func (c *Contexts) Get(contextName string) *CLIContext {
+	context, ok := c.Contexts[contextName]
+	if !ok {
+		return nil
+	}
+
+	return &context
+}
+
 func (c *Contexts) UpdateContext(contextName string, authData *auth.AuthorizationResponse, clientID, orgURL, alias, serverURL string) error {
 	c.Contexts[contextName] = CLIContext{
 		AuthData:  authData,
