@@ -83,13 +83,7 @@ func TestInstallationDTOs(t *testing.T) {
 		ClusterID:      model.NewID(),
 		InstallationID: installation1.ID,
 	}
-
 	clusterInstallation2 := &model.ClusterInstallation{
-		ClusterID:      model.NewID(),
-		InstallationID: installation1.ID,
-	}
-
-	clusterInstallation3 := &model.ClusterInstallation{
 		ClusterID:      model.NewID(),
 		InstallationID: installation2.ID,
 	}
@@ -98,8 +92,6 @@ func TestInstallationDTOs(t *testing.T) {
 	require.NoError(t, err)
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
-	err = sqlStore.CreateClusterInstallation(clusterInstallation3)
-	require.NoError(t, err)
 
 	t.Run("get installation DTO", func(t *testing.T) {
 		installationDTO, err := sqlStore.GetInstallationDTO(installation1.ID, false, false)
@@ -107,7 +99,7 @@ func TestInstallationDTOs(t *testing.T) {
 		assert.Equal(t, installation1, installationDTO.Installation)
 		assert.Equal(t, len(annotations), len(installationDTO.Annotations))
 		assert.Equal(t, annotations, model.SortAnnotations(installationDTO.Annotations))
-		assert.ElementsMatch(t, []string{clusterInstallation1.ClusterID}, installationDTO.ClusterIDs)
+		assert.ElementsMatch(t, []*string{&clusterInstallation1.ClusterID}, installationDTO.ClusterIDs)
 	})
 
 	t.Run("get installation DTOs", func(t *testing.T) {
@@ -122,8 +114,8 @@ func TestInstallationDTOs(t *testing.T) {
 			model.SortAnnotations(i.Annotations)
 		}
 		assert.ElementsMatch(t, []*model.InstallationDTO{
-			installation1.ToDTO(annotations, dnsRecords1, []*string{&clusterInstallation1.ClusterID, &clusterInstallation2.ClusterID}),
-			installation2.ToDTO(nil, dnsRecords2, []*string{&clusterInstallation3.ClusterID}),
+			installation1.ToDTO(annotations, dnsRecords1, []*string{&clusterInstallation1.ClusterID}),
+			installation2.ToDTO(nil, dnsRecords2, []*string{&clusterInstallation2.ClusterID}),
 		}, installationDTOs)
 	})
 }
