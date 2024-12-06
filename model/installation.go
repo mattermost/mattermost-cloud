@@ -207,7 +207,7 @@ func (i *Installation) Clone() *Installation {
 }
 
 // ToDTO expands installation to InstallationDTO.
-func (i *Installation) ToDTO(annotations []*Annotation, dnsRecords []*InstallationDNS) *InstallationDTO {
+func (i *Installation) ToDTO(annotations []*Annotation, dnsRecords []*InstallationDNS, clusterIDs []*string) *InstallationDTO {
 	var dns string
 	for _, record := range dnsRecords {
 		if record.IsPrimary {
@@ -221,6 +221,7 @@ func (i *Installation) ToDTO(annotations []*Annotation, dnsRecords []*Installati
 		Annotations:  annotations,
 		DNSRecords:   dnsRecords,
 		DNS:          dns,
+		ClusterIDs:   clusterIDs,
 	}
 }
 

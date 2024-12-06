@@ -11,4 +11,5 @@ type InstallationDTO struct {
 	// Deprecated: This is for backward compatibility until we switch all clients, as DNS was removed from Installation.
 	DNS        string
 	DNSRecords []*InstallationDNS
+	ClusterIDs []*string `json:"ClusterIDs,omitempty"`
 }
