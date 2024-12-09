@@ -94,6 +94,29 @@ func (sqlStore *SQLStore) getClusterInstallations(db dbInterface, filter *model.
 	return clusterInstallations, nil
 }
 
+func (sqlStore *SQLStore) GetClusterInstallationsForInstallation(installationID string) ([]*model.ClusterInstallation, error) {
+	return sqlStore.getClusterInstallationsForInstallations(sqlStore.db, installationID)
+}
+
+func (sqlStore *SQLStore) GetClusterInstallationsForInstallations(installationIDs []string) ([]*model.ClusterInstallation, error) {
+	return sqlStore.getClusterInstallationsForInstallations(sqlStore.db, installationIDs...)
+}
+
+func (sqlStore *SQLStore) getClusterInstallationsForInstallations(db queryer, installationIDs ...string) ([]*model.ClusterInstallation, error) {
+	builder := clusterInstallationSelect.
+		Where(sq.Eq{"InstallationID": installationIDs}).
+		Where("DeleteAt = 0").
+		OrderBy("CreateAt ASC")
+
+	var clusterInstallations []*model.ClusterInstallation
+	err := sqlStore.selectBuilder(db, &clusterInstallations, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for clusterInstallations")
+	}
+
+	return clusterInstallations, nil
+}
+
 // UpdateClusterInstallation updates the given cluster installation in the database.
 func (sqlStore *SQLStore) UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
