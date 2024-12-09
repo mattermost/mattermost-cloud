@@ -52,7 +52,19 @@ var rootCmd = &cobra.Command{
 				return
 			}
 
-			currentContext := contexts.Current()
+			contextOverride, _ := cmd.Flags().GetString("context")
+
+			var currentContext *clicontext.CLIContext
+			if contextOverride != "" {
+				currentContext = contexts.Get(contextOverride)
+				if currentContext == nil {
+					logger.Fatalf("Context '%s' does not exist.", contextOverride)
+					return
+				}
+			} else {
+				currentContext = contexts.Current()
+			}
+
 			if currentContext == nil {
 				logger.Fatal("No current context set. Use 'cloud contexts set' to set the current context.")
 				return
@@ -114,10 +126,9 @@ func init() {
 	_ = rootCmd.MarkFlagRequired("database")
 
 	rootCmd.PersistentFlags().BoolVarP(new(bool), "y", "y", false, "Skip confirmation prompts")
+	rootCmd.PersistentFlags().String("context", viper.GetString("context"), "Override the current context")
 
-	rootCmd.AddCommand(newCmdServer())
 	rootCmd.AddCommand(newCmdCluster())
-	rootCmd.AddCommand(newCmdInstallation())
 	rootCmd.AddCommand(newCmdGroup())
 	rootCmd.AddCommand(newCmdDatabase())
 	rootCmd.AddCommand(newCmdSchema())
