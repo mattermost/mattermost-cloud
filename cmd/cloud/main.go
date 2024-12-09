@@ -128,7 +128,9 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(new(bool), "y", "y", false, "Skip confirmation prompts")
 	rootCmd.PersistentFlags().String("context", viper.GetString("context"), "Override the current context")
 
+	rootCmd.AddCommand(newCmdServer())
 	rootCmd.AddCommand(newCmdCluster())
+	rootCmd.AddCommand(newCmdInstallation())
 	rootCmd.AddCommand(newCmdGroup())
 	rootCmd.AddCommand(newCmdDatabase())
 	rootCmd.AddCommand(newCmdSchema())
