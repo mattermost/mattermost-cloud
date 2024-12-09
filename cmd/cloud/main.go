@@ -6,7 +6,9 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -23,6 +25,18 @@ var instanceID string
 
 func isCommandThatSkipsAuth(cmd *cobra.Command) bool {
 	return cmd.Use == "migrate" || cmd.Use == "server" || cmd.Use == "login" || cmd.Parent().Use == "contexts"
+}
+
+func askConfirmation(contextURL string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("Commands against this context (URL: %s) require confirmation. Do you want to proceed? (Y/N): ", contextURL)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to read user input.")
+		return false
+	}
+	response = strings.TrimSpace(strings.ToLower(response))
+	return response == "y" || response == "yes"
 }
 
 // TODO: Add support for --context flag to all commands that can use a context different from current one
@@ -75,11 +89,21 @@ var rootCmd = &cobra.Command{
 			}
 
 			// Update disk copy of context with new auth data if any
-			err = contexts.UpdateContext(currentContext.Alias, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL)
+			err = contexts.UpdateContext(contexts.CurrentContext, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL, currentContext.ConfirmationRequired)
 			if err != nil {
 				logger.WithError(err).Fatal("Failed to update context with new auth data.")
 			}
 			cmd.SetContext(context.WithValue(cmd.Context(), clicontext.ContextKeyServerURL{}, currentContext.ServerURL))
+
+			skipConfirmation, _ := cmd.Flags().GetBool("y")
+			if currentContext.ConfirmationRequired && !skipConfirmation {
+				if !askConfirmation(currentContext.ServerURL) {
+					logger.Fatal("Confirmation required to proceed.")
+					return
+				}
+			} else if strings.Contains(currentContext.ServerURL, "prod") {
+				logger.Warn("\"Prod\" detected in server URL. Consider requiring confirmation on this context. Proceed with caution.")
+			}
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -101,6 +125,7 @@ func init() {
 
 	_ = rootCmd.MarkFlagRequired("database")
 
+	rootCmd.PersistentFlags().BoolVarP(new(bool), "y", "y", false, "Skip confirmation prompts")
 	rootCmd.PersistentFlags().String("context", viper.GetString("context"), "Override the current context")
 
 	rootCmd.AddCommand(newCmdServer())
