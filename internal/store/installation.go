@@ -383,7 +383,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, a
 
 	err = sqlStore.createInstallation(tx, installation)
 	if err != nil {
-		return errors.Wrap(err, "failed to create installation")
+		return err
 	}
 
 	// We can do bulk insert for better performance, but currently we do not expect more than 1 record.
@@ -480,6 +480,10 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		SetMap(insertsMap),
 	)
 	if err != nil {
+		if isUniqueConstraintViolation(err) {
+			return &UniqueConstraintError{}
+		}
+
 		return errors.Wrap(err, "failed to create installation")
 	}
 

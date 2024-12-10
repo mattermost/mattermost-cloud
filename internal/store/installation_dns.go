@@ -6,10 +6,8 @@ package store
 
 import (
 	"database/sql"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/lib/pq"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
@@ -44,22 +42,6 @@ func (sqlStore *SQLStore) AddInstallationDomain(installation *model.Installation
 	return sqlStore.createInstallationDNS(sqlStore.db, installation.ID, dnsRecord)
 }
 
-type DomainNameInUseError struct {
-	DomainName string
-}
-
-func (e *DomainNameInUseError) Error() string {
-	return fmt.Sprintf("domain name %s already in use", e.DomainName)
-}
-
-// isUniqueConstraintViolation checks if the error is a unique constraint violation.
-func isUniqueConstraintViolation(err error) bool {
-	if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
-		return true
-	}
-	return false
-}
-
 func (sqlStore *SQLStore) createInstallationDNS(db execer, installationID string, dnsRecord *model.InstallationDNS) error {
 	dnsRecord.ID = model.NewID()
 	dnsRecord.InstallationID = installationID
@@ -77,7 +59,7 @@ func (sqlStore *SQLStore) createInstallationDNS(db execer, installationID string
 	_, err := sqlStore.execBuilder(db, query)
 	if err != nil {
 		if isUniqueConstraintViolation(err) {
-			return &DomainNameInUseError{DomainName: dnsRecord.DomainName}
+			return &UniqueConstraintError{}
 		}
 
 		return errors.Wrap(err, "failed to create installation DNS record")

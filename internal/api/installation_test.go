@@ -473,6 +473,46 @@ func TestCreateInstallation(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
+	t.Run("custom status code for conflict in DNS name", func(t *testing.T) {
+		envs := model.EnvVarMap{
+			"MM_TEST2": model.EnvVar{Value: "test2"},
+		}
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:     "owner",
+			Version:     "version",
+			DNS:         "useddns.example.com",
+			Affinity:    model.InstallationAffinityIsolated,
+			Annotations: []string{"my-annotation"},
+			PriorityEnv: envs,
+		})
+		require.NoError(t, err)
+		require.Equal(t, "owner", installation.OwnerID)
+		require.Equal(t, "version", installation.Version)
+		require.Equal(t, "mattermost/mattermost-enterprise-edition", installation.Image)
+		require.Equal(t, "useddns.example.com", installation.DNS) //nolint
+		require.Equal(t, "useddns.example.com", installation.DNSRecords[0].DomainName)
+		require.Equal(t, "useddns", installation.Name)
+		require.Equal(t, model.InstallationAffinityIsolated, installation.Affinity)
+		require.Equal(t, model.InstallationStateCreationRequested, installation.State)
+		require.Equal(t, model.DefaultCRVersion, installation.CRVersion)
+		require.Empty(t, installation.LockAcquiredBy)
+		require.EqualValues(t, 0, installation.LockAcquiredAt)
+		require.NotEqual(t, 0, installation.CreateAt)
+		require.EqualValues(t, 0, installation.DeleteAt)
+
+		_, err = client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:     "owner",
+			Version:     "version",
+			DNS:         "useddns.example.com",
+			Affinity:    model.InstallationAffinityIsolated,
+			Annotations: []string{"my-annotation"},
+			PriorityEnv: envs,
+		})
+
+		require.Error(t, err)
+		require.EqualError(t, err, "failed with status code 409")
+	})
+
 	t.Run("valid", func(t *testing.T) {
 		envs := model.EnvVarMap{
 			"MM_TEST2": model.EnvVar{Value: "test2"},

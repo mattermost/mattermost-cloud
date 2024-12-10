@@ -294,6 +294,7 @@ endif
 
 .PHONY: unittest
 unittest:
+	@echo $(CLOUD_DATABASE)
 	CLOUD_DATABASE=$(CLOUD_DATABASE) $(GO) test -failfast ./... ${TEST_FLAGS} -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
