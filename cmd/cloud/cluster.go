@@ -628,6 +628,9 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 			amiEntry = "external"
 			networkingEntry = "external"
 			vpcEntry = "external"
+			if cluster.HasAWSInfrastructure() {
+				vpcEntry = cluster.VpcID()
+			}
 		}
 
 		values = append(values, []string{
