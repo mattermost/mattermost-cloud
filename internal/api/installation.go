@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
+	"github.com/mattermost/mattermost-cloud/internal/events"
 
 	"github.com/pkg/errors"
 
@@ -254,6 +255,13 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	err = c.Store.CreateInstallation(&installation, annotations, dnsRecords)
 	if err != nil {
+		var uniqueErr *store.UniqueConstraintError
+		if errors.As(err, &uniqueErr) {
+			c.Logger.WithError(err).Error("domain name already in use")
+			w.WriteHeader(http.StatusConflict)
+			return
+		}
+
 		c.Logger.WithError(err).Error("failed to create installation")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -661,7 +669,15 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldState)
+	// Try to parse the user ID from the request context, so it can be passed along with the webhook event
+	actorID := ""
+	if value := r.Context().Value(ContextKeyUserID{}); value != nil {
+		if str, ok := value.(string); ok && str != "" {
+			actorID = str
+		}
+	}
+
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldState, events.DataField{Key: "actor_id", Value: actorID})
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to create installation state change event")
 	}
