@@ -166,6 +166,7 @@ func executeServerCmd(flags serverFlags) error {
 	installationScheduling := supervisor.NewInstallationSupervisorSchedulingOptions(
 		flags.balancedInstallationScheduling,
 		flags.preferScheduleOnStableClusters,
+		flags.alwaysScheduleExternalClusters,
 		flags.clusterResourceThreshold,
 		flags.thresholdCPUOverride,
 		flags.thresholdMemoryOverride,

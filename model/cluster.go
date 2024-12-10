@@ -80,6 +80,11 @@ func (c *Cluster) HasAWSInfrastructure() bool {
 	return true
 }
 
+// IsExternallyManaged returns if a cluster is externally managed.
+func (c *Cluster) IsExternallyManaged() bool {
+	return c.Provider == ProviderExternal
+}
+
 func (c *Cluster) ApplyClusterUpdatePatch(patchRequest *UpdateClusterRequest) bool {
 	var applied bool
 	if patchRequest.Name != nil && *patchRequest.Name != c.Name {

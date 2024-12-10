@@ -275,7 +275,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, installation.ToDTO(annotations, dnsRecords))
+	outputJSON(c, w, installation.ToDTO(annotations, dnsRecords, nil))
 }
 
 func selectGroupForAnnotation(c *Context, annotations []string) (string, error) {
