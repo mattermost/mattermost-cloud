@@ -655,7 +655,7 @@ func (m *mockCloudflareClient) DeleteDNSRecords(customerDNSName []string, logger
 }
 
 func TestInstallationSupervisorDo(t *testing.T) {
-	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, false, 80, 0, 0, 0, 0)
+	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, false, false, 80, 0, 0, 0, 0)
 	require.NoError(t, standardSchedulingOptions.Validate())
 
 	t.Run("no installations pending work", func(t *testing.T) {
@@ -733,7 +733,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 }
 
 func TestInstallationSupervisor(t *testing.T) {
-	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, false, 80, 0, 0, 0, 0)
+	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, false, false, 80, 0, 0, 0, 0)
 	require.NoError(t, standardSchedulingOptions.Validate())
 
 	expectInstallationState := func(t *testing.T, sqlStore *store.SQLStore, installation *model.Installation, expectedState string) {
@@ -2495,7 +2495,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				UsedPodCount:     100,
 			},
 		}
-		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, false, 80, 0, 0, 0, 2)
+		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, false, false, 80, 0, 0, 0, 2)
 		require.NoError(t, schedulingOptions.Validate())
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
@@ -2542,7 +2542,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(true, false, 80, 0, 0, 0, 0)
+		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, 80, 0, 0, 0, 0)
 		require.NoError(t, schedulingOptions.Validate())
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
@@ -2726,9 +2726,39 @@ func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
 	}{
 		{
 			name:         "valid, no overrides",
-			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, 80, 0, 0, 0, 2),
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, 80, 0, 0, 0, 2),
 			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
 				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     false,
+				AlwaysScheduleExternalClusters:     false,
+				ClusterResourceThresholdCPU:        80,
+				ClusterResourceThresholdMemory:     80,
+				ClusterResourceThresholdPodCount:   80,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: false,
+		},
+		{
+			name:         "valid, no overrides, prefer stable clusters",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, true, false, 80, 0, 0, 0, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     true,
+				AlwaysScheduleExternalClusters:     false,
+				ClusterResourceThresholdCPU:        80,
+				ClusterResourceThresholdMemory:     80,
+				ClusterResourceThresholdPodCount:   80,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: false,
+		},
+		{
+			name:         "valid, no overrides, always schedule external",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, true, 80, 0, 0, 0, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     false,
+				AlwaysScheduleExternalClusters:     true,
 				ClusterResourceThresholdCPU:        80,
 				ClusterResourceThresholdMemory:     80,
 				ClusterResourceThresholdPodCount:   80,
@@ -2738,9 +2768,11 @@ func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
 		},
 		{
 			name:         "valid, cpu override",
-			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, 80, 40, 0, 0, 2),
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, 80, 40, 0, 0, 2),
 			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
 				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     false,
+				AlwaysScheduleExternalClusters:     false,
 				ClusterResourceThresholdCPU:        40,
 				ClusterResourceThresholdMemory:     80,
 				ClusterResourceThresholdPodCount:   80,
@@ -2750,9 +2782,11 @@ func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
 		},
 		{
 			name:         "valid, memory override",
-			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, 80, 0, 40, 0, 2),
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, 80, 0, 40, 0, 2),
 			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
 				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     false,
+				AlwaysScheduleExternalClusters:     false,
 				ClusterResourceThresholdCPU:        80,
 				ClusterResourceThresholdMemory:     40,
 				ClusterResourceThresholdPodCount:   80,
@@ -2762,9 +2796,11 @@ func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
 		},
 		{
 			name:         "valid, pod count override",
-			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, 80, 0, 0, 40, 2),
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, 80, 0, 0, 40, 2),
 			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
 				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     false,
+				AlwaysScheduleExternalClusters:     false,
 				ClusterResourceThresholdCPU:        80,
 				ClusterResourceThresholdMemory:     80,
 				ClusterResourceThresholdPodCount:   40,
@@ -2774,9 +2810,11 @@ func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
 		},
 		{
 			name:         "invalid, no overrides",
-			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, -1, 0, 0, 0, 2),
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, -1, 0, 0, 0, 2),
 			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
 				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     false,
+				AlwaysScheduleExternalClusters:     false,
 				ClusterResourceThresholdCPU:        -1,
 				ClusterResourceThresholdMemory:     -1,
 				ClusterResourceThresholdPodCount:   -1,
@@ -2786,9 +2824,11 @@ func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
 		},
 		{
 			name:         "invalid, cpu override",
-			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, 80, 2, 0, 0, 2),
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, 80, 2, 0, 0, 2),
 			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
 				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     false,
+				AlwaysScheduleExternalClusters:     false,
 				ClusterResourceThresholdCPU:        2,
 				ClusterResourceThresholdMemory:     80,
 				ClusterResourceThresholdPodCount:   80,
@@ -2798,7 +2838,7 @@ func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
 		},
 		{
 			name:         "invalid, memory override",
-			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, 80, 0, 2, 0, 2),
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, 80, 0, 2, 0, 2),
 			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
 				BalanceInstallations:               true,
 				ClusterResourceThresholdCPU:        80,
@@ -2810,9 +2850,11 @@ func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
 		},
 		{
 			name:         "invalid, pod count override",
-			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, 80, 0, 0, 2, 2),
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, 80, 0, 0, 2, 2),
 			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
 				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     false,
+				AlwaysScheduleExternalClusters:     false,
 				ClusterResourceThresholdCPU:        80,
 				ClusterResourceThresholdMemory:     80,
 				ClusterResourceThresholdPodCount:   2,
@@ -2822,9 +2864,11 @@ func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
 		},
 		{
 			name:         "invalid, scale value out of bounds",
-			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, 80, 0, 0, 0, -1),
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, false, false, 80, 0, 0, 0, -1),
 			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
 				BalanceInstallations:               true,
+				PreferScheduleOnStableClusters:     false,
+				AlwaysScheduleExternalClusters:     false,
 				ClusterResourceThresholdCPU:        80,
 				ClusterResourceThresholdMemory:     80,
 				ClusterResourceThresholdPodCount:   80,
