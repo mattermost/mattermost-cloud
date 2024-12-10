@@ -79,12 +79,27 @@ func TestInstallationDTOs(t *testing.T) {
 	err = sqlStore.CreateInstallation(installation2, nil, dnsRecords2)
 	require.NoError(t, err)
 
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      model.NewID(),
+		InstallationID: installation1.ID,
+	}
+	clusterInstallation2 := &model.ClusterInstallation{
+		ClusterID:      model.NewID(),
+		InstallationID: installation2.ID,
+	}
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
 	t.Run("get installation DTO", func(t *testing.T) {
 		installationDTO, err := sqlStore.GetInstallationDTO(installation1.ID, false, false)
 		require.NoError(t, err)
 		assert.Equal(t, installation1, installationDTO.Installation)
 		assert.Equal(t, len(annotations), len(installationDTO.Annotations))
 		assert.Equal(t, annotations, model.SortAnnotations(installationDTO.Annotations))
+		assert.ElementsMatch(t, []*string{&clusterInstallation1.ClusterID}, installationDTO.ClusterIDs)
 	})
 
 	t.Run("get installation DTOs", func(t *testing.T) {
@@ -98,6 +113,9 @@ func TestInstallationDTOs(t *testing.T) {
 		for _, i := range installationDTOs {
 			model.SortAnnotations(i.Annotations)
 		}
-		assert.Equal(t, []*model.InstallationDTO{installation1.ToDTO(annotations, dnsRecords1), installation2.ToDTO(nil, dnsRecords2)}, installationDTOs)
+		assert.ElementsMatch(t, []*model.InstallationDTO{
+			installation1.ToDTO(annotations, dnsRecords1, []*string{&clusterInstallation1.ClusterID}),
+			installation2.ToDTO(nil, dnsRecords2, []*string{&clusterInstallation2.ClusterID}),
+		}, installationDTOs)
 	})
 }
