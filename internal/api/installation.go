@@ -254,6 +254,12 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	err = c.Store.CreateInstallation(&installation, annotations, dnsRecords)
 	if err != nil {
+		if _, ok := err.(*store.DomainNameInUseError); ok {
+			c.Logger.WithError(err).Error("domain name already in use")
+			w.WriteHeader(http.StatusConflict)
+			return
+		}
+
 		c.Logger.WithError(err).Error("failed to create installation")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
