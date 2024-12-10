@@ -122,6 +122,7 @@ type InstallationSupervisorCache struct {
 type InstallationSupervisorSchedulingOptions struct {
 	BalanceInstallations               bool
 	PreferScheduleOnStableClusters     bool
+	AlwaysScheduleExternalClusters     bool
 	ClusterResourceThresholdCPU        int
 	ClusterResourceThresholdMemory     int
 	ClusterResourceThresholdPodCount   int
@@ -169,10 +170,11 @@ func NewInstallationSupervisor(
 }
 
 // NewInstallationSupervisorSchedulingOptions creates a new InstallationSupervisorSchedulingOptions.
-func NewInstallationSupervisorSchedulingOptions(balanceInstallations, preferStableClusters bool, clusterResourceThreshold, thresholdCPUOverride, thresholdMemoryOverride, thresholdPodCountOverride, clusterResourceThresholdScaleValue int) InstallationSupervisorSchedulingOptions {
+func NewInstallationSupervisorSchedulingOptions(balanceInstallations, preferStableClusters, alwaysScheduleExternalClusters bool, clusterResourceThreshold, thresholdCPUOverride, thresholdMemoryOverride, thresholdPodCountOverride, clusterResourceThresholdScaleValue int) InstallationSupervisorSchedulingOptions {
 	schedulingOptions := InstallationSupervisorSchedulingOptions{
 		BalanceInstallations:               balanceInstallations,
 		PreferScheduleOnStableClusters:     preferStableClusters,
+		AlwaysScheduleExternalClusters:     alwaysScheduleExternalClusters,
 		ClusterResourceThresholdCPU:        clusterResourceThreshold,
 		ClusterResourceThresholdMemory:     clusterResourceThreshold,
 		ClusterResourceThresholdPodCount:   clusterResourceThreshold,
@@ -599,9 +601,17 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
 	podPercent := clusterResources.CalculatePodCountPercentUsed(installationPodCountRequirement)
 
-	if cpuPercent > s.scheduling.ClusterResourceThresholdCPU ||
+	// Determine if a resource check should be performed.
+	performResourceCheck := true
+	if cluster.IsExternallyManaged() && s.scheduling.AlwaysScheduleExternalClusters {
+		performResourceCheck = false
+	}
+
+	resourcesOverThreshold := cpuPercent > s.scheduling.ClusterResourceThresholdCPU ||
 		memoryPercent > s.scheduling.ClusterResourceThresholdMemory ||
-		podPercent > s.scheduling.ClusterResourceThresholdPodCount {
+		podPercent > s.scheduling.ClusterResourceThresholdPodCount
+
+	if performResourceCheck && resourcesOverThreshold {
 
 		var provisionerMetadata model.ProvisionerMetadata
 		if cluster.Provisioner == model.ProvisionerKops {

@@ -52,6 +52,7 @@ func (flags *supervisorOptions) addFlags(command *cobra.Command) {
 type schedulingOptions struct {
 	balancedInstallationScheduling     bool
 	preferScheduleOnStableClusters     bool
+	alwaysScheduleExternalClusters     bool
 	clusterResourceThresholdScaleValue int
 	clusterResourceThreshold           int
 	thresholdCPUOverride               int
@@ -62,6 +63,7 @@ type schedulingOptions struct {
 func (flags *schedulingOptions) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.balancedInstallationScheduling, "balanced-installation-scheduling", true, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
 	command.Flags().BoolVar(&flags.preferScheduleOnStableClusters, "prefer-stable-cluster-installation-scheduling", false, "Whether to prioritize scheduling installations on the clusters in the stable state or not. (can slow scheduling speed as cluster count increases)")
+	command.Flags().BoolVar(&flags.alwaysScheduleExternalClusters, "always-schedule-external-clusters", false, "Whether to always schedule installations on the clusters that are externally managed clusters by ignoring resource thresholds.")
 	command.Flags().IntVar(&flags.clusterResourceThresholdScaleValue, "cluster-resource-threshold-scale-value", 0, "The number of worker nodes to scale up by when the threshold is passed. Set to 0 for no scaling. Scaling will never exceed the cluster max worker configuration value.")
 	command.Flags().IntVar(&flags.clusterResourceThreshold, "cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	command.Flags().IntVar(&flags.thresholdCPUOverride, "cluster-resource-threshold-cpu-override", 0, "The cluster-resource-threshold override value for CPU resources only")
