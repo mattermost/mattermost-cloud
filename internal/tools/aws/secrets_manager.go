@@ -176,6 +176,39 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 	return rdsSecretPayload, nil
 }
 
+func (a *Client) SecretsManagerCreateSecret(secretName, description string, secretBytes []byte, logger log.FieldLogger) error {
+	_, err := a.Service().secretsManager.CreateSecret(
+		context.TODO(),
+		&secretsmanager.CreateSecretInput{
+			Name:         aws.String(secretName),
+			Description:  aws.String(description),
+			SecretBinary: secretBytes,
+		})
+	if err != nil {
+		return errors.Wrap(err, "unable to create secrets manager secret")
+	}
+
+	logger.WithField("secret-name", secretName).Debug("AWS secret created")
+
+	return nil
+}
+
+func (a *Client) SecretsManagerUpdateSecret(secretName string, secretBytes []byte, logger log.FieldLogger) error {
+	_, err := a.Service().secretsManager.UpdateSecret(
+		context.TODO(),
+		&secretsmanager.UpdateSecretInput{
+			SecretId:     &secretName,
+			SecretBinary: secretBytes,
+		})
+	if err != nil {
+		return errors.Wrap(err, "unable to update secrets manager secret")
+	}
+
+	logger.WithField("secret-name", secretName).Debug("AWS secret updated")
+
+	return nil
+}
+
 // secretsManagerGetIAMAccessKey returns the AccessKey for an IAM account.
 func (a *Client) secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
 	return a.secretsManagerGetIAMAccessKeyFromSecretName(IAMSecretName(awsID))
@@ -273,4 +306,27 @@ func (a *Client) SecretsManagerGetSecretBytes(secretName string) ([]byte, error)
 	}
 
 	return []byte(*result.SecretString), nil
+}
+
+func (a *Client) SecretsManagerGetSecretAsK8sSecretData(secretName string) (map[string][]byte, error) {
+	result, err := a.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(secretName),
+		})
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get secrets manager secret")
+	}
+
+	var data map[string][]byte
+	err = json.Unmarshal(result.SecretBinary, &data)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert AWS secret binary data")
+	}
+
+	return data, nil
+}
+
+func (a *Client) SecretsManagerEnsureSecretDeleted(secretName string, logger log.FieldLogger) error {
+	return a.secretsManagerEnsureSecretDeleted(secretName, false, logger)
 }

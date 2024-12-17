@@ -32,6 +32,9 @@ func newCmdInstallation() *cobra.Command {
 	cmd.AddCommand(newCmdInstallationCreate())
 	cmd.AddCommand(newCmdInstallationUpdate())
 	cmd.AddCommand(newCmdInstallationDelete())
+	cmd.AddCommand(newCmdInstallationVolumeCreate())
+	cmd.AddCommand(newCmdInstallationVolumeUpdate())
+	cmd.AddCommand(newCmdInstallationVolumeDelete())
 	cmd.AddCommand(newCmdInstallationUpdateDeletion())
 	cmd.AddCommand(newCmdInstallationCancelDeletion())
 	cmd.AddCommand(newCmdInstallationHibernate())
@@ -165,6 +168,104 @@ func newCmdInstallationUpdate() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
 			flags.installationPatchRequestChanges.addFlags(cmd)
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdInstallationVolumeCreate() *cobra.Command {
+	var flags installationCreateVolumeFlags
+
+	cmd := &cobra.Command{
+		Use:   "create-volume",
+		Short: "Creates a new volume for an installation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := createClient(command.Context(), flags.clusterFlags)
+
+			request := flags.GetCreateInstallationVolumeRequest()
+
+			if flags.dryRun {
+				return runDryRun(request)
+			}
+
+			installation, err := client.CreateInstallationVolume(flags.installationID, request)
+			if err != nil {
+				return errors.Wrap(err, "failed to create installation volume")
+			}
+
+			return printJSON(installation)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdInstallationVolumeUpdate() *cobra.Command {
+	var flags installationUpdateVolumeFlags
+
+	cmd := &cobra.Command{
+		Use:   "update-volume",
+		Short: "Updates an existing volume for an installation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := createClient(command.Context(), flags.clusterFlags)
+
+			err := flags.Validate()
+			if err != nil {
+				return err
+			}
+			request := flags.GetUpdateInstallationVolumeRequest()
+
+			if flags.dryRun {
+				return runDryRun(request)
+			}
+
+			installation, err := client.UpdateInstallationVolume(flags.installationID, flags.volumeName, request)
+			if err != nil {
+				return errors.Wrap(err, "failed to update installation volume")
+			}
+
+			return printJSON(installation)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			flags.installationUpdateVolumeChanges.addFlags(cmd)
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdInstallationVolumeDelete() *cobra.Command {
+	var flags installationDeleteVolumeFlags
+
+	cmd := &cobra.Command{
+		Use:   "delete-volume",
+		Short: "Delete an existing volume from an installation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := createClient(command.Context(), flags.clusterFlags)
+
+			installation, err := client.DeleteInstallationVolume(flags.installationID, flags.volumeName)
+			if err != nil {
+				return errors.Wrap(err, "failed to delete installation volume")
+			}
+
+			return printJSON(installation)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
 		},
 	}
 

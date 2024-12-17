@@ -435,6 +435,115 @@ func NewPatchInstallationRequestFromReader(reader io.Reader) (*PatchInstallation
 	return &patchInstallationRequest, nil
 }
 
+// CreateInstallationVolumeRequest specifies the parameters for creating an
+// installation volume.
+type CreateInstallationVolumeRequest struct {
+	Name   string
+	Data   map[string][]byte
+	Volume *Volume
+}
+
+// Validate validates the values of a installation create volume request.
+func (c *CreateInstallationVolumeRequest) Validate() error {
+	if len(c.Name) == 0 {
+		return errors.New("name needs to be specified")
+	}
+	if c.Data == nil {
+		return errors.New("no secret data provided")
+	}
+	if len(c.Data) > 1000000 {
+		return errors.New("secret data is too long")
+	}
+	if c.Volume == nil {
+		return errors.New("no volume metadata provided")
+	}
+	if len(c.Volume.BackingSecret) != 0 {
+		return errors.New("backing secret should not be set on requests")
+	}
+	err := c.Volume.Validate()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetBackingSecretName creates an AWS secret name that is unique even with the
+// same installation ID and base secret name.
+func (c *CreateInstallationVolumeRequest) SetBackingSecretName(installationID string) {
+	c.Volume.BackingSecret = fmt.Sprintf("installation-secret-%s-%d-%s", installationID, GetMillis(), c.Name)
+}
+
+// Apply applies the volume patch to the given installation.
+func (c *CreateInstallationVolumeRequest) Apply(installation *Installation) error {
+	c.SetBackingSecretName(installation.ID)
+	if installation.Volumes == nil {
+		volumeMap := make(VolumeMap)
+		installation.Volumes = &volumeMap
+	}
+	return installation.Volumes.Add(c)
+}
+
+// NewCreateInstallationVolumeRequestFromReader will create a
+// CreateInstallationVolumeRequest an io.Reader with JSON data.
+func NewCreateInstallationVolumeRequestFromReader(reader io.Reader) (*CreateInstallationVolumeRequest, error) {
+	var createInstallationVolumeRequest CreateInstallationVolumeRequest
+	err := json.NewDecoder(reader).Decode(&createInstallationVolumeRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode patch installation volume request")
+	}
+
+	err = createInstallationVolumeRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid patch installation volume request")
+	}
+
+	return &createInstallationVolumeRequest, nil
+}
+
+// PatchInstallationVolumeRequest specifies the parameters for an updated
+// installation volume.
+type PatchInstallationVolumeRequest struct {
+	Data      map[string][]byte
+	MountPath *string
+	ReadOnly  *bool
+}
+
+// Validate validates the values of a installation patch volume request.
+func (p *PatchInstallationVolumeRequest) Validate() error {
+	if len(p.Data) > 1000000 {
+		return errors.New("secret data is too long")
+	}
+	if p.MountPath != nil && len(*p.MountPath) == 0 {
+		return errors.New("mount path is empty")
+	}
+
+	return nil
+}
+
+// Apply applies the volume patch to the given installation and returns the
+// AWS backing secret name value.
+func (p *PatchInstallationVolumeRequest) Apply(installation *Installation, volumeName string) (string, error) {
+	return installation.Volumes.Patch(p, volumeName)
+}
+
+// NewPatchInstallationVolumeRequestFromReader will create a
+// PatchInstallationVolumeRequestfrom an io.Reader with JSON data.
+func NewPatchInstallationVolumeRequestFromReader(reader io.Reader) (*PatchInstallationVolumeRequest, error) {
+	var patchInstallationVolumeRequest PatchInstallationVolumeRequest
+	err := json.NewDecoder(reader).Decode(&patchInstallationVolumeRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode patch installation volume request")
+	}
+
+	err = patchInstallationVolumeRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid patch installation volume request")
+	}
+
+	return &patchInstallationVolumeRequest, nil
+}
+
 // PatchInstallationDeletionRequest specifies the parameters for an updating
 // installation deletion parameters.
 type PatchInstallationDeletionRequest struct {

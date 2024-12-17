@@ -23,13 +23,15 @@ const (
 func init() {
 	installationSelect = sq.
 		Select(
-			"Installation.ID", "Installation.Name", "OwnerID", "Version", "Image", "Database", "Filestore", "Size",
-			"Affinity", "GroupID", "GroupSequence", "Installation.State", "License",
-			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
-			"Installation.CreateAt", "Installation.DeleteAt", "Installation.DeletionPendingExpiry",
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked", "AllowedIPRanges",
-		).
-		From(installationTable)
+			"Installation.ID", "Installation.Name", "OwnerID", "Version", "Image",
+			"Database", "Filestore", "Size", "Affinity", "GroupID", "GroupSequence",
+			"Installation.State", "License", "MattermostEnvRaw", "PriorityEnvRaw",
+			"SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
+			"Installation.CreateAt", "Installation.DeleteAt",
+			"Installation.DeletionPendingExpiry", "APISecurityLock", "LockAcquiredBy",
+			"LockAcquiredAt", "CRVersion", "Installation.DeletionLocked",
+			"AllowedIPRanges", "Volumes",
+		).From(installationTable)
 }
 
 type rawInstallation struct {
@@ -453,6 +455,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"CRVersion":             installation.CRVersion,
 		"DeletionLocked":        installation.DeletionLocked,
 		"AllowedIPRanges":       installation.AllowedIPRanges,
+		"Volumes":               installation.Volumes,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -524,6 +527,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"CRVersion":             installation.CRVersion,
 			"DeletionPendingExpiry": installation.DeletionPendingExpiry,
 			"AllowedIPRanges":       installation.AllowedIPRanges,
+			"Volumes":               installation.Volumes,
 		}).
 		Where("ID = ?", installation.ID),
 	)

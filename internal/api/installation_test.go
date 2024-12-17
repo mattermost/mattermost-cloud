@@ -2118,6 +2118,210 @@ func TestUpdateInstallationDeletion(t *testing.T) {
 	})
 }
 
+func TestInstallationVolumes(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:                             sqlStore,
+		Supervisor:                        &mockSupervisor{},
+		EventProducer:                     testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:                           &mockMetrics{},
+		AwsClient:                         &mockAWSClient{},
+		Logger:                            logger,
+		InstallationDeletionExpiryDefault: time.Hour,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:   "owner",
+		Version:   "version",
+		DNS:       "dns.example.com",
+		Affinity:  model.InstallationAffinityIsolated,
+		Database:  model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer,
+		Filestore: model.InstallationFilestoreBifrost,
+	})
+	require.NoError(t, err)
+
+	installation.State = model.InstallationStateStable
+	err = sqlStore.UpdateInstallation(installation.Installation)
+	require.NoError(t, err)
+
+	t.Run("create first volume", func(t *testing.T) {
+		volumeRequest := &model.CreateInstallationVolumeRequest{
+			Name: "test-volume1",
+			Data: map[string][]byte{"testfile": []byte("test-data")},
+			Volume: &model.Volume{
+				Type:      model.VolumeTypeSecret,
+				MountPath: "/mattermost/test1",
+				ReadOnly:  true,
+			},
+		}
+
+		installation, err = client.CreateInstallationVolume(installation.ID, volumeRequest)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 1)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 1)
+	})
+
+	t.Run("create second volume", func(t *testing.T) {
+		volumeRequest := &model.CreateInstallationVolumeRequest{
+			Name: "test-volume2",
+			Data: map[string][]byte{"testfile": []byte("test-data")},
+			Volume: &model.Volume{
+				Type:      model.VolumeTypeSecret,
+				MountPath: "/mattermost/test2",
+				ReadOnly:  true,
+			},
+		}
+
+		installation, err = client.CreateInstallationVolume(installation.ID, volumeRequest)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 2)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 2)
+	})
+
+	t.Run("create volume with conflicting name", func(t *testing.T) {
+		volumeRequest := &model.CreateInstallationVolumeRequest{
+			Name: "test-volume1",
+			Data: map[string][]byte{"testfile": []byte("test-data")},
+			Volume: &model.Volume{
+				Type:      model.VolumeTypeSecret,
+				MountPath: "/mattermost/test3",
+				ReadOnly:  true,
+			},
+		}
+
+		installationID := installation.ID
+		installation, err = client.CreateInstallationVolume(installation.ID, volumeRequest)
+		require.Error(t, err)
+
+		installation, err = client.GetInstallation(installationID, nil)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 2)
+	})
+
+	t.Run("create volume with conflicting mount path", func(t *testing.T) {
+		volumeRequest := &model.CreateInstallationVolumeRequest{
+			Name: "test-volume3",
+			Data: map[string][]byte{"testfile": []byte("test-data")},
+			Volume: &model.Volume{
+				Type:      model.VolumeTypeSecret,
+				MountPath: "/mattermost/test1",
+				ReadOnly:  true,
+			},
+		}
+
+		installationID := installation.ID
+		installation, err = client.CreateInstallationVolume(installation.ID, volumeRequest)
+		require.Error(t, err)
+
+		installation, err = client.GetInstallation(installationID, nil)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 2)
+	})
+
+	t.Run("update volume 1", func(t *testing.T) {
+		volumeRequest := &model.PatchInstallationVolumeRequest{
+			Data:      map[string][]byte{"testfile": []byte("test-data-new")},
+			MountPath: util.SToP("/mattermost/test1"),
+			ReadOnly:  util.BToP(true),
+		}
+
+		installation, err = client.UpdateInstallationVolume(installation.ID, "test-volume1", volumeRequest)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 2)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 2)
+	})
+
+	t.Run("delete volume 2", func(t *testing.T) {
+		installation, err = client.DeleteInstallationVolume(installation.ID, "test-volume2")
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 1)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 1)
+	})
+
+	t.Run("delete volume 1", func(t *testing.T) {
+		installation, err = client.DeleteInstallationVolume(installation.ID, "test-volume1")
+		require.NoError(t, err)
+		require.Nil(t, installation.Volumes)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		require.Nil(t, installation.Volumes)
+	})
+
+	t.Run("recreate volume 2 and validate", func(t *testing.T) {
+		volumeRequest := &model.CreateInstallationVolumeRequest{
+			Name: "test-volume2",
+			Data: map[string][]byte{"testfile": []byte("test-data")},
+			Volume: &model.Volume{
+				Type:      model.VolumeTypeSecret,
+				MountPath: "/mattermost/test2",
+				ReadOnly:  true,
+			},
+		}
+
+		installation, err = client.CreateInstallationVolume(installation.ID, volumeRequest)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		require.Len(t, *installation.Volumes, 1)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		require.Len(t, *installation.Volumes, 1)
+		assert.Equal(t, (*installation.Volumes)["test-volume2"].Type, model.VolumeTypeSecret)
+		assert.NotEmpty(t, (*installation.Volumes)["test-volume2"].BackingSecret)
+		assert.Equal(t, (*installation.Volumes)["test-volume2"].MountPath, "/mattermost/test2")
+		assert.True(t, (*installation.Volumes)["test-volume2"].ReadOnly)
+	})
+
+	t.Run("update volume 2 mount path", func(t *testing.T) {
+		volumeRequest := &model.PatchInstallationVolumeRequest{
+			MountPath: util.SToP("/mattermost/test-new"),
+		}
+
+		installation, err = client.UpdateInstallationVolume(installation.ID, "test-volume2", volumeRequest)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		assert.Len(t, *installation.Volumes, 1)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		require.NotNil(t, installation.Volumes)
+		require.Len(t, *installation.Volumes, 1)
+		assert.Equal(t, (*installation.Volumes)["test-volume2"].MountPath, "/mattermost/test-new")
+	})
+}
+
 func TestInstallationAnnotations(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)

@@ -5,6 +5,8 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -38,6 +40,9 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("", addContext(handleGetInstallation)).Methods("GET")
 	installationRouter.Handle("", addContext(handleRetryCreateInstallation)).Methods("POST")
 	installationRouter.Handle("/mattermost", addContext(handleUpdateInstallation)).Methods("PUT")
+	installationRouter.Handle("/volumes", addContext(handleCreateInstallationVolume)).Methods("POST")
+	installationRouter.Handle("/volume/{volume-name}", addContext(handleUpdateInstallationVolume)).Methods("PUT")
+	installationRouter.Handle("/volume/{volume-name}", addContext(handleDeleteInstallationVolume)).Methods("DELETE")
 	installationRouter.Handle("/group/{group}", addContext(handleJoinGroup)).Methods("PUT")
 	installationRouter.Handle("/group/{group}", addContext(handleAssignGroup)).Methods("POST")
 	installationRouter.Handle("/group", addContext(handleLeaveGroup)).Methods("DELETE")
@@ -380,6 +385,216 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		if err != nil {
 			c.Logger.WithError(err).Error("Failed to create installation state change event")
 		}
+	}
+
+	unlockOnce()
+	c.Supervisor.Do()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, installationDTO)
+}
+
+// handleUpdateInstallationVolume responds to POST /api/installation/{installation}/volumes,
+// which adds a custom installation volume.
+func handleCreateInstallationVolume(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	createVolumeRequest, err := model.NewCreateInstallationVolumeRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	secretBytes, err := json.Marshal(createVolumeRequest.Data)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to marshal secret bytes")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	newState := model.InstallationStateUpdateRequested
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	oldState := installationDTO.State
+
+	err = createVolumeRequest.Apply(installationDTO.Installation)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to apply request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = c.AwsClient.SecretsManagerCreateSecret(
+		createVolumeRequest.Volume.BackingSecret,
+		fmt.Sprintf("Installation %s secret %s", installationDTO.ID, createVolumeRequest.Name),
+		secretBytes,
+		c.Logger,
+	)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create installation secret manager secret")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	installationDTO.State = newState
+
+	err = c.Store.UpdateInstallation(installationDTO.Installation)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to update installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldState)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to create installation state change event")
+	}
+
+	unlockOnce()
+	c.Supervisor.Do()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, installationDTO)
+}
+
+// handleUpdateInstallationVolume responds to PUT /api/installation/{installation}/volume/{volume-name},
+// which updates a custom installation volume.
+func handleUpdateInstallationVolume(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	volumeName := vars["volume-name"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	patchVolumeRequest, err := model.NewPatchInstallationVolumeRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var secretBytes []byte
+	if patchVolumeRequest.Data != nil {
+		secretBytes, err = json.Marshal(patchVolumeRequest.Data)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to marshal secret bytes")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	newState := model.InstallationStateUpdateRequested
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	oldState := installationDTO.State
+
+	secretName, err := patchVolumeRequest.Apply(installationDTO.Installation, volumeName)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to apply request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Only update the AWS secret if requested in the patch.
+	if len(secretBytes) != 0 {
+		err = c.AwsClient.SecretsManagerUpdateSecret(secretName, secretBytes, c.Logger)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to update installation secret manager secret")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	installationDTO.State = newState
+
+	err = c.Store.UpdateInstallation(installationDTO.Installation)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to update installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldState)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to create installation state change event")
+	}
+
+	unlockOnce()
+	c.Supervisor.Do()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, installationDTO)
+}
+
+// handleDeleteInstallationVolume responds to DELETE /api/installation/{installation}/volume/{volume-name},
+// which deletes a custom installation volume.
+func handleDeleteInstallationVolume(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	volumeName := vars["volume-name"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	newState := model.InstallationStateUpdateRequested
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	oldState := installationDTO.State
+
+	volume, ok := (*installationDTO.Volumes)[volumeName]
+	if !ok {
+		c.Logger.Errorf("installation %s has no volume with name %s", installationID, volumeName)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err := c.AwsClient.SecretsManagerEnsureSecretDeleted(volume.BackingSecret, c.Logger)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to delete installation secret manager secret")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Remove the volume. If this is the only installation volume then set the
+	// VolumeMap back to nil.
+	delete(*installationDTO.Volumes, volumeName)
+	if len(*installationDTO.Volumes) == 0 {
+		*installationDTO.Volumes = nil
+	}
+
+	installationDTO.State = newState
+
+	err = c.Store.UpdateInstallation(installationDTO.Installation)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to update installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldState)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	unlockOnce()
