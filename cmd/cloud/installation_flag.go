@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -79,7 +80,7 @@ func (flags *installationCreateFlags) addFlags(command *cobra.Command) {
 
 type installationPatchRequestChanges struct {
 	ownerIDChanged          bool
-	versionCHanged          bool
+	versionChanged          bool
 	imageChanged            bool
 	sizeChanged             bool
 	licenseChanged          bool
@@ -89,7 +90,7 @@ type installationPatchRequestChanges struct {
 
 func (flags *installationPatchRequestChanges) addFlags(command *cobra.Command) {
 	flags.ownerIDChanged = command.Flags().Changed("owner")
-	flags.versionCHanged = command.Flags().Changed("version")
+	flags.versionChanged = command.Flags().Changed("version")
 	flags.imageChanged = command.Flags().Changed("image")
 	flags.sizeChanged = command.Flags().Changed("size")
 	flags.licenseChanged = command.Flags().Changed("license")
@@ -129,7 +130,7 @@ func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *mod
 		request.OwnerID = &flags.ownerID
 	}
 
-	if flags.versionCHanged {
+	if flags.versionChanged {
 		request.Version = &flags.version
 	}
 
@@ -207,6 +208,126 @@ type installationDeleteFlags struct {
 func (flags *installationDeleteFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to be deleted.")
 	_ = command.MarkFlagRequired("installation")
+}
+
+type baseVolumeFlags struct {
+	mountPath string
+	readOnly  bool
+	filename  string
+	data      string
+}
+type installationCreateVolumeFlags struct {
+	clusterFlags
+	baseVolumeFlags
+	installationID string
+	volumeName     string
+}
+
+func (flags *installationCreateVolumeFlags) addFlags(command *cobra.Command) {
+	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to create a volume for.")
+	command.Flags().StringVar(&flags.volumeName, "volume-name", "", "The name of the volume to create.")
+	command.Flags().StringVar(&flags.mountPath, "mount-path", "", "The container path to mount the volume in.")
+	command.Flags().BoolVar(&flags.readOnly, "read-only", true, "Whether the volume should be read only or not.")
+
+	command.Flags().StringVar(&flags.filename, "filename", "", "The name of the file that will be mounted in the volume mount path.")
+	command.Flags().StringVar(&flags.data, "data", "", "The data contained in the file.")
+
+	_ = command.MarkFlagRequired("installation")
+	_ = command.MarkFlagRequired("volume-name")
+	_ = command.MarkFlagRequired("filename")
+	_ = command.MarkFlagRequired("data")
+}
+
+func (flags *installationCreateVolumeFlags) GetCreateInstallationVolumeRequest() *model.CreateInstallationVolumeRequest {
+	return &model.CreateInstallationVolumeRequest{
+		Name: flags.volumeName,
+		Volume: &model.Volume{
+			Type:      model.VolumeTypeSecret,
+			MountPath: flags.mountPath,
+			ReadOnly:  flags.readOnly,
+		},
+		Data: map[string][]byte{
+			flags.filename: []byte(flags.data),
+		},
+	}
+}
+
+type installationUpdateVolumeChanges struct {
+	mountPathChanged bool
+	readOnlyChanged  bool
+	filenameChanged  bool
+	dataChanged      bool
+}
+
+func (flags *installationUpdateVolumeChanges) addFlags(command *cobra.Command) {
+	flags.mountPathChanged = command.Flags().Changed("mount-path")
+	flags.readOnlyChanged = command.Flags().Changed("read-only")
+	flags.filenameChanged = command.Flags().Changed("filename")
+	flags.dataChanged = command.Flags().Changed("data")
+}
+
+type installationUpdateVolumeFlags struct {
+	installationUpdateVolumeChanges
+	clusterFlags
+	baseVolumeFlags
+	installationID string
+	volumeName     string
+}
+
+func (flags *installationUpdateVolumeFlags) addFlags(command *cobra.Command) {
+	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to update a volume for.")
+	command.Flags().StringVar(&flags.volumeName, "volume-name", "", "The name of the volume to update.")
+	command.Flags().StringVar(&flags.mountPath, "mount-path", "", "The container path to mount the volume in.")
+	command.Flags().BoolVar(&flags.readOnly, "read-only", true, "Whether the volume should be read only or not.")
+
+	command.Flags().StringVar(&flags.filename, "filename", "", "The name of the file that will be mounted in the volume mount path.")
+	command.Flags().StringVar(&flags.data, "data", "", "The data contained in the file.")
+
+	_ = command.MarkFlagRequired("installation")
+	_ = command.MarkFlagRequired("volume-name")
+}
+
+func (flags *installationUpdateVolumeFlags) Validate() error {
+	if flags.filenameChanged && !flags.dataChanged {
+		return errors.New("must provide --data when changing --filename")
+	}
+	if !flags.filenameChanged && flags.dataChanged {
+		return errors.New("must provide --filename when changing --data")
+	}
+
+	return nil
+}
+
+func (flags *installationUpdateVolumeFlags) GetUpdateInstallationVolumeRequest() *model.PatchInstallationVolumeRequest {
+	patch := &model.PatchInstallationVolumeRequest{}
+
+	if flags.mountPathChanged {
+		patch.MountPath = &flags.mountPath
+	}
+	if flags.readOnlyChanged {
+		patch.ReadOnly = &flags.readOnly
+	}
+	if flags.filenameChanged && flags.dataChanged {
+		patch.Data = map[string][]byte{
+			flags.filename: []byte(flags.data),
+		}
+	}
+
+	return patch
+}
+
+type installationDeleteVolumeFlags struct {
+	clusterFlags
+	installationID string
+	volumeName     string
+}
+
+func (flags *installationDeleteVolumeFlags) addFlags(command *cobra.Command) {
+	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to delete a volume from.")
+	command.Flags().StringVar(&flags.volumeName, "volume-name", "", "The name of the volume to delete.")
+
+	_ = command.MarkFlagRequired("installation")
+	_ = command.MarkFlagRequired("volume-name")
 }
 
 type installationDeletionPatchRequestOptions struct {

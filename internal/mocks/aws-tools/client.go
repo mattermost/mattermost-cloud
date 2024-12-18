@@ -431,6 +431,35 @@ func (mr *MockAWSMockRecorder) SecretsManagerGetSecretBytes(secretName interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecretsManagerGetSecretBytes", reflect.TypeOf((*MockAWS)(nil).SecretsManagerGetSecretBytes), secretName)
 }
 
+// SecretsManagerGetSecretAsK8sSecretData mocks base method
+func (m *MockAWS) SecretsManagerGetSecretAsK8sSecretData(secretName string) (map[string][]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SecretsManagerGetSecretAsK8sSecretData", secretName)
+	ret0, _ := ret[0].(map[string][]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SecretsManagerGetSecretAsK8sSecretData indicates an expected call of SecretsManagerGetSecretAsK8sSecretData
+func (mr *MockAWSMockRecorder) SecretsManagerGetSecretAsK8sSecretData(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecretsManagerGetSecretAsK8sSecretData", reflect.TypeOf((*MockAWS)(nil).SecretsManagerGetSecretAsK8sSecretData), secretName)
+}
+
+// SecretsManagerEnsureSecretDeleted mocks base method
+func (m *MockAWS) SecretsManagerEnsureSecretDeleted(secretName string, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SecretsManagerEnsureSecretDeleted", secretName, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SecretsManagerEnsureSecretDeleted indicates an expected call of SecretsManagerEnsureSecretDeleted
+func (mr *MockAWSMockRecorder) SecretsManagerEnsureSecretDeleted(secretName, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecretsManagerEnsureSecretDeleted", reflect.TypeOf((*MockAWS)(nil).SecretsManagerEnsureSecretDeleted), secretName, logger)
+}
+
 // EnsureEKSCluster mocks base method
 func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources) (*types.Cluster, error) {
 	m.ctrl.T.Helper()

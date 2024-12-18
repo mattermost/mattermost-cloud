@@ -116,3 +116,23 @@ func (mr *MockSecretsManagerAPIMockRecorder) RestoreSecret(arg0, arg1 interface{
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreSecret", reflect.TypeOf((*MockSecretsManagerAPI)(nil).RestoreSecret), varargs...)
 }
+
+// UpdateSecret mocks base method
+func (m *MockSecretsManagerAPI) UpdateSecret(arg0 context.Context, arg1 *secretsmanager.UpdateSecretInput, arg2 ...func(*secretsmanager.Options)) (*secretsmanager.UpdateSecretOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateSecret", varargs...)
+	ret0, _ := ret[0].(*secretsmanager.UpdateSecretOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateSecret indicates an expected call of UpdateSecret
+func (mr *MockSecretsManagerAPIMockRecorder) UpdateSecret(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSecret", reflect.TypeOf((*MockSecretsManagerAPI)(nil).UpdateSecret), varargs...)
+}

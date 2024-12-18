@@ -301,6 +301,18 @@ func (m mockAWSClient) DeletePGBouncerLogicalDatabase(multitenantDatabase *model
 	return nil
 }
 
+func (m mockAWSClient) SecretsManagerCreateSecret(secretName, description string, secretBytes []byte, logger log.FieldLogger) error {
+	return nil
+}
+
+func (m mockAWSClient) SecretsManagerUpdateSecret(secretName string, secretBytes []byte, logger log.FieldLogger) error {
+	return nil
+}
+
+func (m mockAWSClient) SecretsManagerEnsureSecretDeleted(secretName string, logger log.FieldLogger) error {
+	return nil
+}
+
 func TestDeleteMultitenantDatabase(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)

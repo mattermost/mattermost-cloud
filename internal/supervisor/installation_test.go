@@ -624,6 +624,14 @@ func (a *mockAWS) GetVpcsWithFilters(filters []ec2Types.Filter) ([]ec2Types.Vpc,
 	return nil, nil
 }
 
+func (m mockAWS) SecretsManagerEnsureSecretDeleted(secretName string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (m mockAWS) SecretsManagerGetSecretAsK8sSecretData(secretName string) (map[string][]byte, error) {
+	return nil, nil
+}
+
 type mockEventProducer struct {
 	installationListByEventOrder        []string
 	clusterListByEventOrder             []string

@@ -146,6 +146,9 @@ type Provisioner interface {
 type AwsClient interface {
 	EnsureVPCExists(vpcID string) error
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
+	SecretsManagerCreateSecret(secretName, description string, secretBytes []byte, logger log.FieldLogger) error
+	SecretsManagerUpdateSecret(secretName string, secretBytes []byte, logger log.FieldLogger) error
+	SecretsManagerEnsureSecretDeleted(secretName string, logger log.FieldLogger) error
 	SecretsManagerValidateExternalClusterSecret(name string) error
 	SecretsManagerValidateExternalDatabaseSecret(name string) error
 	RDSDBCLusterExists(awsID string) (bool, error)
