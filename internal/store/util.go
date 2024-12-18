@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/lib/pq"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -34,4 +35,19 @@ func applyPagingFilter(builder sq.SelectBuilder, paging model.Paging, deleteAtTa
 	}
 
 	return builder
+}
+
+type UniqueConstraintError struct {
+}
+
+func (e *UniqueConstraintError) Error() string {
+	return "unique constraint violation"
+}
+
+// isUniqueConstraintViolation checks if the error is a unique constraint violation.
+func isUniqueConstraintViolation(err error) bool {
+	if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
+		return true
+	}
+	return false
 }

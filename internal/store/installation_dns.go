@@ -58,6 +58,10 @@ func (sqlStore *SQLStore) createInstallationDNS(db execer, installationID string
 
 	_, err := sqlStore.execBuilder(db, query)
 	if err != nil {
+		if isUniqueConstraintViolation(err) {
+			return &UniqueConstraintError{}
+		}
+
 		return errors.Wrap(err, "failed to create installation DNS record")
 	}
 
