@@ -1305,6 +1305,17 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
+	if installation.HasVolumes() {
+		logger.Info("Deleting backing secrets for custom volumes")
+		for name, volume := range *installation.Volumes {
+			err = s.resourceUtil.EnsureSecretManagerSecretDeleted(volume.BackingSecret, logger)
+			if err != nil {
+				logger.WithError(err).Errorf("Failed to mark volume %s secret manager secret for deletion %s", name, volume.BackingSecret)
+				return model.InstallationStateDeletionFinalCleanup
+			}
+		}
+	}
+
 	err = s.resourceUtil.GetDatabaseForInstallation(installation).Teardown(s.store, s.keepDatabaseData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete database")

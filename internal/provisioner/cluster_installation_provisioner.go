@@ -463,6 +463,11 @@ func (provisioner Provisioner) updateClusterInstallation(
 		}
 	}
 
+	err = provisioner.ensureCustomVolumes(mattermost, installation, clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure custom volumes were correct")
+	}
+
 	err = provisioner.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure database and filestore")
@@ -511,6 +516,43 @@ func (provisioner Provisioner) updateClusterInstallation(
 	}
 
 	logger.Info("Updated cluster installation")
+
+	return nil
+}
+
+func (provisioner Provisioner) ensureCustomVolumes(
+	mattermost *mmv1beta1.Mattermost,
+	installation *model.Installation,
+	clusterInstallation *model.ClusterInstallation,
+	k8sClient *k8s.KubeClient,
+	logger log.FieldLogger) error {
+	if !installation.HasVolumes() {
+		logger.Debug("Installation has no custom volumes")
+		return nil
+	}
+
+	for name, vol := range *installation.Volumes {
+		logger.Debugf("Ensuring custom volume %s is up to date", name)
+
+		secretData, err := provisioner.awsClient.SecretsManagerGetSecretAsK8sSecretData(vol.BackingSecret)
+		if err != nil {
+			return errors.Wrap(err, "failed to get AWS secret")
+		}
+
+		volumeSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+			Data: secretData,
+		}
+		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, volumeSecret)
+		if err != nil {
+			return errors.Wrap(err, "failed to ensure k8s volume secret was created")
+		}
+	}
+
+	mattermost.Spec.Volumes = installation.Volumes.ToCoreV1Volumes()
+	mattermost.Spec.VolumeMounts = installation.Volumes.ToCoreV1VolumeMounts()
 
 	return nil
 }

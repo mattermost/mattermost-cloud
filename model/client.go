@@ -605,6 +605,57 @@ func (c *Client) UpdateInstallation(installationID string, request *PatchInstall
 	}
 }
 
+// CreateInstallationVolume creates an installation volume.
+func (c *Client) CreateInstallationVolume(installationID string, request *CreateInstallationVolumeRequest) (*InstallationDTO, error) {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/volumes", installationID), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return DTOFromReader[InstallationDTO](resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// UpdateInstallationVolume updates an installation volume.
+func (c *Client) UpdateInstallationVolume(installationID, volumeName string, request *PatchInstallationVolumeRequest) (*InstallationDTO, error) {
+	resp, err := c.doPut(c.buildURL("/api/installation/%s/volume/%s", installationID, volumeName), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return DTOFromReader[InstallationDTO](resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteInstallationVolume deletes an installation volume.
+func (c *Client) DeleteInstallationVolume(installationID, volumeName string) (*InstallationDTO, error) {
+	resp, err := c.doDelete(c.buildURL("/api/installation/%s/volume/%s", installationID, volumeName))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return DTOFromReader[InstallationDTO](resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // HibernateInstallation puts an installation into hibernation.
 func (c *Client) HibernateInstallation(installationID string) (*InstallationDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/installation/%s/hibernate", installationID), nil)

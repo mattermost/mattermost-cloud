@@ -43,6 +43,7 @@ type Installation struct {
 	Filestore                  string
 	License                    string
 	AllowedIPRanges            *AllowedIPRanges
+	Volumes                    *VolumeMap
 	MattermostEnv              EnvVarMap
 	PriorityEnv                EnvVarMap
 	Size                       string
@@ -118,7 +119,7 @@ func (a AllowedIPRanges) Value() (driver.Value, error) {
 func (a *AllowedIPRanges) Scan(src interface{}) error {
 	source, ok := src.([]byte)
 	if !ok {
-		return errors.New("Could not assert type of AllowedIPRanges")
+		return errors.New("could not assert type of AllowedIPRanges")
 	}
 
 	var i AllowedIPRanges
@@ -290,6 +291,11 @@ func (i *Installation) ExternalDatabase() bool {
 func (i *Installation) ExternalFilestore() bool {
 	// TODO: There are no external filestore options yet.
 	return false
+}
+
+// HasVolumes returns if the installation has custom volumes or not.
+func (i *Installation) HasVolumes() bool {
+	return i.Volumes != nil
 }
 
 // IsInGroup returns if the installation is in a group or not.

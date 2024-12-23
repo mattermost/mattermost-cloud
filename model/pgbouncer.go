@@ -118,7 +118,7 @@ func (c *PgBouncerConfig) Value() (driver.Value, error) {
 func (c *PgBouncerConfig) Scan(src interface{}) error {
 	source, ok := src.([]byte)
 	if !ok {
-		return errors.New("Could not assert type of PgBouncerConfig")
+		return errors.New("could not assert type of PgBouncerConfig")
 	}
 
 	var i PgBouncerConfig

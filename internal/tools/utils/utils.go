@@ -14,6 +14,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // CopyDirectory copy the entire directory to another destination
@@ -188,6 +189,12 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 	// Warning: we should never get here as it would mean that we didn't match
 	// our database type.
 	return model.NewMysqlOperatorDatabase()
+}
+
+// EnsureSecretManagerSecretDeleted ensures a secret with the provided name is
+// marked for deletion in AWS Secrets Manager.
+func (r *ResourceUtil) EnsureSecretManagerSecretDeleted(secretName string, logger log.FieldLogger) error {
+	return r.awsClient.SecretsManagerEnsureSecretDeleted(secretName, logger)
 }
 
 // Retry is retrying a function for a maximum number of attempts and time
