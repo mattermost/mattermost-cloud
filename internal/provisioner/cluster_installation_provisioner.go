@@ -31,6 +31,9 @@ import (
 )
 
 const (
+	k8sCustomSecretKey   = "mattermost-cloud/secret-type"
+	k8sCustomSecretValue = "custom"
+
 	bifrostEndpoint = "bifrost.bifrost:80"
 )
 
@@ -510,9 +513,14 @@ func (provisioner Provisioner) updateClusterInstallation(
 		}
 	} else {
 		logger.Debug("Removing Mattermost Enterprise Nginx SLI")
-		if err := prometheus.EnsureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
+		if err = prometheus.EnsureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
 			return errors.Wrapf(err, "failed to delete enterprise nginx SLI %s", prometheus.GetNginxSlothObjectName(clusterInstallation))
 		}
+	}
+
+	err = cleanupOldCustomSecrets(installation, clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure old custom secrets were cleaned up")
 	}
 
 	logger.Info("Updated cluster installation")
@@ -542,6 +550,9 @@ func (provisioner Provisioner) ensureCustomVolumes(
 		volumeSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
+				Labels: map[string]string{
+					k8sCustomSecretKey: k8sCustomSecretValue,
+				},
 			},
 			Data: secretData,
 		}
@@ -1008,6 +1019,44 @@ func cleanupOldLicenseSecrets(currentSecretName string, clusterInstallation *mod
 		err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return errors.Wrapf(err, "failed to delete secret %s/%s", clusterInstallation.Namespace, secret.Name)
+		}
+	}
+
+	return nil
+}
+
+// cleanupOldCustomSecrets removes any custom secrets that are no longer part
+// of a installation's specification.
+func cleanupOldCustomSecrets(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	logger.Debug("Running cleanup for old custom secrets")
+
+	secrets, err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).List(context.Background(), metav1.ListOptions{
+		LabelSelector: k8sCustomSecretKey,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to list custom secrets")
+	}
+
+	for _, secret := range secrets.Items {
+		var secretInUse bool
+
+		if installation.HasVolumes() {
+			for name := range *installation.Volumes {
+				if secret.Name == name {
+					secretInUse = true
+					break
+				}
+			}
+		}
+		if secretInUse {
+			continue
+		}
+
+		logger.Infof("Deleting old custom license secret %s", secret.Name)
+
+		err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete custom secret %s/%s", clusterInstallation.Namespace, secret.Name)
 		}
 	}
 
