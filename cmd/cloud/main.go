@@ -52,17 +52,17 @@ var rootCmd = &cobra.Command{
 				return
 			}
 
-			contextOverride, _ := cmd.Flags().GetString("context")
+			currentContextName := contexts.CurrentContext
+			currentContext := contexts.Current()
 
-			var currentContext *clicontext.CLIContext
+			contextOverride, _ := cmd.Flags().GetString("context")
 			if contextOverride != "" {
+				currentContextName = contextOverride
 				currentContext = contexts.Get(contextOverride)
 				if currentContext == nil {
 					logger.Fatalf("Context '%s' does not exist.", contextOverride)
 					return
 				}
-			} else {
-				currentContext = contexts.Current()
 			}
 
 			if currentContext == nil {
@@ -89,7 +89,7 @@ var rootCmd = &cobra.Command{
 			}
 
 			// Update disk copy of context with new auth data if any
-			err = contexts.UpdateContext(contexts.CurrentContext, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL, currentContext.ConfirmationRequired)
+			err = contexts.UpdateContext(currentContextName, authData, currentContext.ClientID, currentContext.OrgURL, currentContext.Alias, currentContext.ServerURL, currentContext.ConfirmationRequired)
 			if err != nil {
 				logger.WithError(err).Fatal("Failed to update context with new auth data.")
 			}
