@@ -52,6 +52,7 @@ type AWS interface {
 	UpsertPublicCNAMEs(dnsNames []string, endpoints []string, logger log.FieldLogger) error
 
 	IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error)
+	GetAMIByTag(tagKey, tagValue string, logger log.FieldLogger) (string, error)
 
 	S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error
 	S3EnsureObjectDeleted(bucketName, path string) error

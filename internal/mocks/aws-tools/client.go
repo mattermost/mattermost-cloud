@@ -265,6 +265,14 @@ func (m *MockAWS) IsValidAMI(AMIImage string, logger logrus.FieldLogger) (bool, 
 	return ret0, ret1
 }
 
+func (m *MockAWS) GetAMIByTag(tagKey, tagValue string, logger logrus.FieldLogger) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAMIByTag", tagKey, tagValue, logger)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
 // IsValidAMI indicates an expected call of IsValidAMI
 func (mr *MockAWSMockRecorder) IsValidAMI(AMIImage, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()

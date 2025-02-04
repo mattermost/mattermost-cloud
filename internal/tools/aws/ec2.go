@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -338,4 +339,33 @@ func getLaunchTemplateUserData(eksCluster *eksTypes.Cluster, data *model.LaunchT
 set -o xtrace
 /etc/eks/bootstrap.sh '%s' --apiserver-endpoint '%s' --b64-cluster-ca '%s' --use-max-pods false  --kubelet-extra-args '--max-pods=%d'`
 	return fmt.Sprintf(dataTemplate, *eksCluster.Name, *eksCluster.Endpoint, *eksCluster.CertificateAuthority.Data, data.MaxPodsPerNode)
+}
+
+func (a *Client) GetAMIByTag(tagKey, tagValue string, logger log.FieldLogger) (string, error) {
+	ctx := context.TODO()
+
+	images, err := a.Service().ec2.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		Owners: []string{"self"},
+		Filters: []ec2Types.Filter{
+			{
+				Name:   aws.String(fmt.Sprintf("tag:%s", tagKey)),
+				Values: []string{tagValue},
+			},
+		},
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "failed to describe images by tag")
+	}
+
+	if len(images.Images) == 0 {
+		a.logger.Info("No images found matching the criteria.")
+		return "", nil
+	}
+
+	//Sort images by creation date
+	sort.Slice(images.Images, func(i, j int) bool {
+		return *images.Images[i].CreationDate > *images.Images[j].CreationDate
+	})
+
+	return *images.Images[0].ImageId, nil
 }

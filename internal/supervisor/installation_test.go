@@ -593,6 +593,10 @@ func (a *mockAWS) IsValidAMI(AMIID string, logger log.FieldLogger) (bool, error)
 	return true, nil
 }
 
+func (a *mockAWS) GetAMIByTag(tagKey, tagValue string, logger log.FieldLogger) (string, error) {
+	return "ami-1234567890", nil
+}
+
 func (a *mockAWS) GeneratePerseusUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error) {
 	return nil, nil
 }
