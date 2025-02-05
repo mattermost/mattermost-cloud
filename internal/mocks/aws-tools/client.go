@@ -265,6 +265,13 @@ func (m *MockAWS) IsValidAMI(AMIImage string, logger logrus.FieldLogger) (bool, 
 	return ret0, ret1
 }
 
+// IsValidAMI indicates an expected call of IsValidAMI
+func (mr *MockAWSMockRecorder) IsValidAMI(AMIImage, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValidAMI", reflect.TypeOf((*MockAWS)(nil).IsValidAMI), AMIImage, logger)
+}
+
+// GetAMIByTag mocks base method
 func (m *MockAWS) GetAMIByTag(tagKey, tagValue string, logger logrus.FieldLogger) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAMIByTag", tagKey, tagValue, logger)
@@ -273,10 +280,10 @@ func (m *MockAWS) GetAMIByTag(tagKey, tagValue string, logger logrus.FieldLogger
 	return ret0, ret1
 }
 
-// IsValidAMI indicates an expected call of IsValidAMI
-func (mr *MockAWSMockRecorder) IsValidAMI(AMIImage, logger interface{}) *gomock.Call {
+// GetAMIByTag indicates an expected call of GetAMIByTag
+func (mr *MockAWSMockRecorder) GetAMIByTag(tagKey, tagValue, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValidAMI", reflect.TypeOf((*MockAWS)(nil).IsValidAMI), AMIImage, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAMIByTag", reflect.TypeOf((*MockAWS)(nil).GetAMIByTag), tagKey, tagValue, logger)
 }
 
 // S3EnsureBucketDeleted mocks base method
