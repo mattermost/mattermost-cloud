@@ -22,6 +22,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
 	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
 	"github.com/mattermost/mattermost-cloud/e2e/workflow"
+	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -256,13 +257,41 @@ func fetchAMI(cloudClient *model.Client, logger logrus.FieldLogger) (string, err
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get clusters to fetch AMI")
 	}
+
 	if len(clusters) == 0 {
 		return "", errors.Errorf("no clusters found to fetch AMI")
+	}
+
+	if clusters[0].Provider == model.ProviderExternal {
+		ami, err := fetchAMIFromAWS(logger)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to fetch AMI from AWS")
+		}
+		logrus.Infof("Fetched AMI from AWS: %q", ami)
+		return ami, nil
 	}
 
 	ami := clusters[0].ProvisionerMetadataKops.AMI
 	logrus.Infof("Fetched AMI from existing cluster: %q", ami)
 
+	return ami, nil
+}
+
+func fetchAMIFromAWS(logger logrus.FieldLogger) (string, error) {
+	awsConfig, err := awsTools.NewAWSConfig(context.TODO())
+	if err != nil {
+		return "", errors.Wrap(err, "failed to build aws configuration")
+	}
+
+	awsClient, err := awsTools.NewAWSClientWithConfig(&awsConfig, logrus.New())
+	if err != nil {
+		return "", errors.Wrap(err, "failed to build AWS client")
+	}
+
+	ami, err := awsClient.GetAMIByTag("Name", model.AMDKopsAmiName, logger)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get AMI image by tag")
+	}
 	return ami, nil
 }
 

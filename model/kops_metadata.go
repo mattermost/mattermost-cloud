@@ -15,6 +15,8 @@ import (
 
 const (
 	ProvisionerKops = "kops"
+	AMDKopsAmiName  = "mattermost-cloud-kops-hardened-*-amd64"
+	ARMKopsAmiName  = "mattermost-cloud-kops-hardened-*-arm64"
 )
 
 // KopsMetadata is the provisioner metadata stored in a model.Cluster.
