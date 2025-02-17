@@ -7,7 +7,7 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f #v3.4.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
       - shell: bash
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
@@ -20,6 +20,6 @@ jobs:
           echo "{\"username\":\"Cloud Bot Notify\",\"icon_url\":\"https://mattermost.com/wp-content/uploads/2022/02/icon.png\",\"text\":\"# **New Release for $REPO** - Release [$TAGVERSION]($TAGURL)\n $BODY\"}" > mattermost.json
           cat mattermost.json
 
-      - uses: mattermost/action-mattermost-notify@1.0.2
+      - uses: mattermost/action-mattermost-notify@2.0.0
         env:
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
