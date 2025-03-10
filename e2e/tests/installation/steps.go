@@ -12,17 +12,26 @@ import (
 )
 
 func versionedS3BucketInstallationLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
-	return []*workflow.Step{
-		{
-			Name:              "CreateCluster",
-			Func:              clusterSuite.CreateCluster,
-			DependsOn:         []string{},
-			GetExpectedEvents: clusterSuite.ClusterCreationEvents,
-		},
+	var initialDepends []string
+	var steps []*workflow.Step
+
+	if !clusterSuite.Params.UseExistingCluster {
+		initialDepends = []string{"CreateCluster"}
+		steps = []*workflow.Step{
+			{
+				Name:              "CreateCluster",
+				Func:              clusterSuite.CreateCluster,
+				DependsOn:         []string{},
+				GetExpectedEvents: clusterSuite.ClusterCreationEvents,
+			},
+		}
+	}
+
+	steps = append(steps, []*workflow.Step{
 		{
 			Name:              "CreateInstallationWithVersionedAWSS3Filestore",
 			Func:              installationSuite.CreateInstallationWithVersionedAWSS3Filestore,
-			DependsOn:         []string{"CreateCluster"},
+			DependsOn:         initialDepends,
 			GetExpectedEvents: installationSuite.InstallationCreationEvents,
 		},
 		{
@@ -46,21 +55,32 @@ func versionedS3BucketInstallationLifecycleSteps(clusterSuite *workflow.ClusterS
 			DependsOn:         []string{"CheckVersionedAWSS3FilestoreInstallation"},
 			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
 		},
-	}
+	}...)
+
+	return steps
 }
 
 func largeInstallationSizeLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
-	return []*workflow.Step{
-		{
-			Name:              "CreateCluster",
-			Func:              clusterSuite.CreateCluster,
-			DependsOn:         []string{},
-			GetExpectedEvents: clusterSuite.ClusterCreationEvents,
-		},
+	var initialDepends []string
+	var steps []*workflow.Step
+
+	if !clusterSuite.Params.UseExistingCluster {
+		initialDepends = []string{"CreateCluster"}
+		steps = []*workflow.Step{
+			{
+				Name:              "CreateCluster",
+				Func:              clusterSuite.CreateCluster,
+				DependsOn:         []string{},
+				GetExpectedEvents: clusterSuite.ClusterCreationEvents,
+			},
+		}
+	}
+
+	steps = append(steps, []*workflow.Step{
 		{
 			Name:              "CreateInstallationWithLargeSize",
 			Func:              installationSuite.CreateInstallationWithCustomProvisionerSize,
-			DependsOn:         []string{"CreateCluster"},
+			DependsOn:         initialDepends,
 			GetExpectedEvents: installationSuite.InstallationCreationEvents,
 		},
 		{
@@ -84,21 +104,32 @@ func largeInstallationSizeLifecycleSteps(clusterSuite *workflow.ClusterSuite, in
 			DependsOn:         []string{"CheckLargeSizeInstallation"},
 			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
 		},
-	}
+	}...)
+
+	return steps
 }
 
 func basicCreateDeleteInstallationSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
-	return []*workflow.Step{
-		{
-			Name:              "CreateCluster",
-			Func:              clusterSuite.CreateCluster,
-			DependsOn:         []string{},
-			GetExpectedEvents: clusterSuite.ClusterCreationEvents,
-		},
+	var initialDepends []string
+	var steps []*workflow.Step
+
+	if !clusterSuite.Params.UseExistingCluster {
+		initialDepends = []string{"CreateCluster"}
+		steps = []*workflow.Step{
+			{
+				Name:              "CreateCluster",
+				Func:              clusterSuite.CreateCluster,
+				DependsOn:         []string{},
+				GetExpectedEvents: clusterSuite.ClusterCreationEvents,
+			},
+		}
+	}
+
+	steps = append(steps, []*workflow.Step{
 		{
 			Name:              "CreateInstallation",
 			Func:              installationSuite.CreateInstallation,
-			DependsOn:         []string{"CreateCluster"},
+			DependsOn:         initialDepends,
 			GetExpectedEvents: installationSuite.InstallationCreationEvents,
 		},
 		{
@@ -127,5 +158,7 @@ func basicCreateDeleteInstallationSteps(clusterSuite *workflow.ClusterSuite, ins
 			DependsOn:         []string{"CheckInstallation"},
 			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
 		},
-	}
+	}...)
+
+	return steps
 }

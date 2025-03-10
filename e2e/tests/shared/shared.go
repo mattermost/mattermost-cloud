@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	webhookSuccessfulMessage      = "Provisioner E2E tests passed successfully"
-	webhookFailedMessage          = `Provisioner E2E tests failed`
+	webhookSuccessfulMessage      = "Provisioner E2E tests passed"
+	webhookFailedMessage          = "Provisioner E2E tests failed"
 	webhookSuccessEmoji           = "large_green_circle"
 	webhookFailedEmoji            = "red_circle"
 	webhookAttachmentColorSuccess = "#009E60"
@@ -45,11 +45,13 @@ const (
 type TestConfig struct {
 	Provisioner               string `envconfig:"default=kops"`
 	CloudURL                  string `envconfig:"default=http://localhost:8075"`
+	UseExistingCluster        bool   `envconfig:"optional,default=false"`
 	InstallationDBType        string `envconfig:"default=aws-rds-postgres"`
 	InstallationFilestoreType string `envconfig:"default=bifrost"`
 	DNSSubdomain              string `envconfig:"default=dev.cloud.mattermost.com"`
 	WebhookAddress            string `envconfig:"default=http://localhost:11111"`
 	EventListenerAddress      string `envconfig:"default=http://localhost:11112"`
+	ArgoManagedUtilities      bool   `envconfig:"optional,default=false"`
 	FetchAMI                  bool   `envconfig:"default=true"`
 	KopsAMI                   string `envconfig:"optional"`
 	VPC                       string `envconfig:"optional"`
@@ -74,9 +76,10 @@ type Test struct {
 	Cleanup           bool
 }
 
-func SetupTestWithDefaults(testName string, argoManagedUtilities bool) (*Test, error) {
+func SetupTestWithDefaults(testName string) (*Test, error) {
 	testID := model.NewID()
 	state.TestID = testID
+	state.TestName = testName
 	logger := logrus.WithFields(map[string]interface{}{
 		"test":   testName,
 		"testID": testID,
@@ -92,16 +95,78 @@ func SetupTestWithDefaults(testName string, argoManagedUtilities bool) (*Test, e
 	}
 
 	client := model.NewClient(config.CloudURL)
+	testAnnotations := testAnnotations(testID)
+
+	clusterParams, err := buildClusterSuiteParams(config, client, testAnnotations, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to build cluster test params")
+	}
+
+	installationParams := workflow.InstallationSuiteParams{
+		DBType:        config.InstallationDBType,
+		FileStoreType: config.InstallationFilestoreType,
+	}
+	if !config.UseExistingCluster {
+		installationParams.Annotations = testAnnotations
+	}
+
+	kubeClient, err := pkg.GetK8sClient()
+	if err != nil {
+		return nil, err
+	}
+
+	subOwner := "e2e-test"
+
+	// We need to be cautious with introducing some parallelism for tests especially on step level
+	// as webhook event will be delivered to only one channel.
+	webhookChan, cleanup, err := pkg.SetupTestWebhook(client, config.WebhookAddress, subOwner, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to setup webhook")
+	}
+
+	clusterMeta := workflow.ClusterSuiteMeta{ClusterID: config.ClusterID}
+	clusterSuite := workflow.NewClusterSuite(clusterParams, clusterMeta, client, webhookChan, logger)
+
+	installationMeta := workflow.InstallationSuiteMeta{InstallationID: config.InstallationID}
+
+	installationSuite := workflow.NewInstallationSuite(installationParams, installationMeta, config.DNSSubdomain, client, kubeClient, webhookChan, logger)
+
+	eventsRecorder := eventstest.NewEventsRecorder(subOwner, config.EventListenerAddress, logger.WithField("component", "event-recorder"), eventstest.RecordAll)
+
+	return &Test{
+		Logger:            logger,
+		ProvisionerClient: client,
+		WebhookCleanup:    cleanup,
+		ClusterSuite:      clusterSuite,
+		InstallationSuite: installationSuite,
+		EventsRecorder:    eventsRecorder,
+		Cleanup:           config.Cleanup,
+	}, nil
+}
+
+func testAnnotations(testID string) []string {
+	return []string{"e2e-test-cluster-lifecycle", fmt.Sprintf("test-id-%s", testID)}
+}
+
+func buildClusterSuiteParams(config TestConfig, client *model.Client, testAnnotations []string, logger logrus.FieldLogger) (workflow.ClusterSuiteParams, error) {
+	if config.UseExistingCluster {
+		logger.Info("Tests configured to run on existing clusters")
+		return workflow.ClusterSuiteParams{
+			UseExistingCluster: true,
+		}, nil
+	}
+
+	logger.Info("Tests configured to create new cluster")
 
 	createClusterReq := &model.CreateClusterRequest{
 		AllowInstallations: true,
-		Annotations:        testAnnotations(testID),
+		Annotations:        testAnnotations,
 		AMI:                config.KopsAMI,
 		VPC:                config.VPC,
 		Provisioner:        config.Provisioner,
 	}
 
-	if argoManagedUtilities {
+	if config.ArgoManagedUtilities {
 		createClusterReq.ArgocdClusterRegister = map[string]string{
 			"cluster-type": "customer",
 		}
@@ -149,63 +214,22 @@ func SetupTestWithDefaults(testName string, argoManagedUtilities bool) (*Test, e
 	if config.FetchAMI {
 		ami, err := fetchAMI(client, logger)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch AMI")
+			return workflow.ClusterSuiteParams{}, errors.Wrap(err, "failed to fetch AMI")
 		}
 		createClusterReq.AMI = ami
 	}
 
 	// TODO: A way to fetch the latest AMI automatically for local development
 
-	err = clusterdictionary.ApplyToCreateClusterRequest("SizeAlef1000", createClusterReq)
+	err := clusterdictionary.ApplyToCreateClusterRequest("SizeAlef1000", createClusterReq)
 	if err != nil {
-		return nil, err
+		return workflow.ClusterSuiteParams{}, errors.Wrap(err, "failed to apply cluster size")
 	}
 
-	clusterParams := workflow.ClusterSuiteParams{
-		CreateRequest: *createClusterReq,
-	}
-	installationParams := workflow.InstallationSuiteParams{
-		DBType:        config.InstallationDBType,
-		FileStoreType: config.InstallationFilestoreType,
-		Annotations:   testAnnotations(testID),
-	}
-
-	kubeClient, err := pkg.GetK8sClient()
-	if err != nil {
-		return nil, err
-	}
-
-	subOwner := "e2e-test"
-
-	// We need to be cautious with introducing some parallelism for tests especially on step level
-	// as webhook event will be delivered to only one channel.
-	webhookChan, cleanup, err := pkg.SetupTestWebhook(client, config.WebhookAddress, subOwner, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to setup webhook")
-	}
-
-	clusterMeta := workflow.ClusterSuiteMeta{ClusterID: config.ClusterID}
-	clusterSuite := workflow.NewClusterSuite(clusterParams, clusterMeta, client, webhookChan, logger)
-
-	installationMeta := workflow.InstallationSuiteMeta{InstallationID: config.InstallationID}
-
-	installationSuite := workflow.NewInstallationSuite(installationParams, installationMeta, config.DNSSubdomain, client, kubeClient, webhookChan, logger)
-
-	eventsRecorder := eventstest.NewEventsRecorder(subOwner, config.EventListenerAddress, logger.WithField("component", "event-recorder"), eventstest.RecordAll)
-
-	return &Test{
-		Logger:            logger,
-		ProvisionerClient: client,
-		WebhookCleanup:    cleanup,
-		ClusterSuite:      clusterSuite,
-		InstallationSuite: installationSuite,
-		EventsRecorder:    eventsRecorder,
-		Cleanup:           config.Cleanup,
+	return workflow.ClusterSuiteParams{
+		UseExistingCluster: false,
+		CreateRequest:      *createClusterReq,
 	}, nil
-}
-
-func testAnnotations(testID string) []string {
-	return []string{"e2e-test-cluster-lifecycle", fmt.Sprintf("test-id-%s", testID)}
 }
 
 func readConfig(logger logrus.FieldLogger) (TestConfig, error) {

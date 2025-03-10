@@ -42,6 +42,7 @@ type ClusterSuite struct {
 
 // ClusterSuiteParams contains parameters for ClusterSuite.
 type ClusterSuiteParams struct {
+	UseExistingCluster   bool
 	CreateRequest        model.CreateClusterRequest
 	ReprovisionUtilities map[string]*model.HelmUtilityVersion
 }

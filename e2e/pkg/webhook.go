@@ -90,6 +90,14 @@ func sendWebhook(ctx context.Context, webhookURL string, payload *webhookPayload
 	return nil
 }
 
+func testName() string {
+	if state.TestName == "" {
+		return "not set"
+	}
+
+	return state.TestName
+}
+
 func linkToGrafanaLogs(tmpl, id string) string {
 	if len(id) == 0 {
 		return "not set"
@@ -115,6 +123,23 @@ func SendE2EResult(ctx context.Context, icon, text, color string) error {
 		return errors.New("incorrect or empty webhook url")
 	}
 
+	// Keep the webook clean by adding fields for set values only.
+	extraAttachmentFields := []webhookPayloadAttachmentField{}
+	if state.ClusterID != "" {
+		extraAttachmentFields = append(extraAttachmentFields, webhookPayloadAttachmentField{
+			Short: true,
+			Title: "ClusterID",
+			Value: linkToGrafanaLogs(provisionerGrafanaLogsURLTmpl, state.ClusterID),
+		})
+	}
+	if state.InstallationID != "" {
+		extraAttachmentFields = append(extraAttachmentFields, webhookPayloadAttachmentField{
+			Short: true,
+			Title: "InstallationID",
+			Value: linkToGrafanaLogs(provisionerGrafanaLogsURLTmpl, state.InstallationID),
+		})
+	}
+
 	payload := webhookPayload{
 		Username:  "E2E",
 		IconEmoji: icon,
@@ -123,7 +148,12 @@ func SendE2EResult(ctx context.Context, icon, text, color string) error {
 			Title:     text,
 			TitleLink: `https://grafana.internal.mattermost.com/goto/kWlEn-24k?orgId=1`,
 			Color:     color,
-			Fields: []webhookPayloadAttachmentField{
+			Fields: append([]webhookPayloadAttachmentField{
+				{
+					Short: true,
+					Title: "TestName",
+					Value: testName(),
+				},
 				{
 					Short: true,
 					Title: "TestID",
@@ -131,20 +161,10 @@ func SendE2EResult(ctx context.Context, icon, text, color string) error {
 				},
 				{
 					Short: true,
-					Title: "ClusterID",
-					Value: linkToGrafanaLogs(provisionerGrafanaLogsURLTmpl, state.ClusterID),
-				},
-				{
-					Short: true,
-					Title: "InstallationID",
-					Value: linkToGrafanaLogs(provisionerGrafanaLogsURLTmpl, state.InstallationID),
-				},
-				{
-					Short: true,
 					Title: "Runtime",
 					Value: (state.EndTime.Sub(state.StartTime)).Round(time.Second).String(),
 				},
-			},
+			}, extraAttachmentFields...),
 		}},
 	}
 
