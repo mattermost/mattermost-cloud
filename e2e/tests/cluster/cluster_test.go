@@ -28,9 +28,12 @@ func TestMain(m *testing.M) {
 
 // SetupClusterLifecycleTest sets up cluster lifecycle test.
 func SetupClusterLifecycleTest() (*shared.Test, error) {
-	test, err := shared.SetupTestWithDefaults("cluster-lifecycle", true)
+	test, err := shared.SetupTestWithDefaults("cluster-lifecycle")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup test environment")
+	}
+	if test.ClusterSuite.Params.UseExistingCluster {
+		return nil, errors.Wrap(err, "test configuration invalid; cluster creation must be set to true for cluster lifecycle tests")
 	}
 
 	return test, nil

@@ -10,6 +10,7 @@ var (
 	ClusterID      string
 	InstallationID string
 	TestID         string
+	TestName       string
 	StartTime      time.Time
 	EndTime        time.Time
 )
