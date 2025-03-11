@@ -33,7 +33,7 @@ func SetupClusterLifecycleTest() (*shared.Test, error) {
 		return nil, errors.Wrap(err, "failed to setup test environment")
 	}
 	if test.ClusterSuite.Params.UseExistingCluster {
-		return nil, errors.Wrap(err, "test configuration invalid; cluster creation must be set to true for cluster lifecycle tests")
+		return nil, errors.New("test configuration invalid; cluster creation must be set to true for cluster lifecycle tests")
 	}
 
 	return test, nil
