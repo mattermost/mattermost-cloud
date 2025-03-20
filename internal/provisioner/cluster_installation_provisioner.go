@@ -1081,6 +1081,7 @@ func clusterInstallationBaseLabels(installation *model.Installation, clusterInst
 	return map[string]string{
 		"installation-id":         installation.ID,
 		"cluster-installation-id": clusterInstallation.ID,
+		"dns":                     strings.TrimSuffix(clusterInstallation.ClusterID, "-public"),
 	}
 }
 
