@@ -77,44 +77,48 @@ func TestClusterInstallationBaseLabels(t *testing.T) {
 		name                string
 		installation        *model.Installation
 		clusterInstallation *model.ClusterInstallation
-		expectedLabels      map[string]string
+		cluster             *model.Cluster
+		expected            map[string]string
 	}{
 		{
-			name: "standard case",
+			name: "with cluster name",
 			installation: &model.Installation{
 				ID: "test-installation",
 			},
 			clusterInstallation: &model.ClusterInstallation{
-				ID:        "test-cluster-installation",
-				ClusterID: "cluster-123-public",
+				ID: "test-cluster-installation",
 			},
-			expectedLabels: map[string]string{
+			cluster: &model.Cluster{
+				Name: "test-cluster",
+			},
+			expected: map[string]string{
 				"installation-id":         "test-installation",
 				"cluster-installation-id": "test-cluster-installation",
-				"dns":                     "cluster-123",
+				"dns":                     "test-cluster-public",
 			},
 		},
 		{
-			name: "cluster ID without public suffix",
+			name: "with empty cluster name",
 			installation: &model.Installation{
 				ID: "test-installation",
 			},
 			clusterInstallation: &model.ClusterInstallation{
-				ID:        "test-cluster-installation",
-				ClusterID: "cluster-123",
+				ID: "test-cluster-installation",
 			},
-			expectedLabels: map[string]string{
+			cluster: &model.Cluster{
+				Name: "",
+			},
+			expected: map[string]string{
 				"installation-id":         "test-installation",
 				"cluster-installation-id": "test-cluster-installation",
-				"dns":                     "cluster-123",
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			labels := clusterInstallationBaseLabels(tc.installation, tc.clusterInstallation)
-			assert.Equal(t, tc.expectedLabels, labels)
+			labels := clusterInstallationBaseLabels(tc.installation, tc.clusterInstallation, tc.cluster)
+			assert.Equal(t, tc.expected, labels)
 		})
 	}
 }
