@@ -6,6 +6,7 @@ package model
 
 import (
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"regexp"
 )
@@ -41,7 +42,10 @@ type Cluster struct {
 func (c *Cluster) Clone() *Cluster {
 	var clone Cluster
 	data, _ := json.Marshal(c)
-	json.Unmarshal(data, &clone)
+	if err := json.Unmarshal(data, &clone); err != nil {
+		log.WithError(err).Error("failed to unmarshal data, returning nil cluster")
+		return nil
+	}
 
 	return &clone
 }

@@ -123,7 +123,10 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.Supervisor.Do()
+	err = c.Supervisor.Do()
+	if err != nil {
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -165,7 +168,10 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	c.Supervisor.Do()
+	err = c.Supervisor.Do()
+	if err != nil {
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -215,7 +221,10 @@ func handleDeleteGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.Supervisor.Do()
+	err = c.Supervisor.Do()
+	if err != nil {
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

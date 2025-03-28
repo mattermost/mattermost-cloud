@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 
@@ -36,7 +37,11 @@ func runInstallationLifecycleTest(request *model.CreateInstallationRequest, clie
 	if err != nil {
 		return errors.Wrap(err, "failed to run enhanced ping test")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.WithError(err).Error("failed to close resp.Body")
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		var body []byte

@@ -321,7 +321,7 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	if request.DeletionLocked != nil {
 		q.Add("deletion_locked", fmt.Sprintf("%t", *request.DeletionLocked))
 	}
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }

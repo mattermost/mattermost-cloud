@@ -15,9 +15,13 @@ import (
 func TestParseHeaders(t *testing.T) {
 	envName := "DUMMY_ENV"
 	envNameNonExistant := "NON_EXISTANT_ENV_VAR"
-	os.Setenv(envName, "mattermost")
+	if err := os.Setenv(envName, "mattermost"); err != nil {
+		t.Fatalf("failed to set env %s: %v", envName, err)
+	}
 	t.Cleanup(func() {
-		os.Unsetenv(envName)
+		if err := os.Unsetenv(envName); err != nil {
+			t.Fatalf("failed to unset env %s: %v", envName, err)
+		}
 	})
 	headerValue := "Bar"
 	testCases := []struct {

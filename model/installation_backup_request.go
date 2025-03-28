@@ -43,7 +43,7 @@ func (request *GetInstallationBackupsRequest) ApplyToURL(u *url.URL) {
 	q.Add("installation", request.InstallationID)
 	q.Add("cluster_installation", request.ClusterInstallationID)
 	q.Add("state", request.State)
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }

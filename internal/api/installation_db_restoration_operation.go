@@ -5,6 +5,7 @@
 package api
 
 import (
+	log "github.com/sirupsen/logrus"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -72,7 +73,9 @@ func handleTriggerInstallationDBRestoration(c *Context, w http.ResponseWriter, r
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)

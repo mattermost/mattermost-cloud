@@ -249,10 +249,10 @@ func (sqlStore *SQLStore) GetStateChangeEvent(eventID string) (*model.StateChang
 func (sqlStore *SQLStore) GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error) {
 	query := stateChangeEventSelect.OrderBy("e.Timestamp DESC")
 
-	if filter.Paging.PerPage != model.AllPerPage {
+	if filter.PerPage != model.AllPerPage {
 		query = query.
-			Limit(uint64(filter.Paging.PerPage)).
-			Offset(uint64(filter.Paging.Page * filter.Paging.PerPage))
+			Limit(uint64(filter.PerPage)).
+			Offset(uint64(filter.Page * filter.PerPage))
 	}
 
 	if filter.ResourceType != "" {

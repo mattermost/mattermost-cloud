@@ -7,6 +7,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 
 	"github.com/pkg/errors"
@@ -117,7 +118,10 @@ type MigrateClusterInstallationResponse struct {
 func (c *ClusterInstallation) Clone() *ClusterInstallation {
 	var clone ClusterInstallation
 	data, _ := json.Marshal(c)
-	json.Unmarshal(data, &clone)
+	if err := json.Unmarshal(data, &clone); err != nil {
+		log.WithError(err).Error("failed to unmarshal data, returning nil cluster")
+		return nil
+	}
 
 	return &clone
 }

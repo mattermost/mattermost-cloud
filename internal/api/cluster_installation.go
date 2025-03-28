@@ -141,7 +141,10 @@ func handleGetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(output)
+	if _, err := w.Write(output); err != nil {
+		log.WithError(err).Error("failed to write output")
+	}
+
 }
 
 // handleSetClusterInstallationConfig responds to PUT /api/cluster_installation/{cluster_installation}/config, merging the given config into the given cluster installation.
@@ -311,12 +314,16 @@ func handleRunClusterInstallationExecCommand(c *Context, w http.ResponseWriter, 
 	if execErr != nil {
 		c.Logger.WithError(execErr).Error("failed to execute command")
 		w.WriteHeader(http.StatusConflict)
-		w.Write(output)
+		if _, err := w.Write(output); err != nil {
+			log.WithError(err).Error("failed to write output")
+		}
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(output)
+	if _, err := w.Write(output); err != nil {
+		log.WithError(err).Error("failed to write output")
+	}
 }
 
 // handleRunClusterInstallationGetPPROF responds to POST /api/cluster_installation/{cluster_installation}/pprof,
@@ -381,7 +388,11 @@ func handleRunClusterInstallationGetPPROF(c *Context, w http.ResponseWriter, r *
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			log.WithError(err).Error("failed to remove tempDir")
+		}
+	}()
 
 	tempZipPath := path.Join(tempDir, fmt.Sprintf("%s.tempprof.zip", clusterInstallationID))
 	tempZipFile, err := os.Create(tempZipPath)

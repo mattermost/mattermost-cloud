@@ -129,7 +129,11 @@ func TestCreate(t *testing.T) {
 
 	tempDir, err := os.MkdirTemp(".", "k8s-file-testing-")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Errorf("failed to remove tempDir: %v", err)
+		}
+	}()
 
 	serviceYAML := filepath.Join(tempDir, "service.yaml")
 	err = os.WriteFile(serviceYAML, []byte(exampleServiceYAML), 0600)
@@ -203,7 +207,11 @@ func TestCreateNetworkPolicy(t *testing.T) {
 
 	tempDir, err := os.MkdirTemp(".", "k8s-file-testing-netpol")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Errorf("failed to remove tempDir: %v", err)
+		}
+	}()
 
 	networkPolYAML := filepath.Join(tempDir, "netpol.yaml")
 	err = os.WriteFile(networkPolYAML, []byte(exampleNetPolYAML), 0600)

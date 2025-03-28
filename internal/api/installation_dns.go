@@ -5,6 +5,7 @@
 package api
 
 import (
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 
@@ -26,7 +27,11 @@ func handleAddDNSRecord(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			log.WithError(err).Error("failed to close r.Body")
+		}
+	}()
 
 	newState := model.InstallationStateUpdateRequested
 	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
@@ -70,7 +75,9 @@ func handleAddDNSRecord(c *Context, w http.ResponseWriter, r *http.Request) {
 	installationDTO.DNSRecords = append(installationDTO.DNSRecords, dnsRecord)
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -143,7 +150,9 @@ func handleSetDomainNamePrimary(c *Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -230,7 +239,9 @@ func handleDeleteDNSRecord(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)

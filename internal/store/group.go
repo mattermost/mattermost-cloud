@@ -45,7 +45,7 @@ func (r *rawGroup) toGroup() (*model.Group, error) {
 		}
 	}
 
-	r.Group.MattermostEnv = *mattermostEnv
+	r.MattermostEnv = *mattermostEnv
 	return r.Group, nil
 }
 

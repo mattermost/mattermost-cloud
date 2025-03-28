@@ -2,6 +2,7 @@ package argocd
 
 import (
 	"encoding/base64"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"path"
 	"testing"
@@ -95,7 +96,11 @@ func (suite *ArgoClusterRegisterTestSuite) SetupSuite() {
 }
 
 func (suite *ArgoClusterRegisterTestSuite) TearDownSuite() {
-	os.RemoveAll(suite.tempDir)
+	defer func() {
+		if err := os.RemoveAll(suite.tempDir); err != nil {
+			log.WithError(err).Error("failed to remove tempDir")
+		}
+	}()
 }
 
 func (suite *ArgoClusterRegisterTestSuite) TestReadArgoK8sRegistrationFile() {

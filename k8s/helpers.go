@@ -101,12 +101,17 @@ func (kc *KubeClient) GetPodsFromDaemonSet(namespace, daemonSetName string) (*co
 func (kc *KubeClient) PatchPodsDaemonSet(namespace, daemonSetName string, payload []PatchStringValue) error {
 	ctx := context.TODO()
 	daemonSet := kc.Clientset.AppsV1().DaemonSets(namespace)
-	payloadBytes, _ := json.Marshal(payload)
-	_, err := daemonSet.Patch(ctx, daemonSetName, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+
+	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		errors.Wrapf(err, "failed to patch daemonSet %s", daemonSetName)
-		return err
+		return errors.Wrapf(err, "failed to marshal payload for daemonSet %s", daemonSetName)
 	}
+
+	_, err = daemonSet.Patch(ctx, daemonSetName, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to patch daemonSet %s", daemonSetName)
+	}
+
 	return nil
 }
 

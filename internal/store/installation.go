@@ -35,7 +35,7 @@ func init() {
 }
 
 type rawInstallation struct {
-	*model.Installation
+	Installation                  *model.Installation
 	MattermostEnvRaw              []byte
 	PriorityEnvRaw                []byte
 	SingleTenantDatabaseConfigRaw []byte

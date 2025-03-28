@@ -22,7 +22,7 @@ func TestStorageClass(t *testing.T) {
 
 	t.Run("update storageclass", func(t *testing.T) {
 		ctx := context.TODO()
-		testClient.Clientset.StorageV1beta1().StorageClasses().Create(ctx, storageClass, metav1.CreateOptions{})
+		_, _ = testClient.Clientset.StorageV1beta1().StorageClasses().Create(ctx, storageClass, metav1.CreateOptions{})
 		result, err := testClient.UpdateStorageClassVolumeBindingMode(class)
 		require.NoError(t, err)
 		require.Equal(t, storageClass.GetName(), result.GetName())

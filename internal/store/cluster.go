@@ -90,12 +90,12 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 	var err error
 
 	if r.Provider == model.ProviderExternal {
-		r.Cluster.ProviderMetadataExternal, err = model.NewExternalProviderMetadata(r.ProviderMetadataRaw)
+		r.ProviderMetadataExternal, err = model.NewExternalProviderMetadata(r.ProviderMetadataRaw)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to marshal ProviderMetadataExternal")
 		}
 	} else {
-		r.Cluster.ProviderMetadataAWS, err = model.NewAWSMetadata(r.ProviderMetadataRaw)
+		r.ProviderMetadataAWS, err = model.NewAWSMetadata(r.ProviderMetadataRaw)
 		if err != nil {
 			return nil, err
 		}
@@ -107,29 +107,29 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 
 	switch r.Provisioner {
 	case model.ProvisionerKops:
-		r.Cluster.ProvisionerMetadataKops, err = model.NewKopsMetadata(r.ProvisionerMetadataRaw)
+		r.ProvisionerMetadataKops, err = model.NewKopsMetadata(r.ProvisionerMetadataRaw)
 		if err != nil {
 			return nil, err
 		}
-		if r.Cluster.ProvisionerMetadataKops != nil {
-			r.Cluster.Networking = r.Cluster.ProvisionerMetadataKops.Networking
+		if r.ProvisionerMetadataKops != nil {
+			r.Networking = r.ProvisionerMetadataKops.Networking
 		}
 	case model.ProvisionerEKS:
-		r.Cluster.ProvisionerMetadataEKS, err = model.NewEKSMetadata(r.ProvisionerMetadataRaw)
+		r.ProvisionerMetadataEKS, err = model.NewEKSMetadata(r.ProvisionerMetadataRaw)
 		if err != nil {
 			return nil, err
 		}
-		if r.Cluster.ProvisionerMetadataEKS != nil {
-			r.Cluster.Networking = r.Cluster.ProvisionerMetadataEKS.Networking
+		if r.ProvisionerMetadataEKS != nil {
+			r.Networking = r.ProvisionerMetadataEKS.Networking
 		}
 	case model.ProvisionerExternal:
-		r.Cluster.ProvisionerMetadataExternal, err = model.NewExternalClusterMetadata(r.ProvisionerMetadataRaw)
+		r.ProvisionerMetadataExternal, err = model.NewExternalClusterMetadata(r.ProvisionerMetadataRaw)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	r.Cluster.UtilityMetadata, err = model.NewUtilityMetadata(r.UtilityMetadataRaw)
+	r.UtilityMetadata, err = model.NewUtilityMetadata(r.UtilityMetadataRaw)
 	if err != nil {
 		return nil, err
 	}

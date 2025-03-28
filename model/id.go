@@ -7,11 +7,10 @@ package model
 import (
 	"bytes"
 	"encoding/base32"
+	"github.com/sirupsen/logrus"
 	"math/rand"
 	"time"
 	"unicode"
-
-	"github.com/pborman/uuid"
 )
 
 var encoding = base32.NewEncoding("ybndrfg8ejkmcpqxot1uwisza345h769")
@@ -22,8 +21,14 @@ var encoding = base32.NewEncoding("ybndrfg8ejkmcpqxot1uwisza345h769")
 func NewID() string {
 	var b bytes.Buffer
 	encoder := base32.NewEncoder(encoding, &b)
-	encoder.Write(uuid.NewRandom())
-	encoder.Close()
+	if err := encoder.Close(); err != nil {
+		logrus.WithError(err).Error("failed to close encoder")
+		return err.Error()
+	}
+	if err := encoder.Close(); err != nil {
+		logrus.WithError(err).Error("failed to close encoder")
+		return err.Error()
+	}
 	b.Truncate(26) // removes the '==' padding
 	return b.String()
 }

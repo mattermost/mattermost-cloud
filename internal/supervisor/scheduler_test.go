@@ -5,6 +5,7 @@
 package supervisor_test
 
 import (
+	log "github.com/sirupsen/logrus"
 	"testing"
 	"time"
 
@@ -41,7 +42,11 @@ func TestScheduler(t *testing.T) {
 			calls: make(chan bool, 1),
 		}
 		scheduler := supervisor.NewScheduler(doer, 100*time.Millisecond, logger)
-		defer scheduler.Close()
+		defer func() {
+			if err := scheduler.Close(); err != nil {
+				log.WithError(err).Error("failed to close scheduler")
+			}
+		}()
 
 		for i := 0; i < 5; i++ {
 			select {
@@ -59,9 +64,15 @@ func TestScheduler(t *testing.T) {
 			calls: make(chan bool, 1),
 		}
 		scheduler := supervisor.NewScheduler(doer, 30*time.Second, logger)
-		defer scheduler.Close()
+		defer func() {
+			if err := scheduler.Close(); err != nil {
+				log.WithError(err).Error("failed to close scheduler")
+			}
+		}()
 
-		scheduler.Do()
+		if err := scheduler.Do(); err != nil {
+			log.WithError(err).Error("supervisor task failed")
+		}
 
 		select {
 		case <-doer.calls:
@@ -77,9 +88,15 @@ func TestScheduler(t *testing.T) {
 			calls: make(chan bool, 1),
 		}
 		scheduler := supervisor.NewScheduler(doer, 30*time.Second, logger)
-		scheduler.Close()
+		defer func() {
+			if err := scheduler.Close(); err != nil {
+				log.WithError(err).Error("failed to close scheduler")
+			}
+		}()
 
-		scheduler.Do()
+		if err := scheduler.Do(); err != nil {
+			log.WithError(err).Error("supervisor task failed")
+		}
 
 		select {
 		case <-doer.calls:
@@ -95,14 +112,22 @@ func TestScheduler(t *testing.T) {
 			calls: make(chan bool),
 		}
 		scheduler := supervisor.NewScheduler(doer, 30*time.Second, logger)
-		defer scheduler.Close()
+		defer func() {
+			if err := scheduler.Close(); err != nil {
+				log.WithError(err).Error("failed to close scheduler")
+			}
+		}()
 
-		scheduler.Do()
+		if err := scheduler.Do(); err != nil {
+			log.WithError(err).Error("supervisor task failed")
+		}
 
 		time.Sleep(1 * time.Second)
 
 		// Second call should be non-blocking
-		scheduler.Do()
+		if err := scheduler.Do(); err != nil {
+			log.WithError(err).Error("supervisor task failed")
+		}
 
 		select {
 		case <-doer.calls:

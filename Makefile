@@ -66,7 +66,7 @@ GOIMPORTS_VER := master
 GOIMPORTS_BIN := goimports
 GOIMPORTS := $(TOOLS_BIN_DIR)/$(GOIMPORTS_BIN)
 
-GOLANGCILINT_VER := v1.64.8
+GOLANGCILINT_VER := v2.0.2
 GOLANGCILINT_BIN := golangci-lint
 GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 
@@ -96,12 +96,12 @@ check-style: govet lint goformat goimports
 ## Runs lint against all packages.
 lint: $(GOLANGCILINT)
 	@echo Running golangci-lint
-	$(GOLANGCILINT) run
+	$(GOLANGCILINT) run --config .golangci.yml
 
 ## Runs lint against all packages for changes only
 lint-changes: $(GOLANGCILINT)
 	@echo Running golangci-lint over changes only
-	$(GOLANGCILINT) run -n
+	$(GOLANGCILINT) run -n --config .golangci.yml
 
 ## Runs govet against all packages.
 .PHONY: vet
