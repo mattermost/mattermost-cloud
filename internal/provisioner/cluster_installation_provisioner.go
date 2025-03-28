@@ -51,7 +51,7 @@ func (provisioner Provisioner) CreateClusterInstallation(cluster *model.Cluster,
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return provisioner.createClusterInstallation(clusterInstallation, installation, installationDNS, configLocation, logger)
+	return provisioner.createClusterInstallation(clusterInstallation, installation, installationDNS, configLocation, cluster, logger)
 }
 
 func (provisioner Provisioner) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
@@ -77,7 +77,7 @@ func (provisioner Provisioner) HibernateClusterInstallation(cluster *model.Clust
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return hibernateInstallation(configLocation, logger, clusterInstallation, installation)
+	return hibernateInstallation(configLocation, logger, clusterInstallation, installation, cluster)
 }
 
 // UpdateClusterInstallation updates the cluster installation spec to match the
@@ -93,7 +93,7 @@ func (provisioner Provisioner) UpdateClusterInstallation(cluster *model.Cluster,
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return provisioner.updateClusterInstallation(configLocation, installation, installationDNS, clusterInstallation, logger)
+	return provisioner.updateClusterInstallation(configLocation, installation, installationDNS, clusterInstallation, cluster, logger)
 }
 
 // DeleteOldClusterInstallationLicenseSecrets removes k8s secrets found matching
@@ -179,7 +179,7 @@ func (provisioner Provisioner) PrepareClusterUtilities(cluster *model.Cluster, i
 	return prepareClusterUtilities(cluster, configLocation, store, provisioner.awsClient, logger)
 }
 
-func (provisioner Provisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
+func (provisioner Provisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, cluster *model.Cluster, logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create k8s client from file")
@@ -195,7 +195,7 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      installationName,
 			Namespace: clusterInstallation.Namespace,
-			Labels:    generateClusterInstallationResourceLabels(installation, clusterInstallation),
+			Labels:    generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster),
 		},
 		Spec: mmv1beta1.MattermostSpec{
 			Version:       translateMattermostVersion(installation.Version),
@@ -203,9 +203,9 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 			MattermostEnv: mattermostEnv.ToEnvList(),
 			Ingress:       makeIngressSpec(installationDNS, getIngressAnnotations()),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
-			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation),
+			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation, cluster),
 			Scheduling: mmv1beta1.Scheduling{
-				Affinity: generateAffinityConfig(installation, clusterInstallation),
+				Affinity: generateAffinityConfig(installation, clusterInstallation, cluster),
 			},
 			DNSConfig: setNdots(provisioner.params.NdotsValue),
 			DeploymentTemplate: &mmv1beta1.DeploymentTemplate{
@@ -221,7 +221,7 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 
 	if installation.State == model.InstallationStateHibernating {
 		logger.Info("creating hibernated cluster installation")
-		configureInstallationForHibernation(mattermost, installation, clusterInstallation)
+		configureInstallationForHibernation(mattermost, installation, clusterInstallation, cluster)
 	}
 
 	if installation.License != "" {
@@ -314,7 +314,7 @@ func (provisioner Provisioner) ensureFilestoreAndDatabase(
 	return nil
 }
 
-func hibernateInstallation(configLocation string, logger *log.Entry, clusterInstallation *model.ClusterInstallation, installation *model.Installation) error {
+func hibernateInstallation(configLocation string, logger *log.Entry, clusterInstallation *model.ClusterInstallation, installation *model.Installation, cluster *model.Cluster) error {
 	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create k8s client from file")
@@ -328,7 +328,7 @@ func hibernateInstallation(configLocation string, logger *log.Entry, clusterInst
 		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
 
-	configureInstallationForHibernation(cr, installation, clusterInstallation)
+	configureInstallationForHibernation(cr, installation, clusterInstallation, cluster)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -396,6 +396,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 	installation *model.Installation,
 	installationDNS []*model.InstallationDNS,
 	clusterInstallation *model.ClusterInstallation,
+	cluster *model.Cluster,
 	logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
@@ -416,10 +417,10 @@ func (provisioner Provisioner) updateClusterInstallation(
 
 	logger.WithField("status", fmt.Sprintf("%+v", mattermost.Status)).Debug("Got mattermost installation")
 
-	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation)
-	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation)
+	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster)
+	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster)
 
-	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation)
+	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation, cluster)
 
 	mattermost.Spec.DNSConfig = setNdots(provisioner.params.NdotsValue)
 
@@ -868,7 +869,7 @@ func containsInstallationGroup(installationGroup string, installationGroups []st
 	return false
 }
 
-func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, installation *model.Installation, clusterInstallation *model.ClusterInstallation) {
+func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster) {
 	// Hibernation is currently considered changing the Mattermost app deployment
 	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
 	// The current way to do this is to set a negative replica count in the
@@ -882,7 +883,7 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, insta
 		mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations().ToMap()
 	}
 
-	mattermost.Spec.ResourceLabels = clusterInstallationHibernatedLabels(installation, clusterInstallation)
+	mattermost.Spec.ResourceLabels = clusterInstallationHibernatedLabels(installation, clusterInstallation, cluster)
 }
 
 func makeIngressSpec(installationDNS []*model.InstallationDNS, annotations *model.IngressAnnotations) *mmv1beta1.Ingress {
@@ -918,7 +919,7 @@ func mapDomains(installationDNS []*model.InstallationDNS) []mmv1beta1.IngressHos
 
 // generateAffinityConfig generates pods Affinity configuration aiming to spread pods of single cluster installation
 // across different availability zones and nodes.
-func generateAffinityConfig(installation *model.Installation, clusterInstallation *model.ClusterInstallation) *corev1.Affinity {
+func generateAffinityConfig(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster) *corev1.Affinity {
 	return &corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
@@ -926,7 +927,7 @@ func generateAffinityConfig(installation *model.Installation, clusterInstallatio
 					Weight: 100,
 					PodAffinityTerm: corev1.PodAffinityTerm{
 						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation, cluster),
 						},
 						Namespaces:  []string{clusterInstallation.Namespace},
 						TopologyKey: "kubernetes.io/hostname",
@@ -936,7 +937,7 @@ func generateAffinityConfig(installation *model.Installation, clusterInstallatio
 					Weight: 100,
 					PodAffinityTerm: corev1.PodAffinityTerm{
 						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation, cluster),
 						},
 						Namespaces:  []string{clusterInstallation.Namespace},
 						TopologyKey: "topology.kubernetes.io/zone",
@@ -1065,8 +1066,8 @@ func cleanupOldCustomSecrets(installation *model.Installation, clusterInstallati
 
 // generateClusterInstallationResourceLabels generates standard resource labels
 // for ClusterInstallation resources.
-func generateClusterInstallationResourceLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
-	labels := clusterInstallationBaseLabels(installation, clusterInstallation)
+func generateClusterInstallationResourceLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster) map[string]string {
+	labels := clusterInstallationBaseLabels(installation, clusterInstallation, cluster)
 	if installation.GroupID != nil {
 		labels["group-id"] = *installation.GroupID
 	}
@@ -1077,21 +1078,27 @@ func generateClusterInstallationResourceLabels(installation *model.Installation,
 	return labels
 }
 
-func clusterInstallationBaseLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
-	return map[string]string{
+func clusterInstallationBaseLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster) map[string]string {
+	labels := map[string]string{
 		"installation-id":         installation.ID,
 		"cluster-installation-id": clusterInstallation.ID,
 	}
+
+	if cluster != nil && cluster.Name != "" {
+		labels["dns"] = cluster.Name + "-public"
+	}
+
+	return labels
 }
 
-func clusterInstallationStableLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
-	labels := clusterInstallationBaseLabels(installation, clusterInstallation)
+func clusterInstallationStableLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster) map[string]string {
+	labels := clusterInstallationBaseLabels(installation, clusterInstallation, cluster)
 	labels["state"] = "running"
 	return labels
 }
 
-func clusterInstallationHibernatedLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
-	labels := clusterInstallationBaseLabels(installation, clusterInstallation)
+func clusterInstallationHibernatedLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster) map[string]string {
+	labels := clusterInstallationBaseLabels(installation, clusterInstallation, cluster)
 	labels["state"] = "hibernated"
 	return labels
 }
