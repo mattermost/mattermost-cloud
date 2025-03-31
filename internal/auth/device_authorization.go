@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"net/url"
@@ -38,7 +39,11 @@ func waitForAuthorization(ctx context.Context, config *oauth2.Config, deviceCode
 			log.Print(err)
 			return AuthorizationResponse{}, nil
 		}
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				logrus.WithError(err).Error("failed to close resp.Body")
+			}
+		}()
 
 		var token AuthorizationResponse
 		if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
@@ -94,7 +99,11 @@ func Refresh(ctx context.Context, config *oauth2.Config, refreshToken string) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logrus.WithError(err).Error("failed to close resp.Body")
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
@@ -130,7 +139,11 @@ func Login(ctx context.Context, orgURL string, clientID string) (AuthorizationRe
 	if err != nil {
 		return AuthorizationResponse{}, fmt.Errorf("failed to get device code: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logrus.WithError(err).Error("failed to close resp.Body")
+		}
+	}()
 
 	var loginResponse LoginResponse
 	if dErr := json.NewDecoder(resp.Body).Decode(&loginResponse); dErr != nil {

@@ -688,7 +688,9 @@ func handleAssignGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

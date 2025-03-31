@@ -288,7 +288,6 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 
 		time.Sleep(1 * time.Millisecond)
 
-		supervisor.Do()
 		if err := supervisor.Do(); err != nil {
 			log.WithError(err).Error("supervisor task failed")
 		}

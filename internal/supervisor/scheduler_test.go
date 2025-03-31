@@ -24,9 +24,15 @@ func TestScheduler(t *testing.T) {
 			calls: make(chan bool, 1),
 		}
 		scheduler := supervisor.NewScheduler(doer, 0*time.Second, logger)
-		defer scheduler.Close()
+		defer func() {
+			if err := scheduler.Close(); err != nil {
+				log.WithError(err).Error("failed to close scheduler")
+			}
+		}()
 
-		scheduler.Do()
+		if err := scheduler.Do(); err != nil {
+			t.Fatalf("scheduler.Do() failed: %v", err)
+		}
 
 		select {
 		case <-doer.calls:

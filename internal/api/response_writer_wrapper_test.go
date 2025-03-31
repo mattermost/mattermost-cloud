@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"bufio"
+	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -46,7 +47,9 @@ func TestStatusCodeShouldBe200IfNotHeaderWritten(t *testing.T) {
 	resp := api.NewWrappedWriter(httptest.NewRecorder())
 	req := httptest.NewRequest("GET", "/api/v4/test", nil)
 	handler := TestHandler{func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte{})
+		if _, err := w.Write([]byte{}); err != nil {
+			log.WithError(err).Error("failed to write byte")
+		}
 	}}
 	handler.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusOK, resp.StatusCode())
@@ -77,7 +80,9 @@ func TestForSupportedFlush(t *testing.T) {
 	resp := api.NewWrappedWriter(httptest.NewRecorder())
 	req := httptest.NewRequest("GET", "/api/v4/test", nil)
 	handler := TestHandler{func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte{})
+		if _, err := w.Write([]byte{}); err != nil {
+			log.WithError(err).Error("failed to write byte")
+		}
 		w.(*api.ResponseWriterWrapper).Flush()
 	}}
 	handler.ServeHTTP(resp, req)

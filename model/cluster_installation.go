@@ -117,7 +117,11 @@ type MigrateClusterInstallationResponse struct {
 // Clone returns a deep copy the cluster installation.
 func (c *ClusterInstallation) Clone() *ClusterInstallation {
 	var clone ClusterInstallation
-	data, _ := json.Marshal(c)
+	data, err := json.Marshal(c)
+	if err != nil {
+		log.WithError(err).Error("failed to marshal data, returning nil cluster")
+		return nil
+	}
 	if err := json.Unmarshal(data, &clone); err != nil {
 		log.WithError(err).Error("failed to unmarshal data, returning nil cluster")
 		return nil

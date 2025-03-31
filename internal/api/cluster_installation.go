@@ -418,7 +418,10 @@ func handleRunClusterInstallationGetPPROF(c *Context, w http.ResponseWriter, r *
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(debugBytes)
+	if _, err := w.Write(debugBytes); err != nil {
+		log.WithError(err).Error("failed to write debugBytes")
+	}
+
 }
 
 // handleRunClusterInstallationMattermostCLI responds to POST /api/cluster_installation/{cluster_installation}/mattermost_cli, running a Mattermost CLI command and returning any output.
@@ -475,12 +478,17 @@ func handleRunClusterInstallationMattermostCLI(c *Context, w http.ResponseWriter
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to execute mattermost cli")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(output)
+		if _, err := w.Write(output); err != nil {
+			log.WithError(err).Error("failed to write output")
+		}
+
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(output)
+	if _, err := w.Write(output); err != nil {
+		log.WithError(err).Error("failed to write output")
+	}
 }
 
 // handleMigrateClusterInstallations responds to Post /api/cluster_installation/migrate.

@@ -57,7 +57,9 @@ func New(dsn string, logger logrus.FieldLogger) (*SQLStore, error) {
 		if usePgTemp {
 			// Force the use of the current session's temporary-table schema,
 			// simplifying cleanup for unit tests configured to use same.
-			db.Exec("SET search_path TO pg_temp")
+			if _, err := db.Exec("SET search_path TO pg_temp"); err != nil {
+				return nil, errors.Wrap(err, "failed to set search_path to pg_temp")
+			}
 		}
 
 		// Leave the default mapper as strings.ToLower.
