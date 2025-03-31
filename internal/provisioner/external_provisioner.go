@@ -121,24 +121,18 @@ func (provisioner *ExternalProvisioner) ProvisionCluster(cluster *model.Cluster)
 	if cluster.HasAWSInfrastructure() {
 		logger.Info("Provisioning resources for AWS infrastructure")
 
+		logger.Info("Deploying PgBouncer manifests")
 		err = utility.DeployPgbouncerManifests(k8sClient, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to deploy pgbouncer manifests")
 		}
 
-		vpc := cluster.ProvisionerMetadataExternal.VPC
-		// Update PgBouncer ConfigMap
+		vpc := cluster.VpcID()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		logger.Info("Updating PgBouncer ConfigMap")
 
-		sqlStore, ok := provisioner.clusterUpdateStore.(*store.SQLStore)
-		if !ok {
-			logger.Warn("Store is not a SQLStore, skipping PgBouncer ConfigMap update")
-			return nil
-		}
-
-		err = pgbouncer.UpdatePGBouncerConfigMap(ctx, vpc, sqlStore, cluster.PgBouncerConfig, k8sClient, logger)
+		err = pgbouncer.UpdatePGBouncerConfigMap(ctx, vpc, provisioner.clusterUpdateStore, cluster.PgBouncerConfig, k8sClient, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to update configmap for pgbouncer-configmap")
 		}

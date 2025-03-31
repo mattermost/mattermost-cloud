@@ -29,6 +29,8 @@ const EKSProvisionerType = "eks"
 
 type clusterUpdateStore interface {
 	UpdateCluster(cluster *model.Cluster) error
+	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
+	GetLogicalDatabases(filter *model.LogicalDatabaseFilter) ([]*model.LogicalDatabase, error)
 }
 
 // EKSProvisioner provisions clusters using AWS EKS.
