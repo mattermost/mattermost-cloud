@@ -23,13 +23,15 @@ const (
 func init() {
 	installationSelect = sq.
 		Select(
-			"Installation.ID", "Installation.Name", "OwnerID", "Version", "Image", "Database", "Filestore", "Size",
-			"Affinity", "GroupID", "GroupSequence", "Installation.State", "License",
-			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
-			"Installation.CreateAt", "Installation.DeleteAt", "Installation.DeletionPendingExpiry",
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked", "AllowedIPRanges",
-		).
-		From(installationTable)
+			"Installation.ID", "Installation.Name", "OwnerID", "Version", "Image",
+			"Database", "Filestore", "Size", "Affinity", "GroupID", "GroupSequence",
+			"Installation.State", "License", "MattermostEnvRaw", "PriorityEnvRaw",
+			"SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
+			"Installation.CreateAt", "Installation.DeleteAt",
+			"Installation.DeletionPendingExpiry", "APISecurityLock", "LockAcquiredBy",
+			"LockAcquiredAt", "CRVersion", "Installation.DeletionLocked",
+			"AllowedIPRanges", "Volumes",
+		).From(installationTable)
 }
 
 type rawInstallation struct {
@@ -52,7 +54,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 			return nil, err
 		}
 	}
-	r.Installation.MattermostEnv = *mattermostEnv
+	r.Installation.MattermostEnv = *mattermostEnv // nolint:staticcheck
 
 	priorityEnv := &model.EnvVarMap{}
 	if r.PriorityEnvRaw != nil {
@@ -61,7 +63,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 			return nil, err
 		}
 	}
-	r.Installation.PriorityEnv = *priorityEnv
+	r.Installation.PriorityEnv = *priorityEnv // nolint:staticcheck
 
 	if r.SingleTenantDatabaseConfigRaw != nil {
 		singleTenantDBConfig := &model.SingleTenantDatabaseConfig{}
@@ -69,7 +71,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 		if err != nil {
 			return nil, err
 		}
-		r.Installation.SingleTenantDatabaseConfig = singleTenantDBConfig
+		r.Installation.SingleTenantDatabaseConfig = singleTenantDBConfig // nolint:staticcheck
 	}
 
 	if r.ExternalDatabaseConfigRaw != nil {
@@ -78,7 +80,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 		if err != nil {
 			return nil, err
 		}
-		r.Installation.ExternalDatabaseConfig = externalDBConfig
+		r.Installation.ExternalDatabaseConfig = externalDBConfig // nolint:staticcheck
 	}
 
 	return r.Installation, nil
@@ -453,6 +455,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"CRVersion":             installation.CRVersion,
 		"DeletionLocked":        installation.DeletionLocked,
 		"AllowedIPRanges":       installation.AllowedIPRanges,
+		"Volumes":               installation.Volumes,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -480,6 +483,9 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		SetMap(insertsMap),
 	)
 	if err != nil {
+		if isUniqueConstraintViolation(err) {
+			return &UniqueConstraintError{}
+		}
 		return errors.Wrap(err, "failed to create installation")
 	}
 
@@ -524,6 +530,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"CRVersion":             installation.CRVersion,
 			"DeletionPendingExpiry": installation.DeletionPendingExpiry,
 			"AllowedIPRanges":       installation.AllowedIPRanges,
+			"Volumes":               installation.Volumes,
 		}).
 		Where("ID = ?", installation.ID),
 	)

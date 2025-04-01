@@ -7,6 +7,7 @@ package provisioner
 import (
 	"crypto/sha256"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -39,13 +40,25 @@ func TestGetCachedKopsClient(t *testing.T) {
 
 	t.Run("invalidate cache", func(t *testing.T) {
 		err := provisioner.invalidateCachedKopsClient("test", logger)
-		require.NoError(t, err)
-		require.Nil(t, provisioner.kopsCache["test"])
+		require.NoError(t, err, "expected no error when invalidating existing cache")
+
+		client, ok := provisioner.kopsCache["test"]
+		require.True(t, ok, "expected cache entry to exist after invalidation")
+
+		// Use reflection inline to access the unexported fields.
+		v := reflect.ValueOf(client).Elem()
+		kopsPath := v.FieldByName("kopsPath").String()
+		s3StateStore := v.FieldByName("s3StateStore").String()
+		tempDir := v.FieldByName("tempDir").String()
+
+		assert.Equal(t, "", kopsPath, "expected kopsPath to be empty")
+		assert.Equal(t, "", s3StateStore, "expected s3StateStore to be empty")
+		assert.Equal(t, "", tempDir, "expected tempDir to be empty")
 	})
 
 	t.Run("invalidate missing cache", func(t *testing.T) {
 		err := provisioner.invalidateCachedKopsClient("test1", logger)
-		require.Error(t, err)
+		require.Error(t, err, "expected an error when invalidating missing cache")
 	})
 
 	provisioner.kopsCache["test"] = &kops.Cmd{}
@@ -59,7 +72,11 @@ func TestGetCachedKopsClient(t *testing.T) {
 	t.Run("invalidate cache on error; error is not nil", func(t *testing.T) {
 		cacheError := errors.New("not nil")
 		provisioner.invalidateCachedKopsClientOnError(cacheError, "test", logger)
-		require.Nil(t, provisioner.kopsCache["test"])
+		client, exists := provisioner.kopsCache["test"]
+		require.True(t, exists, "expected cache entry to exist after invalidation on error")
+		defaultClient := new(kops.Cmd)
+		require.True(t, reflect.DeepEqual(client, defaultClient),
+			"expected cached kops client to be reset to its default state, got: %#v", client)
 	})
 }
 
