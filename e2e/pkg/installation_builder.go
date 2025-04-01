@@ -18,7 +18,6 @@ type InstallationBuilder struct {
 func NewInstallationBuilderWithDefaults() *InstallationBuilder {
 	return &InstallationBuilder{request: &model.CreateInstallationRequest{
 		OwnerID:   "e2e-test",
-		Version:   "7.9.1",
 		Image:     "mattermost/mattermost-enterprise-edition",
 		Size:      "1000users",
 		Affinity:  "multitenant",
