@@ -10,7 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/utility"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
@@ -119,10 +121,22 @@ func (provisioner *ExternalProvisioner) ProvisionCluster(cluster *model.Cluster)
 	if cluster.HasAWSInfrastructure() {
 		logger.Info("Provisioning resources for AWS infrastructure")
 
+		logger.Info("Deploying PgBouncer manifests")
 		err = utility.DeployPgbouncerManifests(k8sClient, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to deploy pgbouncer manifests")
 		}
+
+		vpc := cluster.VpcID()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		logger.Info("Updating PgBouncer ConfigMap")
+
+		err = pgbouncer.UpdatePGBouncerConfigMap(ctx, vpc, provisioner.clusterUpdateStore, cluster.PgBouncerConfig, k8sClient, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to update configmap for pgbouncer-configmap")
+		}
+		logger.Info("PgBouncer ConfigMap updated successfully")
 	}
 
 	return nil
