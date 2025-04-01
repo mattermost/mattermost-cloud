@@ -8,9 +8,10 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	model "github.com/mattermost/awat/model"
-	reflect "reflect"
 )
 
 // MockAWATClient is a mock of AWATClient interface

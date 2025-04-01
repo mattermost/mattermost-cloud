@@ -2,10 +2,11 @@ package argocd
 
 import (
 	"encoding/base64"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"path"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

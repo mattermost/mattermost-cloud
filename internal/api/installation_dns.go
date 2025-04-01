@@ -5,9 +5,10 @@
 package api
 
 import (
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/model"

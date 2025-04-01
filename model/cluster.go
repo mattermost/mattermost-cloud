@@ -6,9 +6,10 @@ package model
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"regexp"
+
+	log "github.com/sirupsen/logrus"
 )
 
 //go:generate provisioner-code-gen generate --out-file=cluster_gen.go --boilerplate-file=../hack/boilerplate/boilerplate.generatego.txt --type=github.com/mattermost/mattermost-cloud/model.Cluster --generator=get_id,get_state,is_deleted,as_resources

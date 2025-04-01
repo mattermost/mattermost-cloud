@@ -8,13 +8,14 @@
 package mockawstools
 
 import (
+	reflect "reflect"
+
 	types "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	model "github.com/mattermost/mattermost-cloud/model"
 	logrus "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	reflect "reflect"
 )
 
 // MockAWS is a mock of AWS interface

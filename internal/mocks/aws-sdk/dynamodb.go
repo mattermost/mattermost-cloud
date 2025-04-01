@@ -9,9 +9,10 @@ package mockawssdk
 
 import (
 	context "context"
+	reflect "reflect"
+
 	dynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockDynamoDBAPI is a mock of DynamoDBAPI interface

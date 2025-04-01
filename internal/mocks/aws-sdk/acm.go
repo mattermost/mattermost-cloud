@@ -9,9 +9,10 @@ package mockawssdk
 
 import (
 	context "context"
+	reflect "reflect"
+
 	acm "github.com/aws/aws-sdk-go-v2/service/acm"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockACMAPI is a mock of ACMAPI interface

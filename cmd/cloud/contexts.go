@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"reflect"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/cmd/cloud/clicontext"
 	"github.com/mattermost/mattermost-cloud/internal/auth"

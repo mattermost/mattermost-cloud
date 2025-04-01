@@ -1,10 +1,11 @@
 package argocd
 
 import (
-	log "github.com/sirupsen/logrus"
 	"os"
 	"reflect"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"gopkg.in/yaml.v3"

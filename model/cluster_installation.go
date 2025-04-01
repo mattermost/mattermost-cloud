@@ -7,8 +7,9 @@ package model
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 )

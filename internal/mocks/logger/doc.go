@@ -3,6 +3,7 @@
 //
 
 // Package mocklogger to create the mocks run go generate to regenerate this package.
+//
 //go:generate ../../../bin/mockgen -package=mocklogger -destination ./logrus.go github.com/sirupsen/logrus StdLogger,FieldLogger,Ext1FieldLogger
 //go:generate /usr/bin/env bash -c "cat ../../../hack/boilerplate/boilerplate.generatego.txt logrus.go > _logrus.go && mv _logrus.go logrus.go"
 package mocklogger //nolint

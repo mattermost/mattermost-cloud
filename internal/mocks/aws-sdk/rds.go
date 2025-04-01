@@ -9,9 +9,10 @@ package mockawssdk
 
 import (
 	context "context"
+	reflect "reflect"
+
 	rds "github.com/aws/aws-sdk-go-v2/service/rds"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockRDSAPI is a mock of RDSAPI interface

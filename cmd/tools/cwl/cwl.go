@@ -7,10 +7,11 @@ package main
 import (
 	"embed"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/sirupsen/logrus"
 
 	cloud "github.com/mattermost/mattermost-cloud/model"
 

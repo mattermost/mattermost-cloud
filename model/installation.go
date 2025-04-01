@@ -8,9 +8,10 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 )

@@ -9,9 +9,10 @@ package mockawssdk
 
 import (
 	context "context"
+	reflect "reflect"
+
 	route53 "github.com/aws/aws-sdk-go-v2/service/route53"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockRoute53API is a mock of Route53API interface

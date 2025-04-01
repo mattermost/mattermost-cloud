@@ -7,10 +7,11 @@ package model
 import (
 	"bytes"
 	"encoding/base32"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"time"
 	"unicode"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/pborman/uuid"
 )

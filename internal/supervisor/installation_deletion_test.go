@@ -5,9 +5,10 @@
 package supervisor_test
 
 import (
-	log "github.com/sirupsen/logrus"
 	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/store"

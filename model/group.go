@@ -6,8 +6,9 @@ package model
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"io"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Group represents a group of Mattermost installations.

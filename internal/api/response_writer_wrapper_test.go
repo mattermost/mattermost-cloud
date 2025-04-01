@@ -2,11 +2,12 @@ package api_test
 
 import (
 	"bufio"
-	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/stretchr/testify/assert"

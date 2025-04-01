@@ -6,10 +6,11 @@ package aws
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/mattermost/mattermost-cloud/model"
 

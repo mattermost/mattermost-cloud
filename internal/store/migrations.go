@@ -7,6 +7,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/blang/semver"

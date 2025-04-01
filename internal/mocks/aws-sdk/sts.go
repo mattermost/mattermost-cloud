@@ -9,9 +9,10 @@ package mockawssdk
 
 import (
 	context "context"
+	reflect "reflect"
+
 	sts "github.com/aws/aws-sdk-go-v2/service/sts"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockSTSAPI is a mock of STSAPI interface
