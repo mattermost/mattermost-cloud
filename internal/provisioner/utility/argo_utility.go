@@ -189,13 +189,21 @@ func substituteValues(inputFilePath, outputFilePath string, replacements map[str
 	if err != nil {
 		return errors.Wrap(err, "failed to open input file for argo utility substitution")
 	}
-	defer inputFile.Close()
+	defer func() {
+		if err := inputFile.Close(); err != nil {
+			log.WithError(err).Error("failed to close inputFile")
+		}
+	}()
 
 	outputFile, err := os.Create(outputFilePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to create output file for argo utility substitution")
 	}
-	defer outputFile.Close()
+	defer func() {
+		if err := outputFile.Close(); err != nil {
+			log.WithError(err).Error("failed to close outputFile")
+		}
+	}()
 
 	scanner := bufio.NewScanner(inputFile)
 

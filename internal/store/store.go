@@ -57,7 +57,9 @@ func New(dsn string, logger logrus.FieldLogger) (*SQLStore, error) {
 		if usePgTemp {
 			// Force the use of the current session's temporary-table schema,
 			// simplifying cleanup for unit tests configured to use same.
-			db.Exec("SET search_path TO pg_temp")
+			if _, err := db.Exec("SET search_path TO pg_temp"); err != nil {
+				return nil, errors.Wrap(err, "failed to set search_path to pg_temp")
+			}
 		}
 
 		// Leave the default mapper as strings.ToLower.
@@ -210,7 +212,7 @@ func (t *Transaction) Commit() error {
 // RollbackUnlessCommitted rollback the transaction if it is not committed.
 func (t *Transaction) RollbackUnlessCommitted() {
 	if !t.committed {
-		err := t.Tx.Rollback()
+		err := t.Tx.Rollback() // nolint: staticcheck
 		if err != nil {
 			t.sqlStore.logger.Errorf("error: failed to rollback uncommitted transaction: %s", err.Error())
 		}

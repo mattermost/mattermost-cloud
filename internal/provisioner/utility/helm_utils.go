@@ -154,7 +154,11 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
-	defer helmClient.Close()
+	defer func() {
+		if err := helmClient.Close(); err != nil {
+			log.WithError(err).Error("failed to close helmClient")
+		}
+	}()
 
 	err = helmClient.RunGenericCommand(arguments...)
 	if err != nil {
@@ -178,7 +182,11 @@ func deleteHelmChart(chart helmDeployment, configPath string, logger log.FieldLo
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
-	defer helmClient.Close()
+	defer func() {
+		if err := helmClient.Close(); err != nil {
+			log.WithError(err).Error("failed to close helmClient")
+		}
+	}()
 
 	err = helmClient.RunGenericCommand(arguments...)
 	if err != nil {
@@ -225,7 +233,11 @@ func (d *helmDeployment) List() (*HelmListOutput, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create helm wrapper")
 	}
-	defer helmClient.Close()
+	defer func() {
+		if err := helmClient.Close(); err != nil {
+			log.WithError(err).Error("failed to close helmClient")
+		}
+	}()
 
 	rawOutput, err := helmClient.RunCommandRaw(arguments...)
 	if err != nil {
@@ -326,7 +338,9 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 
 	return temporaryValuesFile.Name(), func(path string) {
 		if strings.HasPrefix(path, os.TempDir()) {
-			os.Remove(path)
+			if err := os.Remove(path); err != nil {
+				log.WithError(err).Error("failed to remove temporary file")
+			}
 		}
 	}, nil
 }

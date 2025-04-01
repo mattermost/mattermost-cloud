@@ -90,12 +90,12 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 	var err error
 
 	if r.Provider == model.ProviderExternal {
-		r.Cluster.ProviderMetadataExternal, err = model.NewExternalProviderMetadata(r.ProviderMetadataRaw)
+		r.Cluster.ProviderMetadataExternal, err = model.NewExternalProviderMetadata(r.ProviderMetadataRaw) // nolint:staticcheck
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to marshal ProviderMetadataExternal")
 		}
 	} else {
-		r.Cluster.ProviderMetadataAWS, err = model.NewAWSMetadata(r.ProviderMetadataRaw)
+		r.Cluster.ProviderMetadataAWS, err = model.NewAWSMetadata(r.ProviderMetadataRaw) // nolint:staticcheck
 		if err != nil {
 			return nil, err
 		}
@@ -107,29 +107,29 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 
 	switch r.Provisioner {
 	case model.ProvisionerKops:
-		r.Cluster.ProvisionerMetadataKops, err = model.NewKopsMetadata(r.ProvisionerMetadataRaw)
+		r.Cluster.ProvisionerMetadataKops, err = model.NewKopsMetadata(r.ProvisionerMetadataRaw) // nolint:staticcheck
 		if err != nil {
 			return nil, err
 		}
-		if r.Cluster.ProvisionerMetadataKops != nil {
-			r.Cluster.Networking = r.Cluster.ProvisionerMetadataKops.Networking
+		if r.Cluster.ProvisionerMetadataKops != nil { // nolint:staticcheck
+			r.Cluster.Networking = r.Cluster.ProvisionerMetadataKops.Networking // nolint:staticcheck
 		}
 	case model.ProvisionerEKS:
-		r.Cluster.ProvisionerMetadataEKS, err = model.NewEKSMetadata(r.ProvisionerMetadataRaw)
+		r.Cluster.ProvisionerMetadataEKS, err = model.NewEKSMetadata(r.ProvisionerMetadataRaw) // nolint:staticcheck
 		if err != nil {
 			return nil, err
 		}
-		if r.Cluster.ProvisionerMetadataEKS != nil {
-			r.Cluster.Networking = r.Cluster.ProvisionerMetadataEKS.Networking
+		if r.Cluster.ProvisionerMetadataEKS != nil { // nolint:staticcheck
+			r.Cluster.Networking = r.Cluster.ProvisionerMetadataEKS.Networking // nolint:staticcheck
 		}
 	case model.ProvisionerExternal:
-		r.Cluster.ProvisionerMetadataExternal, err = model.NewExternalClusterMetadata(r.ProvisionerMetadataRaw)
+		r.Cluster.ProvisionerMetadataExternal, err = model.NewExternalClusterMetadata(r.ProvisionerMetadataRaw) // nolint:staticcheck
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	r.Cluster.UtilityMetadata, err = model.NewUtilityMetadata(r.UtilityMetadataRaw)
+	r.Cluster.UtilityMetadata, err = model.NewUtilityMetadata(r.UtilityMetadataRaw) // nolint:staticcheck
 	if err != nil {
 		return nil, err
 	}

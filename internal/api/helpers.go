@@ -109,7 +109,11 @@ func parseDeletionLocked(u *url.URL) (*bool, error) {
 }
 
 func populateZipfile(w *zip.Writer, fileDatas []model.FileData) error {
-	defer w.Close()
+	defer func() {
+		if err := w.Close(); err != nil {
+			logrus.WithError(err).Error("failed to close zip writer")
+		}
+	}()
 	for _, fd := range fileDatas {
 		f, err := w.CreateHeader(&zip.FileHeader{
 			Name:     fd.Filename,

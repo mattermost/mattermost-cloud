@@ -7,6 +7,8 @@ package api
 import (
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -141,7 +143,9 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.Logger.WithError(err).Error("Failed to create cluster state change event")
 	}
 
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -186,7 +190,9 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 
 	// Notify even if we didn't make changes, to expedite even the no-op operations above.
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -252,7 +258,9 @@ func handleImportCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.Logger.WithError(err).Error("Failed to create cluster state change event")
 	}
 
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -310,7 +318,9 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	// Notify even if we didn't make changes, to expedite even the no-op operations above.
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -386,10 +396,11 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 	oldState := clusterDTO.State
 
 	var isUpgradeApplied bool
-	if clusterDTO.Provisioner == model.ProvisionerKops {
-		isUpgradeApplied = clusterDTO.ProvisionerMetadataKops.ApplyUpgradePatch(upgradeClusterRequest)
-	} else if clusterDTO.Provisioner == model.ProvisionerEKS {
+	switch clusterDTO.Provisioner {
+	case model.ProvisionerEKS:
 		isUpgradeApplied = clusterDTO.ProvisionerMetadataEKS.ApplyUpgradePatch(upgradeClusterRequest)
+	default:
+		isUpgradeApplied = clusterDTO.ProvisionerMetadataKops.ApplyUpgradePatch(upgradeClusterRequest)
 	}
 
 	if isUpgradeApplied {
@@ -410,7 +421,9 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -440,29 +453,28 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
-	if clusterDTO.Provisioner == model.ProvisionerEKS {
+	switch clusterDTO.Provisioner {
+	case model.ProvisionerEKS:
 		err = clusterDTO.ProvisionerMetadataEKS.ValidateClusterSizePatch(resizeClusterRequest)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to validate cluster size patch")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-	} else if clusterDTO.Provisioner == model.ProvisionerKops {
+	case model.ProvisionerKops:
 		err = clusterDTO.ProvisionerMetadataKops.ValidateClusterSizePatch(resizeClusterRequest)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to validate cluster size patch")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	default:
+		// Optionally handle unsupported provisioners here.
+	}
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to validate cluster size patch")
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	oldState := clusterDTO.State
 
 	var isResizeApplied bool
-	if clusterDTO.Provisioner == model.ProvisionerKops {
-		isResizeApplied = clusterDTO.ProvisionerMetadataKops.ApplyClusterSizePatch(resizeClusterRequest)
-	} else if clusterDTO.Provisioner == model.ProvisionerEKS {
+	switch clusterDTO.Provisioner {
+	case model.ProvisionerEKS:
 		isResizeApplied = clusterDTO.ProvisionerMetadataEKS.ApplyClusterSizePatch(resizeClusterRequest)
+	default:
+		isResizeApplied = clusterDTO.ProvisionerMetadataKops.ApplyClusterSizePatch(resizeClusterRequest)
 	}
 
 	if isResizeApplied {
@@ -483,7 +495,9 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -705,7 +719,9 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 }
@@ -810,7 +826,11 @@ func annotationsFromRequest(req *http.Request) ([]*model.Annotation, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode request")
 	}
-	defer req.Body.Close()
+	defer func() {
+		if err := req.Body.Close(); err != nil {
+			log.WithError(err).Error("failed to close req.Body")
+		}
+	}()
 
 	annotations, err := model.AnnotationsFromStringSlice(annotationsRequest.Annotations)
 	if err != nil {
