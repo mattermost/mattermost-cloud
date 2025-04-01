@@ -9,10 +9,9 @@ package mockawssdk
 
 import (
 	context "context"
-	reflect "reflect"
-
 	kms "github.com/aws/aws-sdk-go-v2/service/kms"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockKMSAPI is a mock of KMSAPI interface

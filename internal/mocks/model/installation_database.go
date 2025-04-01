@@ -8,12 +8,11 @@
 package mockmodel
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	model "github.com/mattermost/mattermost-cloud/model"
 	logrus "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	reflect "reflect"
 )
 
 // MockDatabase is a mock of Database interface

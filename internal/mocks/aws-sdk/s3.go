@@ -9,10 +9,9 @@ package mockawssdk
 
 import (
 	context "context"
-	reflect "reflect"
-
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockS3API is a mock of S3API interface

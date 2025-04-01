@@ -9,10 +9,9 @@ package mockawssdk
 
 import (
 	context "context"
-	reflect "reflect"
-
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockEC2API is a mock of EC2API interface

@@ -9,10 +9,9 @@ package mockawssdk
 
 import (
 	context "context"
-	reflect "reflect"
-
 	iam "github.com/aws/aws-sdk-go-v2/service/iam"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockIAMAPI is a mock of IAMAPI interface

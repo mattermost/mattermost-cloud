@@ -9,10 +9,9 @@ package mockawssdk
 
 import (
 	context "context"
-	reflect "reflect"
-
 	resourcegroupstaggingapi "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockResourceGroupsTaggingAPIAPI is a mock of ResourceGroupsTaggingAPIAPI interface
