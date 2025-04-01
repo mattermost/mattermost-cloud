@@ -23,19 +23,17 @@ const (
 func init() {
 	installationSelect = sq.
 		Select(
-			"Installation.ID", "Installation.Name", "OwnerID", "Version", "Image",
-			"Database", "Filestore", "Size", "Affinity", "GroupID", "GroupSequence",
-			"Installation.State", "License", "MattermostEnvRaw", "PriorityEnvRaw",
-			"SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
-			"Installation.CreateAt", "Installation.DeleteAt",
-			"Installation.DeletionPendingExpiry", "APISecurityLock", "LockAcquiredBy",
-			"LockAcquiredAt", "CRVersion", "Installation.DeletionLocked",
-			"AllowedIPRanges", "Volumes",
-		).From(installationTable)
+			"Installation.ID", "Installation.Name", "OwnerID", "Version", "Image", "Database", "Filestore", "Size",
+			"Affinity", "GroupID", "GroupSequence", "Installation.State", "License",
+			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
+			"Installation.CreateAt", "Installation.DeleteAt", "Installation.DeletionPendingExpiry",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion", "Installation.DeletionLocked", "AllowedIPRanges",
+		).
+		From(installationTable)
 }
 
 type rawInstallation struct {
-	Installation                  *model.Installation
+	*model.Installation
 	MattermostEnvRaw              []byte
 	PriorityEnvRaw                []byte
 	SingleTenantDatabaseConfigRaw []byte
@@ -385,7 +383,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, a
 
 	err = sqlStore.createInstallation(tx, installation)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create installation")
 	}
 
 	// We can do bulk insert for better performance, but currently we do not expect more than 1 record.
@@ -455,7 +453,6 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"CRVersion":             installation.CRVersion,
 		"DeletionLocked":        installation.DeletionLocked,
 		"AllowedIPRanges":       installation.AllowedIPRanges,
-		"Volumes":               installation.Volumes,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -483,10 +480,6 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		SetMap(insertsMap),
 	)
 	if err != nil {
-		if isUniqueConstraintViolation(err) {
-			return &UniqueConstraintError{}
-		}
-
 		return errors.Wrap(err, "failed to create installation")
 	}
 
@@ -531,7 +524,6 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"CRVersion":             installation.CRVersion,
 			"DeletionPendingExpiry": installation.DeletionPendingExpiry,
 			"AllowedIPRanges":       installation.AllowedIPRanges,
-			"Volumes":               installation.Volumes,
 		}).
 		Where("ID = ?", installation.ID),
 	)
