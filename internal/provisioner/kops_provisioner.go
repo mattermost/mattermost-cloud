@@ -70,11 +70,12 @@ func (provisioner *KopsProvisioner) Teardown() {
 	provisioner.logger.Debug("Performing kops provisioner cleanup")
 	for name, kops := range provisioner.kopsCache {
 		provisioner.logger.Debugf("Cleaning up kops cache for %s", name)
-		defer func() {
-			if err := kops.Close(); err != nil {
-				log.WithError(err).Error("failed to close kops")
-			}
-		}()
+		kops.Close()
+		//defer func() {
+		//	if err := kops.Close(); err != nil {
+		//		log.WithError(err).Error("failed to close kops")
+		//	}
+		//}()
 	}
 }
 

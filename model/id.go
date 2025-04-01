@@ -11,6 +11,8 @@ import (
 	"math/rand"
 	"time"
 	"unicode"
+
+	"github.com/pborman/uuid"
 )
 
 var encoding = base32.NewEncoding("ybndrfg8ejkmcpqxot1uwisza345h769")
@@ -21,15 +23,27 @@ var encoding = base32.NewEncoding("ybndrfg8ejkmcpqxot1uwisza345h769")
 func NewID() string {
 	var b bytes.Buffer
 	encoder := base32.NewEncoder(encoding, &b)
+
+	// Write the UUID to the encoder.
+	if _, err := encoder.Write(uuid.NewRandom()); err != nil {
+		logrus.WithError(err).Error("failed to write to encoder")
+		return err.Error() // or return an empty string, based on your design
+	}
+
+	// Close the encoder and check for errors.
 	if err := encoder.Close(); err != nil {
 		logrus.WithError(err).Error("failed to close encoder")
-		return err.Error()
+		return err.Error() // or handle the error gracefully
 	}
-	if err := encoder.Close(); err != nil {
-		logrus.WithError(err).Error("failed to close encoder")
-		return err.Error()
+
+	// Ensure the buffer has at least 26 bytes.
+	if b.Len() < 26 {
+		logrus.Errorf("unexpected buffer length: got %d, want at least 26", b.Len())
+		return b.String() // or handle error accordingly
 	}
-	b.Truncate(26) // removes the '==' padding
+
+	// Truncate to remove the '==' padding.
+	b.Truncate(26)
 	return b.String()
 }
 

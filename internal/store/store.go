@@ -212,7 +212,7 @@ func (t *Transaction) Commit() error {
 // RollbackUnlessCommitted rollback the transaction if it is not committed.
 func (t *Transaction) RollbackUnlessCommitted() {
 	if !t.committed {
-		err := t.Rollback()
+		err := t.Tx.Rollback()
 		if err != nil {
 			t.sqlStore.logger.Errorf("error: failed to rollback uncommitted transaction: %s", err.Error())
 		}
