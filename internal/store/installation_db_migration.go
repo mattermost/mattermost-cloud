@@ -40,9 +40,9 @@ func init() {
 }
 
 type rawDBMigrationOperation struct {
-	InstallationDBMigrationOperation *model.InstallationDBMigrationOperation
-	SourceMultiTenantRaw             []byte
-	DestinationMultiTenantRaw        []byte
+	*model.InstallationDBMigrationOperation
+	SourceMultiTenantRaw      []byte
+	DestinationMultiTenantRaw []byte
 }
 
 type rawDBMigrationOperations []*rawDBMigrationOperation

@@ -5,13 +5,14 @@
 package supervisor_test
 
 import (
-	log "github.com/sirupsen/logrus"
 	"testing"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestScheduler(t *testing.T) {
@@ -38,6 +39,7 @@ func TestScheduler(t *testing.T) {
 		case <-doer.calls:
 			assert.Fail(t, "doer should not have been invoked")
 		case <-time.After(500 * time.Millisecond):
+			// Expected: no invocation.
 		}
 	})
 
@@ -94,20 +96,19 @@ func TestScheduler(t *testing.T) {
 			calls: make(chan bool, 1),
 		}
 		scheduler := supervisor.NewScheduler(doer, 30*time.Second, logger)
-		defer func() {
-			if err := scheduler.Close(); err != nil {
-				log.WithError(err).Error("failed to close scheduler")
-			}
-		}()
+		// Explicitly close the scheduler before calling Do.
+		require.NoError(t, scheduler.Close(), "failed to close scheduler")
 
+		// Now, calling Do() should not schedule any work.
 		if err := scheduler.Do(); err != nil {
-			log.WithError(err).Error("supervisor task failed")
+			log.WithError(err).Error("scheduler.Do() after close failed")
 		}
 
 		select {
 		case <-doer.calls:
-			assert.Fail(t, "doer should not have been invoked")
+			assert.Fail(t, "doer should not have been invoked after scheduler close")
 		case <-time.After(500 * time.Millisecond):
+			// Expected: no invocation.
 		}
 	})
 
@@ -130,7 +131,6 @@ func TestScheduler(t *testing.T) {
 
 		time.Sleep(1 * time.Second)
 
-		// Second call should be non-blocking
 		if err := scheduler.Do(); err != nil {
 			log.WithError(err).Error("supervisor task failed")
 		}
