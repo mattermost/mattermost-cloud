@@ -56,6 +56,12 @@ func (u *unmanaged) ValuesPath() string {
 }
 
 func (u *unmanaged) CreateOrUpgrade() error {
+	if u.ActualVersion().Version() == model.UnmanagedUtilityVersion {
+		//skip if the utility is already unmanaged
+		u.logger.WithField("unmanaged-action", "skip").Info("Utility is unmanaged; skipping...")
+		return nil
+	}
+
 	u.logger.WithField("unmanaged-action", "create").Info("Utility is unmanaged; deploying with argocd...")
 
 	privateDomainName, err := u.awsClient.GetPrivateZoneDomainName(u.logger)
