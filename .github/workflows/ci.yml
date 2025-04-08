@@ -18,10 +18,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Clean duplicate toolchain files
+        run: rm -rf "$(go env GOPATH)/pkg/mod/golang.org/toolchain*"
+
       - name: Setup Go
         uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: go.mod
+
 
       - name: ci/check-style
         run: make check-style

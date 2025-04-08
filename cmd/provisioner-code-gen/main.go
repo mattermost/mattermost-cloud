@@ -43,8 +43,13 @@ func newRootCmd() *cobra.Command {
 
 // Binds all flags as viper values
 func bindFlags(cmd *cobra.Command) {
-	viper.BindPFlags(cmd.PersistentFlags())
-	viper.BindPFlags(cmd.Flags())
+	if err := viper.BindPFlags(cmd.PersistentFlags()); err != nil {
+		logrus.WithError(err).Fatal("failed to bind persistent flags")
+	}
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		logrus.WithError(err).Fatal("failed to bind command flags")
+	}
+
 	for _, c := range cmd.Commands() {
 		bindFlags(c)
 	}

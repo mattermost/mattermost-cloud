@@ -70,7 +70,11 @@ func (provisioner *KopsProvisioner) Teardown() {
 	provisioner.logger.Debug("Performing kops provisioner cleanup")
 	for name, kops := range provisioner.kopsCache {
 		provisioner.logger.Debugf("Cleaning up kops cache for %s", name)
-		kops.Close()
+		defer func() {
+			if err := kops.Close(); err != nil {
+				log.WithError(err).Error("failed to close kops")
+			}
+		}()
 	}
 }
 
@@ -168,8 +172,11 @@ func (provisioner *KopsProvisioner) invalidateCachedKopsClient(name string, logg
 	}
 
 	logger.Debugf("Invalidating kops client cache for %s and cleaning up %s", name, kopsClient.GetOutputDirectory())
-	kopsClient.Close()
-	delete(provisioner.kopsCache, name)
+	defer func() {
+		if err := kopsClient.Close(); err != nil {
+			log.WithError(err).Error("failed to close kops client")
+		}
+	}()
 
 	return nil
 }
@@ -181,8 +188,11 @@ func (provisioner *KopsProvisioner) invalidateCachedKopsClientOnError(err error,
 	if err == nil {
 		return
 	}
+	err = provisioner.invalidateCachedKopsClient(name, logger)
+	if err != nil {
+		logger.WithError(err).Errorf("failed to invalidate cached kops client for %s", name)
+	}
 
-	provisioner.invalidateCachedKopsClient(name, logger)
 }
 
 func (provisioner *KopsProvisioner) k8sClient(clusterName string, logger log.FieldLogger) (*k8s.KubeClient, error) {
@@ -255,7 +265,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	if err != nil {
 		return err
 	}
-	defer kops.Close()
+	defer func() {
+		if err := kops.Close(); err != nil {
+			log.WithError(err).Error("failed to close kops client")
+		}
+	}()
 
 	var clusterResources aws.ClusterResources
 	if kopsMetadata.ChangeRequest.VPC != "" && provisioner.params.UseExistingAWSResources {
@@ -294,7 +308,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	if err != nil {
 		return err
 	}
-	defer terraformClient.Close()
+	defer func() {
+		if err := terraformClient.Close(); err != nil {
+			log.WithError(err).Error("failed to close terraform client")
+		}
+	}()
 
 	err = terraformClient.Init(kopsMetadata.Name)
 	if err != nil {
@@ -422,7 +440,9 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	if err != nil {
 		// Run non-silent validate one more time to log final cluster state
 		// and return original timeout error.
-		kops.ValidateCluster(kopsMetadata.Name, false)
+		if validateErr := kops.ValidateCluster(kopsMetadata.Name, false); validateErr != nil {
+			log.WithError(validateErr).Error("failed to validate kops cluster")
+		}
 		return err
 	}
 
@@ -433,8 +453,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 
-	defer gitClient.Close(argocdRepoTempDir, provisioner.logger)
-
+	defer func() {
+		if err := gitClient.Close(argocdRepoTempDir, provisioner.logger); err != nil {
+			log.WithError(err).Error("failed to close git client")
+		}
+	}()
 	ugh, err := utility.NewUtilityGroupHandle(provisioner.params.AllowCIDRRangeList, kops.GetKubeConfigPath(), argocdRepoTempDir, cluster, provisioner.awsClient, gitClient, argocdClient, logger)
 	if err != nil {
 		return err
@@ -480,7 +503,11 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) err
 		return err
 	}
 
-	defer gitClient.Close(argocdRepoTempDir, provisioner.logger)
+	defer func() {
+		if err := gitClient.Close(argocdRepoTempDir, provisioner.logger); err != nil {
+			log.WithError(err).Error("failed to close git client")
+		}
+	}()
 
 	logger.Info("Provisioning cluster")
 	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
@@ -518,7 +545,11 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
-	defer kops.Close()
+	defer func() {
+		if err := kops.Close(); err != nil {
+			log.WithError(err).Error("failed to close kops client")
+		}
+	}()
 
 	switch kopsMetadata.ChangeRequest.Version {
 	case "":
@@ -586,7 +617,11 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	if err != nil {
 		return err
 	}
-	defer terraformClient.Close()
+	defer func() {
+		if err := terraformClient.Close(); err != nil {
+			log.WithError(err).Error("failed to close terraform client")
+		}
+	}()
 
 	err = terraformClient.Init(kopsMetadata.Name)
 	if err != nil {
@@ -637,7 +672,9 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 		if err != nil {
 			// Run non-silent validate one more time to log final cluster state
 			// and return original timeout error.
-			kops.ValidateCluster(kopsMetadata.Name, false)
+			if validateErr := kops.ValidateCluster(kopsMetadata.Name, false); validateErr != nil {
+				log.WithError(validateErr).Error("failed to validate kops cluster")
+			}
 			return err
 		}
 	}
@@ -707,7 +744,11 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
-	defer kops.Close()
+	defer func() {
+		if err := kops.Close(); err != nil {
+			log.WithError(err).Error("failed to close kops client")
+		}
+	}()
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
@@ -723,8 +764,11 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 	if err != nil {
 		return err
 	}
-	defer terraformClient.Close()
-
+	defer func() {
+		if err := terraformClient.Close(); err != nil {
+			log.WithError(err).Error("failed to close terraform client")
+		}
+	}()
 	err = terraformClient.Init(kopsMetadata.Name)
 	if err != nil {
 		return err
@@ -815,7 +859,9 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 		if err != nil {
 			// Run non-silent validate one more time to log final cluster state
 			// and return original timeout error.
-			kops.ValidateCluster(kopsMetadata.Name, false)
+			if validateErr := kops.ValidateCluster(kopsMetadata.Name, false); validateErr != nil {
+				log.WithError(validateErr).Error("failed to validate kops cluster")
+			}
 			return err
 		}
 	}
@@ -834,7 +880,11 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool,
 		return false, errors.Wrap(err, "failed to prepare argocd repo")
 	}
 
-	defer gitClient.Close(argocdRepoTempDir, provisioner.logger)
+	defer func() {
+		if err := gitClient.Close(argocdRepoTempDir, provisioner.logger); err != nil {
+			log.WithError(err).Error("failed to close git client")
+		}
+	}()
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
@@ -858,7 +908,10 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool,
 		return false, errors.Wrap(err, "failed to release cluster VPC")
 	}
 
-	provisioner.invalidateCachedKopsClient(kopsMetadata.Name, logger)
+	err = provisioner.invalidateCachedKopsClient(kopsMetadata.Name, logger)
+	if err != nil {
+		logger.WithError(err).Errorf("failed to invalidate cached kops client for %s", kopsMetadata.Name)
+	}
 
 	logger.Info("Successfully deleted Kops cluster")
 
@@ -938,8 +991,11 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 	if err != nil {
 		return errors.Wrap(err, "failed to create terraform wrapper")
 	}
-	defer terraformClient.Close()
-
+	defer func() {
+		if err := terraformClient.Close(); err != nil {
+			log.WithError(err).Error("failed to close terraform client")
+		}
+	}()
 	err = terraformClient.Init(kopsMetadata.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to init terraform")
