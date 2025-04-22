@@ -110,9 +110,28 @@ func WaitForInstallationDeletion(client *model.Client, installationID string, lo
 	return err
 }
 
+// WaitForInstallationToBeDeletionPending waits until installation is in the deletion pending state.
+func WaitForInstallationToBeDeletionPending(ctx context.Context, installationID string, whChan <-chan *model.WebhookPayload, log logrus.FieldLogger) error {
+	waitCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	whWaiter := webhookWaiter{
+		whChan:        whChan,
+		resourceType:  model.TypeInstallation.String(),
+		desiredState:  model.InstallationStateDeletionPending,
+		failureStates: []string{model.InstallationStateDeletionCancellationRequested, model.InstallationStateDeletionFailed},
+		logger: log.WithFields(map[string]interface{}{
+			"installation":  installationID,
+			"desired-state": model.InstallationStateDeletionPending,
+		}),
+	}
+
+	return whWaiter.waitForState(waitCtx, installationID)
+}
+
 // WaitForInstallationToBeDeleted waits until installation is deleted.
 func WaitForInstallationToBeDeleted(ctx context.Context, installationID string, whChan <-chan *model.WebhookPayload, log logrus.FieldLogger) error {
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	waitCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 
 	whWaiter := webhookWaiter{
