@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   lint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: ci/checkout-repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -30,7 +30,7 @@ jobs:
         run: make check-modules
 
   mocks:
-    runs-on: ubuntu-20.04 # TODO: move check-mocks back to the newest Ubuntu release
+    runs-on: ubuntu-24.04
     steps:
       - name: ci/checkout-repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -46,7 +46,7 @@ jobs:
         run: make verify-mocks
 
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: cimg/postgres:14.8
@@ -82,7 +82,7 @@ jobs:
         working-directory: ./cmd/tools/testwick
 
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - test
       - lint
