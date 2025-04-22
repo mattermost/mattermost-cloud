@@ -9,10 +9,12 @@ package workflow
 
 import (
 	"context"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
 	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
+	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -283,7 +285,7 @@ func (w *InstallationSuite) CheckHealth(ctx context.Context) error {
 func (w *InstallationSuite) Cleanup(ctx context.Context) error {
 	installation, err := w.client.GetInstallation(w.Meta.InstallationID, &model.GetInstallationRequest{})
 	if err != nil {
-		return errors.Wrap(err, "while getting installation to wake up")
+		return errors.Wrap(err, "while getting installation to delete")
 	}
 	if installation == nil {
 		w.logger.Info("installation never created")
@@ -302,7 +304,29 @@ func (w *InstallationSuite) Cleanup(ctx context.Context) error {
 
 	err = w.client.DeleteInstallation(w.Meta.InstallationID)
 	if err != nil {
-		return errors.Wrap(err, "while requesting installation removal")
+		return errors.Wrap(err, "while requesting installation deletion")
+	}
+
+	err = pkg.WaitForInstallationToBeDeletionPending(context.TODO(), installation.ID, w.whChan, w.logger)
+	if err != nil {
+		return errors.Wrap(err, "while waiting for installation deletion pending")
+	}
+
+	installation, err = w.client.GetInstallation(w.Meta.InstallationID, &model.GetInstallationRequest{})
+	if err != nil {
+		return errors.Wrap(err, "while getting installation deletion pending expiry")
+	}
+
+	// Manually shorten deletion expiry if it is set to more than a minute from now.
+	if installation.DeletionPendingExpiry > model.GetMillisAtTime(time.Now().Add(time.Minute)) {
+		w.logger.Info("Shortening installation deletion pending expiry")
+
+		installation, err = w.client.UpdateInstallationDeletion(w.Meta.InstallationID, &model.PatchInstallationDeletionRequest{
+			DeletionPendingExpiry: util.IToP(model.GetMillisAtTime(time.Now().Add(10 * time.Second))),
+		})
+		if err != nil {
+			return errors.Wrap(err, "while updating installation deletion pending expiry")
+		}
 	}
 
 	err = pkg.WaitForInstallationToBeDeleted(context.TODO(), installation.ID, w.whChan, w.logger)
