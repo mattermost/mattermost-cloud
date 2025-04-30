@@ -101,7 +101,7 @@ var rootCmd = &cobra.Command{
 					logger.Fatal("Confirmation required to proceed.")
 					return
 				}
-			} else if strings.Contains(currentContext.ServerURL, "prod") {
+			} else if strings.Contains(currentContext.ServerURL, "prod") && !skipConfirmation {
 				logger.Warn("\"Prod\" detected in server URL. Consider requiring confirmation on this context. Proceed with caution.")
 			}
 		}
