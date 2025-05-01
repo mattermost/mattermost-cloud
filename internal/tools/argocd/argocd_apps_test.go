@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"gopkg.in/yaml.v3"
 )
@@ -14,7 +16,11 @@ func TestAddClusterIDLabel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating temporary YAML file: %v", err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		if err := os.Remove(tmpfile.Name()); err != nil {
+			log.WithError(err).Error("failed to remove tmpfile")
+		}
+	}()
 
 	testYAML := []byte(`
 applications:
@@ -107,7 +113,11 @@ func TestRemoveClusterIDLabel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating temporary YAML file: %v", err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		if err := os.Remove(tmpfile.Name()); err != nil {
+			log.WithError(err).Error("failed to remove tmpfile")
+		}
+	}()
 
 	testYAML := []byte(`
 applications:
@@ -200,7 +210,11 @@ func TestClusterIDLabelAlreadyExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating temporary YAML file: %v", err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		if err := os.Remove(tmpfile.Name()); err != nil {
+			log.WithError(err).Error("failed to remove tmpfile")
+		}
+	}()
 
 	testYAML := []byte(`
 applications:

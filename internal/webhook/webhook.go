@@ -42,7 +42,11 @@ func sendWebhooks(hooks []*model.Webhook, payload *model.WebhookPayload, logger 
 	logger.Debugf("Sending %d webhook(s)", len(hooks))
 
 	for _, hook := range hooks {
-		go sendWebhook(hook, payload, logger)
+		go func() {
+			if err := sendWebhook(hook, payload, logger); err != nil {
+				logger.Errorf("failed to send webhook: %v", err)
+			}
+		}()
 	}
 }
 

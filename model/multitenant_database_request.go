@@ -25,7 +25,7 @@ func (request *GetMultitenantDatabasesRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("vpc_id", request.VpcID)
 	q.Add("database_type", request.DatabaseType)
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }
@@ -87,7 +87,7 @@ type GetLogicalDatabasesRequest struct {
 func (request *GetLogicalDatabasesRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("multitenant_database_id", request.MultitenantDatabaseID)
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }
@@ -105,7 +105,7 @@ func (request *GetDatabaseSchemaRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("logical_database_id", request.LogicalDatabaseID)
 	q.Add("installation_id", request.InstallationID)
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }

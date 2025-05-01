@@ -830,7 +830,11 @@ func (provisioner *EKSProvisioner) getKubeConfigPath(cluster *model.Cluster) (st
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create kubeconfig tempfile")
 	}
-	defer kubeconfigFile.Close()
+	defer func() {
+		if err := kubeconfigFile.Close(); err != nil {
+			log.WithError(err).Error("failed to close kubeconfigFile")
+		}
+	}()
 
 	rawKubeconfig, err := clientcmd.Write(kubeconfig)
 	if err != nil {
