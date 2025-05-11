@@ -58,6 +58,7 @@ type CreateInstallationRequest struct {
 	PriorityEnv               EnvVarMap
 	Annotations               []string
 	GroupSelectionAnnotations []string
+	ScheduledDeletionTime     int64
 	// SingleTenantDatabaseConfig is ignored if Database is not single tenant mysql or postgres.
 	SingleTenantDatabaseConfig SingleTenantDatabaseRequest
 	// ExternalDatabaseConfig is ignored if Database is not single external.
@@ -179,6 +180,18 @@ func (request *CreateInstallationRequest) Validate() error {
 	if !deployMySQLOperator && request.Database == InstallationDatabaseMysqlOperator {
 		return errors.Errorf("mysql operator database cannot be used when mysql operator is not deployed")
 	}
+
+	if request.ScheduledDeletionTime < 0 {
+		return errors.New("scheduled deletion time cannot be negative")
+	}
+	if request.ScheduledDeletionTime > 0 {
+		// Ensure scheduled deletion time is at least 5 minutes in the future.
+		fiveMinutesFromNow := GetMillisAtTime(time.Now().Add(5 * time.Minute))
+		if request.ScheduledDeletionTime < fiveMinutesFromNow {
+			return errors.New("scheduled deletion time must be at least 5 minutes in the future")
+		}
+	}
+
 	return checkSpaces(request)
 }
 
@@ -684,4 +697,49 @@ func IsIPRangeValid(ipRange string) bool {
 
 	// Check if the IP is within the specified subnet
 	return ipNet.Contains(ip)
+}
+
+// PatchInstallationScheduledDeletionRequest represents the parameters for updating an installation's scheduled deletion time.
+type PatchInstallationScheduledDeletionRequest struct {
+	ScheduledDeletionTime *int64
+}
+
+// Validate validates the request parameters.
+func (p *PatchInstallationScheduledDeletionRequest) Validate() error {
+	if p.ScheduledDeletionTime != nil {
+		if *p.ScheduledDeletionTime < 0 {
+			return errors.New("scheduled deletion time cannot be negative")
+		}
+		if *p.ScheduledDeletionTime != 0 && *p.ScheduledDeletionTime <= GetMillis() {
+			return errors.New("scheduled deletion time must be in the future")
+		}
+	}
+
+	return nil
+}
+
+// Apply applies the patch to the given installation.
+func (p *PatchInstallationScheduledDeletionRequest) Apply(installation *Installation) bool {
+	if p.ScheduledDeletionTime == nil {
+		return false
+	}
+
+	installation.ScheduledDeletionTime = *p.ScheduledDeletionTime
+	return true
+}
+
+// NewPatchInstallationScheduledDeletionRequestFromReader creates a new request from the given reader.
+func NewPatchInstallationScheduledDeletionRequestFromReader(reader io.Reader) (*PatchInstallationScheduledDeletionRequest, error) {
+	var request PatchInstallationScheduledDeletionRequest
+	err := json.NewDecoder(reader).Decode(&request)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode request")
+	}
+
+	err = request.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid patch installation scheduled deletion request")
+	}
+
+	return &request, nil
 }

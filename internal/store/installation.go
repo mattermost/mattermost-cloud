@@ -30,7 +30,7 @@ func init() {
 			"Installation.CreateAt", "Installation.DeleteAt",
 			"Installation.DeletionPendingExpiry", "APISecurityLock", "LockAcquiredBy",
 			"LockAcquiredAt", "CRVersion", "Installation.DeletionLocked",
-			"AllowedIPRanges", "Volumes",
+			"AllowedIPRanges", "Volumes", "ScheduledDeletionTime",
 		).From(installationTable)
 }
 
@@ -346,6 +346,44 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingDeletion() ([]*model.In
 	return installations, nil
 }
 
+// GetUnlockedInstallationsWithScheduledDeletion returns unlocked installations
+// that are scheduled for deletion.
+func (sqlStore *SQLStore) GetUnlockedInstallationsWithScheduledDeletion() ([]*model.Installation, error) {
+	builder := installationSelect.
+		Where(sq.Eq{
+			"State": []string{model.InstallationStateStable, model.InstallationStateHibernating},
+		}).
+		Where("DeletionLocked = false").
+		Where("ScheduledDeletionTime > 0").
+		Where("LockAcquiredAt = 0").
+		OrderBy("CreateAt ASC")
+
+	var rawInstallationsOutput rawInstallations
+	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallationsOutput, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get installations pending deletion")
+	}
+
+	installations, err := rawInstallationsOutput.toInstallations()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, installation := range installations {
+		if !installation.IsInGroup() {
+			continue
+		}
+
+		group, err := sqlStore.GetGroup(*installation.GroupID)
+		if err != nil {
+			return nil, err
+		}
+		installation.MergeWithGroup(group, false)
+	}
+
+	return installations, nil
+}
+
 // GetSingleTenantDatabaseConfigForInstallation fetches single tenant database configuration
 // for specified installation.
 func (sqlStore *SQLStore) GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error) {
@@ -449,6 +487,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"CreateAt":              installation.CreateAt,
 		"DeleteAt":              0,
 		"DeletionPendingExpiry": 0,
+		"ScheduledDeletionTime": installation.ScheduledDeletionTime,
 		"APISecurityLock":       installation.APISecurityLock,
 		"LockAcquiredBy":        nil,
 		"LockAcquiredAt":        0,
@@ -530,6 +569,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"State":                 installation.State,
 			"CRVersion":             installation.CRVersion,
 			"DeletionPendingExpiry": installation.DeletionPendingExpiry,
+			"ScheduledDeletionTime": installation.ScheduledDeletionTime,
 			"AllowedIPRanges":       installation.AllowedIPRanges,
 			"Volumes":               installation.Volumes,
 		}).

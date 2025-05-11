@@ -27,6 +27,7 @@ type installationCreateRequestOptions struct {
 	priorityEnv               []string
 	annotations               []string
 	groupSelectionAnnotations []string
+	scheduledDeletionTime     time.Duration
 }
 
 func (flags *installationCreateRequestOptions) addFlags(command *cobra.Command) {
@@ -44,6 +45,7 @@ func (flags *installationCreateRequestOptions) addFlags(command *cobra.Command) 
 	command.Flags().StringArrayVar(&flags.priorityEnv, "priority-env", []string{}, "Env vars to add to the Mattermost App that take priority over group config. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 	command.Flags().StringArrayVar(&flags.groupSelectionAnnotations, "group-selection-annotation", []string{}, "Annotations for automatic group selection. Accepts multiple values, for example: '... --group-selection-annotation abc --group-selection-annotation def'")
+	command.Flags().DurationVar(&flags.scheduledDeletionTime, "scheduled-deletion-time", 0, "The time from now when the installation should be deleted. Use 0 for no scheduled deletion.")
 
 	_ = command.MarkFlagRequired("owner")
 }
@@ -523,4 +525,33 @@ type installationDeletionReportFlags struct {
 
 func (flags *installationDeletionReportFlags) addFlags(command *cobra.Command) {
 	command.Flags().IntVar(&flags.days, "days", 7, "The number of days include in the deletion report.")
+}
+
+type installationScheduledDeletionRequestOptions struct {
+	scheduledDeletionTime time.Duration
+}
+
+func (flags *installationScheduledDeletionRequestOptions) addFlags(command *cobra.Command) {
+	command.Flags().DurationVar(&flags.scheduledDeletionTime, "scheduled-deletion-time", 0, "The time from now when the installation should be deleted. Use 0 to cancel scheduled deletion.")
+}
+
+type installationScheduledDeletionRequestOptionsChanged struct {
+	scheduledDeletionTimeChanged bool
+}
+
+func (flags *installationScheduledDeletionRequestOptionsChanged) addFlags(command *cobra.Command) {
+	flags.scheduledDeletionTimeChanged = command.Flags().Changed("scheduled-deletion-time")
+}
+
+type installationScheduledDeletionFlags struct {
+	clusterFlags
+	installationScheduledDeletionRequestOptions
+	installationScheduledDeletionRequestOptionsChanged
+	installationID string
+}
+
+func (flags *installationScheduledDeletionFlags) addFlags(command *cobra.Command) {
+	flags.installationScheduledDeletionRequestOptions.addFlags(command)
+	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to schedule deletion for.")
+	_ = command.MarkFlagRequired("installation")
 }

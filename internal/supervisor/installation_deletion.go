@@ -17,6 +17,7 @@ import (
 type installationDeletionStore interface {
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	GetUnlockedInstallationsPendingDeletion() ([]*model.Installation, error)
+	GetUnlockedInstallationsWithScheduledDeletion() ([]*model.Installation, error)
 	GetInstallationsStatus() (*model.InstallationsStatus, error)
 	UpdateInstallationState(*model.Installation) error
 	installationLockStore
@@ -64,13 +65,21 @@ func (s *InstallationDeletionSupervisor) Shutdown() {
 	s.logger.Debug("Shutting down installation-deletion supervisor")
 }
 
-// Do looks for work to be done on any pending installations and attempts to schedule the required work.
+// Do looks for installation deletion work and attempts to schedule the required work.
 func (s *InstallationDeletionSupervisor) Do() error {
-	installations, err := s.store.GetUnlockedInstallationsPendingDeletion()
+	scheduled, err := s.store.GetUnlockedInstallationsWithScheduledDeletion()
+	if err != nil {
+		s.logger.WithError(err).Warn("Failed to query for installations with scheduled deletion")
+		return nil
+	}
+
+	pending, err := s.store.GetUnlockedInstallationsPendingDeletion()
 	if err != nil {
 		s.logger.WithError(err).Warn("Failed to query for installation pending deletion")
 		return nil
 	}
+
+	installations := append(scheduled, pending...)
 
 	// Limit the number of installations that can be deleted at one time.
 	// NOTE: this is a bit of a soft limit. Multiple provisioners running at the
@@ -156,12 +165,40 @@ func (s *InstallationDeletionSupervisor) Supervise(installation *model.Installat
 // transitionInstallation works with the given installation to transition it to a final state.
 func (s *InstallationDeletionSupervisor) transitionInstallation(installation *model.Installation, logger log.FieldLogger) string {
 	switch installation.State {
+	case model.InstallationStateStable, model.InstallationStateHibernating:
+		return s.checkInstallationScheduledDeletion(installation, logger)
 	case model.InstallationStateDeletionPending:
 		return s.checkIfInstallationShouldBeDeleted(installation, logger)
 	default:
 		logger.Warnf("Found installation pending deletion in unexpected state %s", installation.State)
 		return installation.State
 	}
+}
+
+func (s *InstallationDeletionSupervisor) checkInstallationScheduledDeletion(installation *model.Installation, logger log.FieldLogger) string {
+	// Perform two extra checks to ensure that the installation is a valid
+	// candidate for scheduled deletion. Installations with either of these
+	// values should not be presented to the supervisor so this is an extra
+	// sanity check to prevent invalid deletions.
+	if installation.DeletionLocked {
+		logger.Warn("Installation is deletion locked, skipping scheduled deletion check")
+		return installation.State
+	}
+	if installation.ScheduledDeletionTime == 0 {
+		logger.Warn("Installation has no scheduled deletion time")
+		return installation.State
+	}
+
+	if model.GetMillis() < installation.ScheduledDeletionTime {
+		timeUntilDeletionPending := time.Until(model.TimeFromMillis(installation.ScheduledDeletionTime))
+		logger.WithField("time-until-deletion-pending", timeUntilDeletionPending.Round(time.Second).String()).Debug("Installation is not ready for scheduled deletion")
+		return installation.State
+	}
+
+	logger.Info("Scheduled installation deletion time has passed")
+	s.currentlyUpdatingCounter++
+
+	return model.InstallationStateDeletionPendingRequested
 }
 
 func (s *InstallationDeletionSupervisor) checkIfInstallationShouldBeDeleted(installation *model.Installation, logger log.FieldLogger) string {
@@ -197,10 +234,10 @@ func (s *InstallationDeletionSupervisor) checkIfInstallationShouldBeDeleted(inst
 		// Check to see if enough time has passed that the installation should be
 		// deleted.
 		timeSincePending := time.Since(model.TimeFromMillis(deletionQueuedEvent.Event.Timestamp))
-		logger = logger.WithField("time-spent-pending-deletion", timeSincePending.String())
+		logger = logger.WithField("time-spent-pending-deletion", timeSincePending.Round(time.Second).String())
 		if timeSincePending < s.deletionPendingTime {
 			timeUntilDeletion := s.deletionPendingTime - timeSincePending
-			logger.WithField("time-until-deletion", timeUntilDeletion.String()).Debug("Installation is not ready for deletion")
+			logger.WithField("time-until-deletion", timeUntilDeletion.Round(time.Second).String()).Debug("Installation is not ready for deletion")
 			return model.InstallationStateDeletionPending
 		}
 	}

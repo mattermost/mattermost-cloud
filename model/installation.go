@@ -53,6 +53,7 @@ type Installation struct {
 	CreateAt                   int64
 	DeleteAt                   int64
 	DeletionPendingExpiry      int64 `json:"DeletionPendingExpiry,omitempty"`
+	ScheduledDeletionTime      int64 `json:"ScheduledDeletionTime,omitempty"`
 	APISecurityLock            bool
 	DeletionLocked             bool
 	LockAcquiredBy             *string
@@ -240,6 +241,16 @@ func (i *Installation) DeletionDateString() string {
 	}
 
 	return DateStringFromMillis(i.DeleteAt)
+}
+
+// ScheculedDeletionCompleteTimeString returns a standardized time string for
+// an installation's scheduled deletion or 'n/a' if no deletion is scheduled.
+func (i *Installation) ScheculedDeletionCompleteTimeString() string {
+	if i.ScheduledDeletionTime == 0 {
+		return "n/a"
+	}
+
+	return DateTimeStringFromMillis(i.ScheduledDeletionTime)
 }
 
 // DeletionPendingExpiryCompleteTimeString returns a standardized time string for

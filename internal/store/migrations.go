@@ -2255,4 +2255,20 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.50.0"), semver.MustParse("0.51.0"), func(e execer) error {
+		_, err := e.Exec(`
+			ALTER TABLE Installation
+			ADD COLUMN ScheduledDeletionTime BIGINT NOT NULL DEFAULT '0';
+		`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create ScheduledDeletionTime column")
+		}
+
+		_, err = e.Exec("ALTER TABLE Installation ALTER COLUMN ScheduledDeletionTime SET NOT NULL;")
+		if err != nil {
+			return errors.Wrap(err, "failed to remove not null constraint")
+		}
+
+		return nil
+	}},
 }

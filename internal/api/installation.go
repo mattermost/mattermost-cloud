@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
@@ -52,6 +53,7 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
 	installationRouter.Handle("/deletion", addContext(handleUpdateInstallationDeletion)).Methods("PUT")
 	installationRouter.Handle("/deletion/cancel", addContext(handleCancelInstallationDeletion)).Methods("POST")
+	installationRouter.Handle("/deletion/schedule", addContext(handleUpdateInstallationScheduledDeletion)).Methods("PUT")
 	installationRouter.Handle("/annotations", addContext(handleAddInstallationAnnotations)).Methods("POST")
 	installationRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteInstallationAnnotation)).Methods("DELETE")
 
@@ -238,6 +240,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		APISecurityLock:            createInstallationRequest.APISecurityLock,
 		MattermostEnv:              createInstallationRequest.MattermostEnv,
 		PriorityEnv:                createInstallationRequest.PriorityEnv,
+		ScheduledDeletionTime:      createInstallationRequest.ScheduledDeletionTime,
 		SingleTenantDatabaseConfig: createInstallationRequest.SingleTenantDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
 		ExternalDatabaseConfig:     createInstallationRequest.ExternalDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
 		CRVersion:                  model.DefaultCRVersion,
@@ -957,9 +960,17 @@ func handleCancelInstallationDeletion(c *Context, w http.ResponseWriter, r *http
 	}
 	defer unlockOnce()
 
-	err := updateInstallationState(c, installationDTO, newState)
+	// If the installation is scheduled for deletion, cancel the scheduled
+	// deletion so that it isn't immediately deleted again.
+	if installationDTO.ScheduledDeletionTime != 0 {
+		c.Logger.Debug("Removing scheduled deletion time as part of deletion cancellation")
+		installationDTO.ScheduledDeletionTime = 0
+	}
+	installationDTO.State = newState
+
+	err := c.Store.UpdateInstallation(installationDTO.Installation)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("failed to update installation state to %q", newState)
+		c.Logger.WithError(err).Error("failed to update installation")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -968,6 +979,53 @@ func handleCancelInstallationDeletion(c *Context, w http.ResponseWriter, r *http
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// handleUpdateInstallationScheduledDeletion responds to PUT /api/installation/{installation}/deletion/schedule,
+// updating the scheduled deletion time of an installation.
+func handleUpdateInstallationScheduledDeletion(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	patchRequest, err := model.NewPatchInstallationScheduledDeletionRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if installationDTO.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	if slices.Contains(model.AllInstallationDeletionStates, installationDTO.State) {
+		c.Logger.Warnf("installation is in a deletion state, cannot update scheduled deletion time")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if patchRequest.Apply(installationDTO.Installation) {
+		err := c.Store.UpdateInstallation(installationDTO.Installation)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to update installation")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, installationDTO)
 }
 
 // handleAddInstallationAnnotations responds to POST /api/installation/{installation}/annotations,

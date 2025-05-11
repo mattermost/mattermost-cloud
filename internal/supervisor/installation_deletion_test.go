@@ -19,10 +19,11 @@ import (
 )
 
 type mockInstallationDeletionStore struct {
-	Installation                         *model.Installation
-	UnlockedInstallationsPendingDeletion []*model.Installation
-	Events                               []*model.StateChangeEventData
-	CurrentlyUpdatingCounter             int64
+	Installation                               *model.Installation
+	UnlockedInstallationsWithScheduledDeletion []*model.Installation
+	UnlockedInstallationsPendingDeletion       []*model.Installation
+	Events                                     []*model.StateChangeEventData
+	CurrentlyUpdatingCounter                   int64
 
 	UnlockChan              chan interface{}
 	UpdateInstallationCalls int
@@ -32,6 +33,10 @@ type mockInstallationDeletionStore struct {
 
 func (s *mockInstallationDeletionStore) GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error) {
 	return s.Installation, nil
+}
+
+func (s *mockInstallationDeletionStore) GetUnlockedInstallationsWithScheduledDeletion() ([]*model.Installation, error) {
+	return s.UnlockedInstallationsWithScheduledDeletion, nil
 }
 
 func (s *mockInstallationDeletionStore) GetUnlockedInstallationsPendingDeletion() ([]*model.Installation, error) {
@@ -92,7 +97,71 @@ func TestInstallationDeletionSupervisor_Do(t *testing.T) {
 		require.Equal(t, 0, mockStore.UpdateInstallationCalls)
 	})
 
-	t.Run("mock check installation deletion", func(t *testing.T) {
+	t.Run("mock check installation scheduled deletion, scheduled deletion time has not passed", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		mockStore := &mockInstallationDeletionStore{}
+
+		mockStore.UnlockedInstallationsWithScheduledDeletion = []*model.Installation{{
+			ID:                    model.NewID(),
+			State:                 model.InstallationStateStable,
+			ScheduledDeletionTime: model.GetMillisAtTime(time.Now().Add(time.Minute)),
+		}}
+		mockStore.Installation = mockStore.UnlockedInstallationsWithScheduledDeletion[0]
+		mockStore.UnlockChan = make(chan interface{})
+
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, 10, mockStore, &mockEventsProducer{}, logger)
+		err := supervisor.Do()
+		require.NoError(t, err)
+
+		<-mockStore.UnlockChan
+		require.Equal(t, 0, mockStore.UpdateInstallationCalls)
+		require.Equal(t, model.InstallationStateStable, mockStore.Installation.State)
+	})
+
+	t.Run("mock check installation scheduled deletion, scheduled deletion time has passed", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		mockStore := &mockInstallationDeletionStore{}
+
+		mockStore.UnlockedInstallationsWithScheduledDeletion = []*model.Installation{{
+			ID:                    model.NewID(),
+			State:                 model.InstallationStateStable,
+			ScheduledDeletionTime: model.GetMillisAtTime(time.Now().Add(-time.Minute)),
+		}}
+		mockStore.Installation = mockStore.UnlockedInstallationsWithScheduledDeletion[0]
+		mockStore.UnlockChan = make(chan interface{})
+
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, 10, mockStore, &mockEventsProducer{}, logger)
+		err := supervisor.Do()
+		require.NoError(t, err)
+
+		<-mockStore.UnlockChan
+		require.Equal(t, 1, mockStore.UpdateInstallationCalls)
+		require.Equal(t, model.InstallationStateDeletionPendingRequested, mockStore.Installation.State)
+	})
+
+	t.Run("mock check installation scheduled deletion, scheduled deletion time has passed, but deletion locked", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		mockStore := &mockInstallationDeletionStore{}
+
+		mockStore.UnlockedInstallationsWithScheduledDeletion = []*model.Installation{{
+			ID:                    model.NewID(),
+			State:                 model.InstallationStateStable,
+			ScheduledDeletionTime: model.GetMillisAtTime(time.Now().Add(-time.Minute)),
+			DeletionLocked:        true,
+		}}
+		mockStore.Installation = mockStore.UnlockedInstallationsWithScheduledDeletion[0]
+		mockStore.UnlockChan = make(chan interface{})
+
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, 10, mockStore, &mockEventsProducer{}, logger)
+		err := supervisor.Do()
+		require.NoError(t, err)
+
+		<-mockStore.UnlockChan
+		require.Equal(t, 0, mockStore.UpdateInstallationCalls)
+		require.Equal(t, model.InstallationStateStable, mockStore.Installation.State)
+	})
+
+	t.Run("mock check installation deletion pending, deletion pending time has passed", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationDeletionStore{}
 
@@ -110,6 +179,7 @@ func TestInstallationDeletionSupervisor_Do(t *testing.T) {
 
 		<-mockStore.UnlockChan
 		require.Equal(t, 1, mockStore.UpdateInstallationCalls)
+		require.Equal(t, model.InstallationStateDeletionRequested, mockStore.Installation.State)
 	})
 }
 
@@ -357,5 +427,61 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 		installation, err = sqlStore.GetInstallation(installation.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateDeletionRequested, installation.State)
+	})
+
+	t.Run("scheduled deletion, before scheduled deletion time", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Nanosecond, 10, sqlStore, &mockEventsProducer{}, logger)
+
+		installation := &model.Installation{
+			OwnerID:               "blah",
+			Version:               "version",
+			Name:                  "dns",
+			Size:                  mmv1alpha1.Size100String,
+			Affinity:              model.InstallationAffinityIsolated,
+			State:                 model.InstallationStateStable,
+			ScheduledDeletionTime: model.GetMillisAtTime(time.Now().Add(time.Hour)),
+		}
+
+		err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		supervisor.Supervise(installation)
+		installation, err = sqlStore.GetInstallation(installation.ID, false, false)
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationStateStable, installation.State)
+	})
+
+	t.Run("scheduled deletion, past scheduled deletion time", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Nanosecond, 10, sqlStore, &mockEventsProducer{}, logger)
+
+		installation := &model.Installation{
+			OwnerID:               "blah",
+			Version:               "version",
+			Name:                  "dns",
+			Size:                  mmv1alpha1.Size100String,
+			Affinity:              model.InstallationAffinityIsolated,
+			State:                 model.InstallationStateStable,
+			ScheduledDeletionTime: model.GetMillis() - 1,
+		}
+
+		err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		supervisor.Supervise(installation)
+		installation, err = sqlStore.GetInstallation(installation.ID, false, false)
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationStateDeletionPendingRequested, installation.State)
 	})
 }

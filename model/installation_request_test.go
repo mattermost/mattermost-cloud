@@ -941,6 +941,131 @@ func TestPatchInstallationDeletionRequestApply(t *testing.T) {
 	}
 }
 
+func TestPatchInstallationScheduledDeletionRequestValidate(t *testing.T) {
+	var testCases = []struct {
+		testName    string
+		expectError bool
+		request     *model.PatchInstallationScheduledDeletionRequest
+	}{
+		{
+			"nil scheduled deletion time",
+			false,
+			&model.PatchInstallationScheduledDeletionRequest{
+				ScheduledDeletionTime: nil,
+			},
+		},
+		{
+			"zero scheduled deletion time",
+			false,
+			&model.PatchInstallationScheduledDeletionRequest{
+				ScheduledDeletionTime: util.IToP(0),
+			},
+		},
+		{
+			"negative scheduled deletion time",
+			true,
+			&model.PatchInstallationScheduledDeletionRequest{
+				ScheduledDeletionTime: util.IToP(-100),
+			},
+		},
+		{
+			"past scheduled deletion time",
+			true,
+			&model.PatchInstallationScheduledDeletionRequest{
+				ScheduledDeletionTime: util.IToP(model.GetMillisAtTime(time.Now().Add(-1 * time.Hour))),
+			},
+		},
+		{
+			"future scheduled deletion time",
+			false,
+			&model.PatchInstallationScheduledDeletionRequest{
+				ScheduledDeletionTime: util.IToP(model.GetMillisAtTime(time.Now().Add(24 * time.Hour))),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			if tc.expectError {
+				assert.Error(t, tc.request.Validate())
+				return
+			}
+			assert.NoError(t, tc.request.Validate())
+		})
+	}
+}
+
+func TestPatchInstallationScheduledDeletionRequestApply(t *testing.T) {
+	var testCases = []struct {
+		testName             string
+		expectApply          bool
+		request              *model.PatchInstallationScheduledDeletionRequest
+		installation         *model.Installation
+		expectedInstallation *model.Installation
+	}{
+		{
+			"nil scheduled deletion time",
+			false,
+			&model.PatchInstallationScheduledDeletionRequest{
+				ScheduledDeletionTime: nil,
+			},
+			&model.Installation{
+				ScheduledDeletionTime: 0,
+			},
+			&model.Installation{
+				ScheduledDeletionTime: 0,
+			},
+		},
+		{
+			"zero scheduled deletion time",
+			true,
+			&model.PatchInstallationScheduledDeletionRequest{
+				ScheduledDeletionTime: util.IToP(0),
+			},
+			&model.Installation{
+				ScheduledDeletionTime: 100000,
+			},
+			&model.Installation{
+				ScheduledDeletionTime: 0,
+			},
+		},
+		{
+			"non-zero scheduled deletion time",
+			true,
+			&model.PatchInstallationScheduledDeletionRequest{
+				ScheduledDeletionTime: util.IToP(200000),
+			},
+			&model.Installation{
+				ScheduledDeletionTime: 0,
+			},
+			&model.Installation{
+				ScheduledDeletionTime: 200000,
+			},
+		},
+		{
+			"same scheduled deletion time",
+			true,
+			&model.PatchInstallationScheduledDeletionRequest{
+				ScheduledDeletionTime: util.IToP(300000),
+			},
+			&model.Installation{
+				ScheduledDeletionTime: 300000,
+			},
+			&model.Installation{
+				ScheduledDeletionTime: 300000,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			apply := tc.request.Apply(tc.installation)
+			assert.Equal(t, tc.expectApply, apply)
+			assert.Equal(t, tc.expectedInstallation, tc.installation)
+		})
+	}
+}
+
 func TestNewAssignInstallationGroupFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
 		request, err := model.NewAssignInstallationGroupRequestFromReader(bytes.NewReader([]byte(
