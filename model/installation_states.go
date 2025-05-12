@@ -183,6 +183,20 @@ var AllInstallationRequestStates = []string{
 	InstallationStateDeletionRequested,
 }
 
+// AllInstallationDeletionStates is a list of all states that an installation
+// moves through when being deleted.
+var AllInstallationDeletionStates = []string{
+	InstallationStateDeletionPendingRequested,
+	InstallationStateDeletionPendingInProgress,
+	InstallationStateDeletionPending,
+	InstallationStateDeletionCancellationRequested,
+	InstallationStateDeletionRequested,
+	InstallationStateDeletionInProgress,
+	InstallationStateDeletionFinalCleanup,
+	InstallationStateDeletionFailed,
+	InstallationStateDeleted,
+}
+
 // ValidTransitionState returns whether an installation can be transitioned into
 // the new state or not based on its current state.
 func (i *Installation) ValidTransitionState(newState string) bool {

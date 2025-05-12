@@ -1962,3 +1962,20 @@ func (c *Client) GetClusterInstallationStatus(clusterInstallationID string) (*Cl
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// UpdateInstallationScheduledDeletion updates the scheduled deletion time of an installation.
+func (c *Client) UpdateInstallationScheduledDeletion(installationID string, request *PatchInstallationScheduledDeletionRequest) (*InstallationDTO, error) {
+	resp, err := c.doPut(c.buildURL("/api/installation/%s/deletion/schedule", installationID), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return DTOFromReader[InstallationDTO](resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}

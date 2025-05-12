@@ -37,6 +37,7 @@ func newCmdInstallation() *cobra.Command {
 	cmd.AddCommand(newCmdInstallationVolumeDelete())
 	cmd.AddCommand(newCmdInstallationUpdateDeletion())
 	cmd.AddCommand(newCmdInstallationCancelDeletion())
+	cmd.AddCommand(newCmdInstallationScheduleDeletion())
 	cmd.AddCommand(newCmdInstallationHibernate())
 	cmd.AddCommand(newCmdInstallationWakeup())
 	cmd.AddCommand(newCmdInstallationGet())
@@ -78,11 +79,16 @@ func executeInstallationCreateCmd(ctx context.Context, flags installationCreateF
 
 	envVarMap, err := parseEnvVarInput(flags.mattermostEnv, false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to parse env var input")
 	}
 	priorityEnvVarMap, err := parseEnvVarInput(flags.priorityEnv, false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to parse priority env var input")
+	}
+
+	var scheduledDeletionTime int64
+	if flags.scheduledDeletionTime > 0 {
+		scheduledDeletionTime = model.GetMillisAtTime(time.Now().Add(flags.scheduledDeletionTime))
 	}
 
 	request := &model.CreateInstallationRequest{
@@ -100,6 +106,7 @@ func executeInstallationCreateCmd(ctx context.Context, flags installationCreateF
 		PriorityEnv:               priorityEnvVarMap,
 		Annotations:               flags.annotations,
 		GroupSelectionAnnotations: flags.groupSelectionAnnotations,
+		ScheduledDeletionTime:     scheduledDeletionTime,
 	}
 
 	// For CLI to be backward compatible, if only one DNS is passed we use
@@ -352,6 +359,46 @@ func newCmdInstallationCancelDeletion() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+		},
+	}
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdInstallationScheduleDeletion() *cobra.Command {
+	var flags installationScheduledDeletionFlags
+
+	cmd := &cobra.Command{
+		Use:   "schedule-deletion",
+		Short: "Schedule an installation for future deletion.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := createClient(command.Context(), flags.clusterFlags)
+
+			request := &model.PatchInstallationScheduledDeletionRequest{}
+			if flags.scheduledDeletionTimeChanged {
+				var scheduledTimeMillis int64
+				if flags.scheduledDeletionTime > 0 {
+					scheduledTimeMillis = model.GetMillisAtTime(time.Now().Add(flags.scheduledDeletionTime))
+				}
+				request.ScheduledDeletionTime = &scheduledTimeMillis
+			}
+
+			if flags.dryRun {
+				return runDryRun(request)
+			}
+
+			installation, err := client.UpdateInstallationScheduledDeletion(flags.installationID, request)
+			if err != nil {
+				return errors.Wrap(err, "failed to update installation scheduled deletion")
+			}
+
+			return printJSON(installation)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			flags.installationScheduledDeletionRequestOptionsChanged.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -802,7 +849,12 @@ func executeInstallationDeploymentReportCmd(ctx context.Context, flags installat
 	case model.InstallationStateDeleted:
 		output += fmt.Sprintf(" │ └ Deleted: %s\n", installation.DeletionDateString())
 	case model.InstallationStateDeletionPending:
-		output += fmt.Sprintf(" │ └ Scheduled Deletion: %s\n", installation.DeletionPendingExpiryCompleteTimeString())
+		output += fmt.Sprintf(" │ └ Deletion Pending Expiry: %s\n", installation.DeletionPendingExpiryCompleteTimeString())
+	default:
+		scheduledDeletion := installation.ScheculedDeletionCompleteTimeString()
+		if scheduledDeletion != "n/a" {
+			output += fmt.Sprintf(" │ └ Scheduled Deletion: %s\n", scheduledDeletion)
+		}
 	}
 	output += fmt.Sprintf(" ├ DNS: %s (primary)\n", installation.DNS) //nolint
 	if len(installation.DNSRecords) > 1 {
