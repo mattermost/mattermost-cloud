@@ -122,38 +122,3 @@ func (cr *ClusterRegister) getClusterCreds(s3StateStore string) (*k8s.Kubeconfig
 	}
 	return clusterCreds, nil
 }
-
-func (cr *ClusterRegister) deregisterClusterFromArgocd() error {
-	logger := cr.logger.WithField("cluster", cr.cluster.ID)
-
-	// Git pull to get the latest state before deleting the cluster
-	err := cr.gitClient.Pull(logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to pull from argocd repo")
-	}
-
-	clusteFile, err := os.ReadFile(cr.clusterFilePath)
-	if err != nil {
-		return errors.Wrap(err, "failed to read cluster file")
-	}
-
-	argoK8sFile, err := argocd.ReadArgoK8sRegistrationFile(clusteFile)
-	if err != nil {
-		return errors.Wrap(err, "failed to load cluster registration file into argo struct")
-	}
-
-	if err = argocd.DeleteK8sClusterFromRegistrationFile(argoK8sFile, cr.clusterName, cr.clusterFilePath); err != nil {
-		return errors.Wrap(err, "failed to remove cluster from registration file")
-	}
-
-	commitMsg := "Removing cluster: " + cr.cluster.ID
-	if err = cr.gitClient.Commit(cr.clusterFile, commitMsg, logger); err != nil {
-		return errors.Wrap(err, "failed to commit to repo")
-	}
-
-	if err = cr.gitClient.Push(logger); err != nil {
-		return errors.Wrap(err, "failed to push to repo")
-	}
-
-	return nil
-}
