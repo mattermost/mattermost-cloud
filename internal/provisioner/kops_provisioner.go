@@ -885,30 +885,6 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, tempD
 		return errors.Wrap(err, "failed to destroy all services in the utility group")
 	}
 
-	// Remove utility and cluster from argocd
-	// if cluster.UtilityMetadata.ManagedByArgocd {
-	// 	err = ugh.RemoveUtilityFromArgocd(gitClient)
-	// 	if err != nil {
-	// 		return errors.Wrap(err, "failed to remove utility from argocd")
-	// 	}
-
-	// 	appName := fmt.Sprintf("%s-%s", "gitops-sre", provisioner.awsClient.GetCloudEnvironmentName())
-	// 	err = argocdClient.WaitForAppHealthy(appName)
-	// 	if err != nil {
-	// 		return errors.Wrap(err, "failed to wait for app to be healthy")
-	// 	}
-
-	// 	var cr *ClusterRegister
-	// 	cr, err = NewClusterRegisterHandle(cluster, gitClient, provisioner.awsClient.GetCloudEnvironmentName(), tempDir, logger)
-	// 	if err != nil {
-	// 		return errors.Wrap(err, "Failed to create new cluster register handle")
-	// 	}
-
-	// 	if err = cr.deregisterClusterFromArgocd(); err != nil {
-	// 		return errors.Wrap(err, "failed to remove cluster from Argocd")
-	// 	}
-	// }
-
 	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
 	err = provisioner.awsClient.DetachPolicyFromRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
