@@ -10,6 +10,8 @@ import (
 	"io"
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
@@ -36,7 +38,11 @@ func runInstallationLifecycleTest(request *model.CreateInstallationRequest, clie
 	if err != nil {
 		return errors.Wrap(err, "failed to run enhanced ping test")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.WithError(err).Error("failed to close resp.Body")
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		var body []byte

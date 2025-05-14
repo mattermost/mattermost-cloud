@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/mattermost/mattermost-cloud/internal/common"
 
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
@@ -66,7 +68,9 @@ func handleRequestInstallationBackup(c *Context, w http.ResponseWriter, r *http.
 		return
 	}
 
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -194,7 +198,9 @@ func handleDeleteInstallationBackup(c *Context, w http.ResponseWriter, r *http.R
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 }

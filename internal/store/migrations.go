@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/blang/semver"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -1398,7 +1400,11 @@ var migrations = []migration{
 		if err != nil {
 			return err
 		}
-		defer multitenantDatabaseRows.Close()
+		defer func() {
+			if err := multitenantDatabaseRows.Close(); err != nil {
+				log.WithError(err).Error("failed to close multitenantDatabaseRows")
+			}
+		}()
 
 		var id string
 		var ids []string
@@ -1496,7 +1502,11 @@ var migrations = []migration{
 		if err != nil {
 			return err
 		}
-		defer multitenantDatabaseRows.Close()
+		defer func() {
+			if err := multitenantDatabaseRows.Close(); err != nil {
+				log.WithError(err).Error("failed to close multitenantDatabaseRows")
+			}
+		}()
 
 		sharedDatabaseMapping := make(map[string]map[string][]string)
 		for multitenantDatabaseRows.Next() {
@@ -1783,7 +1793,11 @@ var migrations = []migration{
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch installation")
 		}
-		defer rows.Close()
+		defer func() {
+			if err := rows.Close(); err != nil {
+				log.WithError(err).Error("failed to close rows")
+			}
+		}()
 
 		type installationDNS struct {
 			installationID string

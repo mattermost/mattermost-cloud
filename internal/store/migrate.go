@@ -44,7 +44,11 @@ func (sqlStore *SQLStore) Migrate() error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to begin applying target version %s", migration.toVersion)
 			}
-			defer tx.Rollback()
+			defer func() {
+				if err := tx.Rollback(); err != nil {
+					sqlStore.logger.WithError(err).Error("failed to rollback transaction")
+				}
+			}()
 
 			err = migration.migrationFunc(tx)
 			if err != nil {

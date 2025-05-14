@@ -71,9 +71,17 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile, installationName string)
 	}
 
 	install.Install(scheme.Scheme)
-	apixv1beta1scheme.AddToScheme(scheme.Scheme)
-	mattermostscheme.AddToScheme(scheme.Scheme)
-	monitoringscheme.AddToScheme(scheme.Scheme)
+	if err := apixv1beta1scheme.AddToScheme(scheme.Scheme); err != nil {
+		log.WithError(err).Fatal("failed to add apixv1beta1 scheme")
+	}
+
+	if err := mattermostscheme.AddToScheme(scheme.Scheme); err != nil {
+		log.WithError(err).Fatal("failed to add mattermost scheme")
+	}
+
+	if err := monitoringscheme.AddToScheme(scheme.Scheme); err != nil {
+		log.WithError(err).Fatal("failed to add monitoring scheme")
+	}
 
 	logger := kc.logger.WithFields(log.Fields{
 		"file": file.Basename(),

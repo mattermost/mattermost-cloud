@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/stretchr/testify/assert"
 )
@@ -46,7 +48,9 @@ func TestStatusCodeShouldBe200IfNotHeaderWritten(t *testing.T) {
 	resp := api.NewWrappedWriter(httptest.NewRecorder())
 	req := httptest.NewRequest("GET", "/api/v4/test", nil)
 	handler := TestHandler{func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte{})
+		if _, err := w.Write([]byte{}); err != nil {
+			log.WithError(err).Error("failed to write byte")
+		}
 	}}
 	handler.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusOK, resp.StatusCode())
@@ -58,7 +62,7 @@ func TestForUnsupportedHijack(t *testing.T) {
 	handler := TestHandler{func(w http.ResponseWriter, r *http.Request) {
 		_, _, err := w.(*api.ResponseWriterWrapper).Hijack()
 		assert.Error(t, err)
-		assert.Equal(t, "Hijacker interface not supported by the wrapped ResponseWriter", err.Error())
+		assert.Equal(t, "hijacker interface not supported by the wrapped ResponseWriter", err.Error())
 	}}
 	handler.ServeHTTP(resp, req)
 }
@@ -77,7 +81,9 @@ func TestForSupportedFlush(t *testing.T) {
 	resp := api.NewWrappedWriter(httptest.NewRecorder())
 	req := httptest.NewRequest("GET", "/api/v4/test", nil)
 	handler := TestHandler{func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte{})
+		if _, err := w.Write([]byte{}); err != nil {
+			log.WithError(err).Error("failed to write byte")
+		}
 		w.(*api.ResponseWriterWrapper).Flush()
 	}}
 	handler.ServeHTTP(resp, req)
