@@ -291,6 +291,7 @@ func executeServerCmd(flags serverFlags) error {
 		SLOInstallationGroups:     flags.sloInstallationGroups,
 		SLOEnterpriseGroups:       flags.sloEnterpriseGroups,
 		EtcdManagerEnv:            etcdManagerEnv,
+		PodProbeOverrides:         flags.generateProbeOverrides(),
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck, flags.enableS3Versioning)
