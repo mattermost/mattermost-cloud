@@ -240,6 +240,8 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
+	provisioner.ensurePodProbeOverrides(mattermost)
+
 	if installation.GroupID != nil && *installation.GroupID != "" {
 		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
 			logger.Debug("Installation belongs in the approved SLO installation group list. Adding SLI")
@@ -487,6 +489,8 @@ func (provisioner Provisioner) updateClusterInstallation(
 	addSourceRangeWhitelistToAnnotations(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
+	provisioner.ensurePodProbeOverrides(mattermost)
+
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
@@ -527,6 +531,22 @@ func (provisioner Provisioner) updateClusterInstallation(
 	logger.Info("Updated cluster installation")
 
 	return nil
+}
+
+func (provisioner Provisioner) ensurePodProbeOverrides(mattermost *mmv1beta1.Mattermost) {
+	if provisioner.params.PodProbeOverrides.LivenessProbeOverride != nil {
+		mattermost.Spec.Probes.LivenessProbe = *provisioner.params.PodProbeOverrides.LivenessProbeOverride
+	} else {
+		// Ensure previous liveness probe overrides are removed.
+		mattermost.Spec.Probes.LivenessProbe = corev1.Probe{}
+	}
+
+	if provisioner.params.PodProbeOverrides.ReadinessProbeOverride != nil {
+		mattermost.Spec.Probes.ReadinessProbe = *provisioner.params.PodProbeOverrides.ReadinessProbeOverride
+	} else {
+		// Ensure previous readiness probe overrides are removed.
+		mattermost.Spec.Probes.ReadinessProbe = corev1.Probe{}
+	}
 }
 
 func (provisioner Provisioner) ensureCustomVolumes(

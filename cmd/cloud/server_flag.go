@@ -7,8 +7,10 @@ package main
 import (
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type supervisorOptions struct {
@@ -88,6 +90,18 @@ type provisioningParams struct {
 
 	etcdQuotaBackendBytes int
 	etcdListenMetricsURL  string
+
+	probeLivenessFailureThreshold    int32
+	probeLivenessSuccessThreshold    int32
+	probeLivenessInitialDelaySeconds int32
+	probeLivenessPeriodSeconds       int32
+	probeLivenessTimeoutSeconds      int32
+
+	probeReadinessFailureThreshold    int32
+	probeReadinessSuccessThreshold    int32
+	probeReadinessInitialDelaySeconds int32
+	probeReadinessPeriodSeconds       int32
+	probeReadinessTimeoutSeconds      int32
 }
 
 func (flags *provisioningParams) addFlags(command *cobra.Command) {
@@ -108,6 +122,75 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().IntVar(&flags.etcdQuotaBackendBytes, "etcd-quota-backend-bytes", 4294967296, "Raise alarms by cluster when backend size exceeds the given quota")
 	command.Flags().StringVar(&flags.etcdListenMetricsURL, "etcd-listen-metrics-urls", "http://0.0.0.0:8081", "List of additional URL to listen for metrics")
 
+	command.Flags().Int32Var(&flags.probeLivenessFailureThreshold, "probe-liveness-failure-threshold", 10, "An optional override for the liveness probe failure threshold.")
+	command.Flags().Int32Var(&flags.probeLivenessSuccessThreshold, "probe-liveness-success-threshold", 1, "An optional override for the liveness probe success threshold.")
+	command.Flags().Int32Var(&flags.probeLivenessInitialDelaySeconds, "probe-liveness-initial-delay-seconds", 30, "An optional override for the liveness probe initial delay seconds.")
+	command.Flags().Int32Var(&flags.probeLivenessPeriodSeconds, "probe-liveness-period-seconds", 10, "An optional override for the liveness probe period seconds.")
+	command.Flags().Int32Var(&flags.probeLivenessTimeoutSeconds, "probe-liveness-timeout-seconds", 5, "An optional override for the liveness probe timeout seconds.")
+
+	command.Flags().Int32Var(&flags.probeReadinessFailureThreshold, "probe-readiness-failure-threshold", 10, "An optional override for the readiness probe failure threshold.")
+	command.Flags().Int32Var(&flags.probeReadinessSuccessThreshold, "probe-readiness-success-threshold", 1, "An optional override for the readiness probe success threshold.")
+	command.Flags().Int32Var(&flags.probeReadinessInitialDelaySeconds, "probe-readiness-initial-delay-seconds", 30, "An optional override for the readiness probe initial delay seconds.")
+	command.Flags().Int32Var(&flags.probeReadinessPeriodSeconds, "probe-readiness-period-seconds", 10, "An optional override for the readiness probe period seconds.")
+	command.Flags().Int32Var(&flags.probeReadinessTimeoutSeconds, "probe-readiness-timeout-seconds", 5, "An optional override for the readiness probe timeout seconds.")
+}
+
+func (flags *serverFlags) generateProbeOverrides() provisioner.PodProbeOverrides {
+	probeOverrides := provisioner.PodProbeOverrides{}
+
+	livenessOverride := corev1.Probe{}
+	var livenessChanged bool
+	if flags.probeLivenessFailureThresholdChanged {
+		livenessOverride.FailureThreshold = flags.probeLivenessFailureThreshold
+		livenessChanged = true
+	}
+	if flags.probeLivenessSuccessThresholdChanged {
+		livenessOverride.SuccessThreshold = flags.probeLivenessSuccessThreshold
+		livenessChanged = true
+	}
+	if flags.probeLivenessInitialDelaySecondsChanged {
+		livenessOverride.InitialDelaySeconds = flags.probeLivenessInitialDelaySeconds
+		livenessChanged = true
+	}
+	if flags.probeLivenessPeriodSecondsChanged {
+		livenessOverride.PeriodSeconds = flags.probeLivenessPeriodSeconds
+		livenessChanged = true
+	}
+	if flags.probeLivenessTimeoutSecondsChanged {
+		livenessOverride.TimeoutSeconds = flags.probeLivenessTimeoutSeconds
+		livenessChanged = true
+	}
+	if livenessChanged {
+		probeOverrides.LivenessProbeOverride = &livenessOverride
+	}
+
+	readinessOverride := corev1.Probe{}
+	var readinessChanged bool
+	if flags.probeReadinessFailureThresholdChanged {
+		readinessOverride.FailureThreshold = flags.probeReadinessFailureThreshold
+		readinessChanged = true
+	}
+	if flags.probeReadinessSuccessThresholdChanged {
+		readinessOverride.SuccessThreshold = flags.probeReadinessSuccessThreshold
+		readinessChanged = true
+	}
+	if flags.probeReadinessInitialDelaySecondsChanged {
+		readinessOverride.InitialDelaySeconds = flags.probeReadinessInitialDelaySeconds
+		readinessChanged = true
+	}
+	if flags.probeReadinessPeriodSecondsChanged {
+		readinessOverride.PeriodSeconds = flags.probeReadinessPeriodSeconds
+		readinessChanged = true
+	}
+	if flags.probeReadinessTimeoutSecondsChanged {
+		readinessOverride.TimeoutSeconds = flags.probeReadinessTimeoutSeconds
+		readinessChanged = true
+	}
+	if readinessChanged {
+		probeOverrides.ReadinessProbeOverride = &readinessOverride
+	}
+
+	return probeOverrides
 }
 
 type installationOptions struct {
@@ -155,9 +238,22 @@ func (flags *dbUtilizationSettings) addFlags(command *cobra.Command) {
 }
 
 type serverFlagChanged struct {
-	isDebugChanged             bool
+	isDebugChanged bool
+
 	isKeepDatabaseDataChanged  bool
 	isKeepFileStoreDataChanged bool
+
+	probeLivenessFailureThresholdChanged    bool
+	probeLivenessSuccessThresholdChanged    bool
+	probeLivenessInitialDelaySecondsChanged bool
+	probeLivenessPeriodSecondsChanged       bool
+	probeLivenessTimeoutSecondsChanged      bool
+
+	probeReadinessFailureThresholdChanged    bool
+	probeReadinessSuccessThresholdChanged    bool
+	probeReadinessInitialDelaySecondsChanged bool
+	probeReadinessPeriodSecondsChanged       bool
+	probeReadinessTimeoutSecondsChanged      bool
 }
 
 type serverAuthFlags struct {
@@ -180,8 +276,21 @@ func (flags *serverAuthFlags) addFlags(command *cobra.Command) {
 
 func (flags *serverFlagChanged) addFlags(command *cobra.Command) {
 	flags.isDebugChanged = command.Flags().Changed("debug")
+
 	flags.isKeepDatabaseDataChanged = command.Flags().Changed("keep-database-data")
 	flags.isKeepFileStoreDataChanged = command.Flags().Changed("keep-filestore-data")
+
+	flags.probeLivenessFailureThresholdChanged = command.Flags().Changed("probe-liveness-failure-threshold")
+	flags.probeLivenessSuccessThresholdChanged = command.Flags().Changed("probe-liveness-success-threshold")
+	flags.probeLivenessInitialDelaySecondsChanged = command.Flags().Changed("probe-liveness-initial-delay-seconds")
+	flags.probeLivenessPeriodSecondsChanged = command.Flags().Changed("probe-liveness-period-seconds")
+	flags.probeLivenessTimeoutSecondsChanged = command.Flags().Changed("probe-liveness-timeout-seconds")
+
+	flags.probeReadinessFailureThresholdChanged = command.Flags().Changed("probe-readiness-failure-threshold")
+	flags.probeReadinessSuccessThresholdChanged = command.Flags().Changed("probe-readiness-success-threshold")
+	flags.probeReadinessInitialDelaySecondsChanged = command.Flags().Changed("probe-readiness-initial-delay-seconds")
+	flags.probeReadinessPeriodSecondsChanged = command.Flags().Changed("probe-readiness-period-seconds")
+	flags.probeReadinessTimeoutSecondsChanged = command.Flags().Changed("probe-readiness-timeout-seconds")
 }
 
 type serverFlags struct {
