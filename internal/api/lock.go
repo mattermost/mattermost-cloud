@@ -90,6 +90,7 @@ func lockGroup(c *Context, groupID string) (*model.GroupDTO, int, func()) {
 		return nil, http.StatusInternalServerError, nil
 	}
 	if group == nil {
+		c.Logger.Errorf("no group with ID %s found", groupID)
 		return nil, http.StatusNotFound, nil
 	}
 
