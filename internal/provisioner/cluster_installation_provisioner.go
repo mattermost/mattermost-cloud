@@ -1035,9 +1035,7 @@ func generateCILicenseName(installation *model.Installation, clusterInstallation
 // convention except the current license secret name. Pass in a blank name value
 // to cleanup all license secrets.
 func cleanupOldLicenseSecrets(currentSecretName string, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	secrets, err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).List(context.Background(), metav1.ListOptions{
-		LabelSelector: k8sCustomSecretKey,
-	})
+	secrets, err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to list secrets")
 	}
