@@ -30,7 +30,7 @@ func init() {
 			"Installation.CreateAt", "Installation.DeleteAt",
 			"Installation.DeletionPendingExpiry", "APISecurityLock", "LockAcquiredBy",
 			"LockAcquiredAt", "CRVersion", "Installation.DeletionLocked",
-			"AllowedIPRanges", "Volumes", "ScheduledDeletionTime", "PodProbeOverrides AS PodProbeOverridesRaw",
+			"AllowedIPRanges", "Volumes", "ScheduledDeletionTime", "PodProbeOverrides",
 		).From(installationTable)
 }
 
@@ -40,7 +40,6 @@ type rawInstallation struct {
 	PriorityEnvRaw                []byte
 	SingleTenantDatabaseConfigRaw []byte
 	ExternalDatabaseConfigRaw     []byte
-	PodProbeOverridesRaw          []byte
 }
 
 type rawInstallations []*rawInstallation
@@ -82,15 +81,6 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 			return nil, err
 		}
 		r.Installation.ExternalDatabaseConfig = externalDBConfig
-	}
-
-	if r.PodProbeOverridesRaw != nil {
-		podProbeOverrides := &model.PodProbeOverrides{}
-		err = json.Unmarshal(r.PodProbeOverridesRaw, podProbeOverrides)
-		if err != nil {
-			return nil, err
-		}
-		r.Installation.PodProbeOverrides = podProbeOverrides
 	}
 
 	return r.Installation, nil
@@ -478,11 +468,6 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		return errors.Wrap(err, "unable to marshal PriorityEnv")
 	}
 
-	podProbeOverridesJSON, err := json.Marshal(installation.PodProbeOverrides)
-	if err != nil {
-		return errors.Wrap(err, "unable to marshal PodProbeOverrides")
-	}
-
 	insertsMap := map[string]interface{}{
 		"Name":                  installation.Name,
 		"ID":                    installation.ID,
@@ -510,7 +495,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"DeletionLocked":        installation.DeletionLocked,
 		"AllowedIPRanges":       installation.AllowedIPRanges,
 		"Volumes":               installation.Volumes,
-		"PodProbeOverrides":     podProbeOverridesJSON,
+		"PodProbeOverrides":     installation.PodProbeOverrides,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -566,11 +551,6 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 		return errors.Wrap(err, "unable to marshal PriorityEnv")
 	}
 
-	podProbeOverridesJSON, err := json.Marshal(installation.PodProbeOverrides)
-	if err != nil {
-		return errors.Wrap(err, "unable to marshal PodProbeOverrides")
-	}
-
 	_, err = sqlStore.execBuilder(db, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
@@ -593,7 +573,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"ScheduledDeletionTime": installation.ScheduledDeletionTime,
 			"AllowedIPRanges":       installation.AllowedIPRanges,
 			"Volumes":               installation.Volumes,
-			"PodProbeOverrides":     podProbeOverridesJSON,
+			"PodProbeOverrides":     installation.PodProbeOverrides,
 		}).
 		Where("ID = ?", installation.ID),
 	)
