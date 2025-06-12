@@ -243,6 +243,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		ScheduledDeletionTime:      createInstallationRequest.ScheduledDeletionTime,
 		SingleTenantDatabaseConfig: createInstallationRequest.SingleTenantDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
 		ExternalDatabaseConfig:     createInstallationRequest.ExternalDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
+		PodProbeOverrides:          createInstallationRequest.PodProbeOverrides,
 		CRVersion:                  model.DefaultCRVersion,
 		State:                      model.InstallationStateCreationRequested,
 	}

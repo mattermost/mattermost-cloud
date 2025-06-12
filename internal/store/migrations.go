@@ -1865,9 +1865,11 @@ var migrations = []migration{
 						State TEXT NOT NULL,
 						APISecurityLock NOT NULL DEFAULT FALSE,
 						SingleTenantDatabaseConfigRaw BYTEA NULL,
+						ExternalDatabaseConfigRaw BYTEA NULL,
 						CRVersion TEXT NOT NULL DEFAULT 'mattermost.com/v1alpha1',
 						CreateAt BIGINT NOT NULL,
 						DeleteAt BIGINT NOT NULL,
+						DeletionPendingExpiry BIGINT NOT NULL,
 						LockAcquiredBy TEXT NULL,
 						LockAcquiredAt BIGINT NOT NULL
 					);
@@ -1896,9 +1898,11 @@ var migrations = []migration{
 						State,
 						APISecurityLock,
 						SingleTenantDatabaseConfigRaw,
+						ExternalDatabaseConfigRaw,
 						CRVersion,
 						CreateAt,
 						DeleteAt,
+						'0',
 						LockAcquiredBy,
 						LockAcquiredAt
 					FROM
@@ -2267,6 +2271,14 @@ var migrations = []migration{
 		_, err = e.Exec("ALTER TABLE Installation ALTER COLUMN ScheduledDeletionTime SET NOT NULL;")
 		if err != nil {
 			return errors.Wrap(err, "failed to remove not null constraint")
+		}
+
+		return nil
+	}},
+	{semver.MustParse("0.51.0"), semver.MustParse("0.52.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN PodProbeOverrides JSON DEFAULT NULL;`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create PodProbeOverrides column")
 		}
 
 		return nil

@@ -107,6 +107,7 @@ func executeInstallationCreateCmd(ctx context.Context, flags installationCreateF
 		Annotations:               flags.annotations,
 		GroupSelectionAnnotations: flags.groupSelectionAnnotations,
 		ScheduledDeletionTime:     scheduledDeletionTime,
+		PodProbeOverrides:         flags.generateProbeOverrides(),
 	}
 
 	// For CLI to be backward compatible, if only one DNS is passed we use

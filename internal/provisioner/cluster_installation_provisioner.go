@@ -240,7 +240,7 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
-	provisioner.ensurePodProbeOverrides(mattermost)
+	provisioner.ensurePodProbeOverrides(mattermost, installation)
 
 	if installation.GroupID != nil && *installation.GroupID != "" {
 		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
@@ -489,7 +489,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 	addSourceRangeWhitelistToAnnotations(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
-	provisioner.ensurePodProbeOverrides(mattermost)
+	provisioner.ensurePodProbeOverrides(mattermost, installation)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
@@ -533,20 +533,32 @@ func (provisioner Provisioner) updateClusterInstallation(
 	return nil
 }
 
-func (provisioner Provisioner) ensurePodProbeOverrides(mattermost *mmv1beta1.Mattermost) {
+func (provisioner Provisioner) ensurePodProbeOverrides(mattermost *mmv1beta1.Mattermost, installation *model.Installation) {
+	// Start with server defaults
+	livenessProbe := corev1.Probe{}
+	readinessProbe := corev1.Probe{}
+
+	// Apply server-level defaults first
 	if provisioner.params.PodProbeOverrides.LivenessProbeOverride != nil {
-		mattermost.Spec.Probes.LivenessProbe = *provisioner.params.PodProbeOverrides.LivenessProbeOverride
-	} else {
-		// Ensure previous liveness probe overrides are removed.
-		mattermost.Spec.Probes.LivenessProbe = corev1.Probe{}
+		livenessProbe = *provisioner.params.PodProbeOverrides.LivenessProbeOverride
+	}
+	if provisioner.params.PodProbeOverrides.ReadinessProbeOverride != nil {
+		readinessProbe = *provisioner.params.PodProbeOverrides.ReadinessProbeOverride
 	}
 
-	if provisioner.params.PodProbeOverrides.ReadinessProbeOverride != nil {
-		mattermost.Spec.Probes.ReadinessProbe = *provisioner.params.PodProbeOverrides.ReadinessProbeOverride
-	} else {
-		// Ensure previous readiness probe overrides are removed.
-		mattermost.Spec.Probes.ReadinessProbe = corev1.Probe{}
+	// Override with installation-level settings if they exist
+	if installation != nil && installation.PodProbeOverrides != nil {
+		if installation.PodProbeOverrides.LivenessProbeOverride != nil {
+			livenessProbe = *installation.PodProbeOverrides.LivenessProbeOverride
+		}
+		if installation.PodProbeOverrides.ReadinessProbeOverride != nil {
+			readinessProbe = *installation.PodProbeOverrides.ReadinessProbeOverride
+		}
 	}
+
+	// Apply the final probe configurations
+	mattermost.Spec.Probes.LivenessProbe = livenessProbe
+	mattermost.Spec.Probes.ReadinessProbe = readinessProbe
 }
 
 func (provisioner Provisioner) ensureCustomVolumes(
@@ -1023,7 +1035,9 @@ func generateCILicenseName(installation *model.Installation, clusterInstallation
 // convention except the current license secret name. Pass in a blank name value
 // to cleanup all license secrets.
 func cleanupOldLicenseSecrets(currentSecretName string, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	secrets, err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).List(context.Background(), metav1.ListOptions{})
+	secrets, err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).List(context.Background(), metav1.ListOptions{
+		LabelSelector: k8sCustomSecretKey,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to list secrets")
 	}

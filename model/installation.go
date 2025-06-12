@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 //go:generate provisioner-code-gen generate --out-file=installation_gen.go --boilerplate-file=../hack/boilerplate/boilerplate.generatego.txt --type=github.com/mattermost/mattermost-cloud/model.Installation --generator=get_id,get_state,is_deleted,as_resources
@@ -58,7 +59,8 @@ type Installation struct {
 	DeletionLocked             bool
 	LockAcquiredBy             *string
 	LockAcquiredAt             int64
-	GroupOverrides             map[string]string `json:"GroupOverrides,omitempty"`
+	GroupOverrides             map[string]string  `json:"GroupOverrides,omitempty"`
+	PodProbeOverrides          *PodProbeOverrides `json:"PodProbeOverrides,omitempty"`
 
 	// configconfigMergedWithGroup is set when the installation configuration
 	// has been overridden with group configuration. This value can then be
@@ -69,6 +71,12 @@ type Installation struct {
 	// configMergeGroupSequence is the Sequence value of the group at the time
 	// it was merged with the installation.
 	configMergeGroupSequence int64
+}
+
+// PodProbeOverrides contains configuration for overriding pod probe settings.
+type PodProbeOverrides struct {
+	LivenessProbeOverride  *corev1.Probe `json:"LivenessProbeOverride,omitempty"`
+	ReadinessProbeOverride *corev1.Probe `json:"ReadinessProbeOverride,omitempty"`
 }
 
 // InstallationsCount represents the number of installations
