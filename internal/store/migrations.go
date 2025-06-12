@@ -1865,11 +1865,9 @@ var migrations = []migration{
 						State TEXT NOT NULL,
 						APISecurityLock NOT NULL DEFAULT FALSE,
 						SingleTenantDatabaseConfigRaw BYTEA NULL,
-						ExternalDatabaseConfigRaw BYTEA NULL,
 						CRVersion TEXT NOT NULL DEFAULT 'mattermost.com/v1alpha1',
 						CreateAt BIGINT NOT NULL,
 						DeleteAt BIGINT NOT NULL,
-						DeletionPendingExpiry BIGINT NOT NULL,
 						LockAcquiredBy TEXT NULL,
 						LockAcquiredAt BIGINT NOT NULL
 					);
@@ -1898,11 +1896,9 @@ var migrations = []migration{
 						State,
 						APISecurityLock,
 						SingleTenantDatabaseConfigRaw,
-						ExternalDatabaseConfigRaw,
 						CRVersion,
 						CreateAt,
 						DeleteAt,
-						'0',
 						LockAcquiredBy,
 						LockAcquiredAt
 					FROM
