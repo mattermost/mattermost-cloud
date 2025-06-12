@@ -7,8 +7,8 @@ package main
 import (
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -135,8 +135,8 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().Int32Var(&flags.probeReadinessTimeoutSeconds, "probe-readiness-timeout-seconds", 5, "An optional override for the readiness probe timeout seconds.")
 }
 
-func (flags *serverFlags) generateProbeOverrides() provisioner.PodProbeOverrides {
-	probeOverrides := provisioner.PodProbeOverrides{}
+func (flags *serverFlags) generateProbeOverrides() model.PodProbeOverrides {
+	probeOverrides := model.PodProbeOverrides{}
 
 	livenessOverride := corev1.Probe{}
 	var livenessChanged bool

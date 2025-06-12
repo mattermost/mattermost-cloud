@@ -7,7 +7,7 @@ package main
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -17,7 +17,7 @@ func TestGenerateProbeOverrides(t *testing.T) {
 		flags := &serverFlags{}
 		result := flags.generateProbeOverrides()
 
-		expected := provisioner.PodProbeOverrides{}
+		expected := model.PodProbeOverrides{}
 		assert.Equal(t, expected, result)
 		assert.Nil(t, result.LivenessProbeOverride)
 		assert.Nil(t, result.ReadinessProbeOverride)

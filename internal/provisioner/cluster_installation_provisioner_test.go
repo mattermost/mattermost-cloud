@@ -130,7 +130,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 	t.Run("no probe overrides", func(t *testing.T) {
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{},
+				PodProbeOverrides: model.PodProbeOverrides{},
 			},
 		}
 
