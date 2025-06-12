@@ -171,7 +171,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  livenessOverride,
 					ReadinessProbeOverride: nil,
 				},
@@ -211,7 +211,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  nil,
 					ReadinessProbeOverride: readinessOverride,
 				},
@@ -259,7 +259,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  livenessOverride,
 					ReadinessProbeOverride: readinessOverride,
 				},
@@ -288,7 +288,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  livenessOverride,
 					ReadinessProbeOverride: nil,
 				},
@@ -342,7 +342,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  livenessOverride,
 					ReadinessProbeOverride: readinessOverride,
 				},
@@ -393,7 +393,7 @@ func TestEnsurePodProbeOverrides_InstallationLevel(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{}, // No server overrides
+				PodProbeOverrides: model.PodProbeOverrides{}, // No server overrides
 			},
 		}
 
@@ -453,7 +453,7 @@ func TestEnsurePodProbeOverrides_InstallationLevel(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  serverLivenessOverride,
 					ReadinessProbeOverride: serverReadinessOverride,
 				},
@@ -509,7 +509,7 @@ func TestEnsurePodProbeOverrides_InstallationLevel(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  serverLivenessOverride,
 					ReadinessProbeOverride: serverReadinessOverride,
 				},
@@ -549,7 +549,7 @@ func TestEnsurePodProbeOverrides_InstallationLevel(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  serverLivenessOverride,
 					ReadinessProbeOverride: nil,
 				},
@@ -585,7 +585,7 @@ func TestEnsurePodProbeOverrides_InstallationLevel(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  nil,
 					ReadinessProbeOverride: serverReadinessOverride,
 				},
@@ -632,7 +632,7 @@ func TestEnsurePodProbeOverrides_InstallationLevel(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  serverLivenessOverride,
 					ReadinessProbeOverride: nil,
 				},
@@ -664,7 +664,7 @@ func TestEnsurePodProbeOverrides_InstallationLevel(t *testing.T) {
 	t.Run("no server or installation overrides", func(t *testing.T) {
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{}, // No server overrides
+				PodProbeOverrides: model.PodProbeOverrides{}, // No server overrides
 			},
 		}
 
