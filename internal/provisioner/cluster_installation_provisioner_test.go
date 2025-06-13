@@ -130,7 +130,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 	t.Run("no probe overrides", func(t *testing.T) {
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{},
+				PodProbeOverrides: model.PodProbeOverrides{},
 			},
 		}
 
@@ -153,7 +153,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 			},
 		}
 
-		provisioner.ensurePodProbeOverrides(mattermost)
+		provisioner.ensurePodProbeOverrides(mattermost, nil)
 
 		// Both probes should be cleared to empty Probe structs
 		assert.Equal(t, corev1.Probe{}, mattermost.Spec.Probes.LivenessProbe)
@@ -171,7 +171,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  livenessOverride,
 					ReadinessProbeOverride: nil,
 				},
@@ -192,7 +192,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 			},
 		}
 
-		provisioner.ensurePodProbeOverrides(mattermost)
+		provisioner.ensurePodProbeOverrides(mattermost, nil)
 
 		// Liveness probe should be set to the override
 		assert.Equal(t, *livenessOverride, mattermost.Spec.Probes.LivenessProbe)
@@ -211,7 +211,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  nil,
 					ReadinessProbeOverride: readinessOverride,
 				},
@@ -232,7 +232,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 			},
 		}
 
-		provisioner.ensurePodProbeOverrides(mattermost)
+		provisioner.ensurePodProbeOverrides(mattermost, nil)
 
 		// Liveness probe should be cleared
 		assert.Equal(t, corev1.Probe{}, mattermost.Spec.Probes.LivenessProbe)
@@ -259,7 +259,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  livenessOverride,
 					ReadinessProbeOverride: readinessOverride,
 				},
@@ -273,7 +273,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 			Spec: mmv1beta1.MattermostSpec{},
 		}
 
-		provisioner.ensurePodProbeOverrides(mattermost)
+		provisioner.ensurePodProbeOverrides(mattermost, nil)
 
 		// Both probes should be set to their respective overrides
 		assert.Equal(t, *livenessOverride, mattermost.Spec.Probes.LivenessProbe)
@@ -288,7 +288,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  livenessOverride,
 					ReadinessProbeOverride: nil,
 				},
@@ -319,7 +319,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 			},
 		}
 
-		provisioner.ensurePodProbeOverrides(mattermost)
+		provisioner.ensurePodProbeOverrides(mattermost, nil)
 
 		// Liveness probe should be completely replaced with the override
 		assert.Equal(t, *livenessOverride, mattermost.Spec.Probes.LivenessProbe)
@@ -342,7 +342,7 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 
 		provisioner := Provisioner{
 			params: ProvisioningParams{
-				PodProbeOverrides: PodProbeOverrides{
+				PodProbeOverrides: model.PodProbeOverrides{
 					LivenessProbeOverride:  livenessOverride,
 					ReadinessProbeOverride: readinessOverride,
 				},
@@ -356,18 +356,420 @@ func TestEnsurePodProbeOverrides(t *testing.T) {
 			Spec: mmv1beta1.MattermostSpec{},
 		}
 
-		provisioner.ensurePodProbeOverrides(mattermost)
+		provisioner.ensurePodProbeOverrides(mattermost, nil)
 
+		// Server overrides are applied completely
+		assert.Equal(t, *livenessOverride, mattermost.Spec.Probes.LivenessProbe)
+		assert.Equal(t, *readinessOverride, mattermost.Spec.Probes.ReadinessProbe)
+	})
+}
+
+func TestEnsurePodProbeOverrides_InstallationLevel(t *testing.T) {
+	t.Run("installation overrides with no server overrides", func(t *testing.T) {
+		livenessOverride := &corev1.Probe{
+			FailureThreshold:    8,
+			SuccessThreshold:    1,
+			InitialDelaySeconds: 45,
+			PeriodSeconds:       20,
+			TimeoutSeconds:      12,
+		}
+
+		readinessOverride := &corev1.Probe{
+			FailureThreshold:    6,
+			SuccessThreshold:    2,
+			InitialDelaySeconds: 35,
+			PeriodSeconds:       15,
+			TimeoutSeconds:      8,
+		}
+
+		provisioner := Provisioner{
+			params: ProvisioningParams{
+				PodProbeOverrides: model.PodProbeOverrides{}, // No server overrides
+			},
+		}
+
+		installation := &model.Installation{
+			PodProbeOverrides: &model.PodProbeOverrides{
+				LivenessProbeOverride:  livenessOverride,
+				ReadinessProbeOverride: readinessOverride,
+			},
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-mattermost",
+			},
+			Spec: mmv1beta1.MattermostSpec{},
+		}
+
+		provisioner.ensurePodProbeOverrides(mattermost, installation)
+
+		// Both probes should be set to installation overrides
+		assert.Equal(t, *livenessOverride, mattermost.Spec.Probes.LivenessProbe)
+		assert.Equal(t, *readinessOverride, mattermost.Spec.Probes.ReadinessProbe)
+	})
+
+	t.Run("installation overrides override server overrides", func(t *testing.T) {
+		serverLivenessOverride := &corev1.Probe{
+			FailureThreshold:    5,
+			SuccessThreshold:    1,
+			InitialDelaySeconds: 30,
+			PeriodSeconds:       10,
+			TimeoutSeconds:      5,
+		}
+
+		serverReadinessOverride := &corev1.Probe{
+			FailureThreshold:    3,
+			SuccessThreshold:    1,
+			InitialDelaySeconds: 20,
+			PeriodSeconds:       8,
+			TimeoutSeconds:      3,
+		}
+
+		installationLivenessOverride := &corev1.Probe{
+			FailureThreshold:    12,
+			SuccessThreshold:    2,
+			InitialDelaySeconds: 60,
+			PeriodSeconds:       25,
+			TimeoutSeconds:      15,
+		}
+
+		installationReadinessOverride := &corev1.Probe{
+			FailureThreshold:    10,
+			SuccessThreshold:    3,
+			InitialDelaySeconds: 50,
+			PeriodSeconds:       20,
+			TimeoutSeconds:      12,
+		}
+
+		provisioner := Provisioner{
+			params: ProvisioningParams{
+				PodProbeOverrides: model.PodProbeOverrides{
+					LivenessProbeOverride:  serverLivenessOverride,
+					ReadinessProbeOverride: serverReadinessOverride,
+				},
+			},
+		}
+
+		installation := &model.Installation{
+			PodProbeOverrides: &model.PodProbeOverrides{
+				LivenessProbeOverride:  installationLivenessOverride,
+				ReadinessProbeOverride: installationReadinessOverride,
+			},
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-mattermost",
+			},
+			Spec: mmv1beta1.MattermostSpec{},
+		}
+
+		provisioner.ensurePodProbeOverrides(mattermost, installation)
+
+		// Both probes should be set to installation overrides (not server overrides)
+		assert.Equal(t, *installationLivenessOverride, mattermost.Spec.Probes.LivenessProbe)
+		assert.Equal(t, *installationReadinessOverride, mattermost.Spec.Probes.ReadinessProbe)
+	})
+
+	t.Run("partial installation overrides with server fallback", func(t *testing.T) {
+		serverLivenessOverride := &corev1.Probe{
+			FailureThreshold:    5,
+			SuccessThreshold:    1,
+			InitialDelaySeconds: 30,
+			PeriodSeconds:       10,
+			TimeoutSeconds:      5,
+		}
+
+		serverReadinessOverride := &corev1.Probe{
+			FailureThreshold:    3,
+			SuccessThreshold:    1,
+			InitialDelaySeconds: 20,
+			PeriodSeconds:       8,
+			TimeoutSeconds:      3,
+		}
+
+		// Installation only overrides InitialDelaySeconds for liveness, but server settings should be preserved
+		installationLivenessOverride := &corev1.Probe{
+			InitialDelaySeconds: 90, // Only this field is overridden
+		}
+
+		provisioner := Provisioner{
+			params: ProvisioningParams{
+				PodProbeOverrides: model.PodProbeOverrides{
+					LivenessProbeOverride:  serverLivenessOverride,
+					ReadinessProbeOverride: serverReadinessOverride,
+				},
+			},
+		}
+
+		installation := &model.Installation{
+			PodProbeOverrides: &model.PodProbeOverrides{
+				LivenessProbeOverride:  installationLivenessOverride,
+				ReadinessProbeOverride: nil, // No installation override for readiness
+			},
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-mattermost",
+			},
+			Spec: mmv1beta1.MattermostSpec{},
+		}
+
+		provisioner.ensurePodProbeOverrides(mattermost, installation)
+
+		// Liveness should merge: server settings + installation InitialDelaySeconds override
 		expectedLiveness := corev1.Probe{
-			FailureThreshold: 15,
-			// All other fields should be zero values
+			FailureThreshold:    5,  // from server
+			SuccessThreshold:    1,  // from server
+			InitialDelaySeconds: 90, // from installation override
+			PeriodSeconds:       10, // from server
+			TimeoutSeconds:      5,  // from server
 		}
 		assert.Equal(t, expectedLiveness, mattermost.Spec.Probes.LivenessProbe)
 
+		// Readiness should use server override completely
+		assert.Equal(t, *serverReadinessOverride, mattermost.Spec.Probes.ReadinessProbe)
+	})
+
+	t.Run("installation with nil probe overrides uses server defaults", func(t *testing.T) {
+		serverLivenessOverride := &corev1.Probe{
+			FailureThreshold:    7,
+			SuccessThreshold:    1,
+			InitialDelaySeconds: 40,
+			PeriodSeconds:       12,
+			TimeoutSeconds:      6,
+		}
+
+		provisioner := Provisioner{
+			params: ProvisioningParams{
+				PodProbeOverrides: model.PodProbeOverrides{
+					LivenessProbeOverride:  serverLivenessOverride,
+					ReadinessProbeOverride: nil,
+				},
+			},
+		}
+
+		installation := &model.Installation{
+			PodProbeOverrides: nil, // No installation overrides
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-mattermost",
+			},
+			Spec: mmv1beta1.MattermostSpec{},
+		}
+
+		provisioner.ensurePodProbeOverrides(mattermost, installation)
+
+		// Should use server overrides
+		assert.Equal(t, *serverLivenessOverride, mattermost.Spec.Probes.LivenessProbe)
+		assert.Equal(t, corev1.Probe{}, mattermost.Spec.Probes.ReadinessProbe)
+	})
+
+	t.Run("installation with empty probe overrides uses server defaults", func(t *testing.T) {
+		serverReadinessOverride := &corev1.Probe{
+			FailureThreshold:    4,
+			SuccessThreshold:    2,
+			InitialDelaySeconds: 25,
+			PeriodSeconds:       10,
+			TimeoutSeconds:      4,
+		}
+
+		provisioner := Provisioner{
+			params: ProvisioningParams{
+				PodProbeOverrides: model.PodProbeOverrides{
+					LivenessProbeOverride:  nil,
+					ReadinessProbeOverride: serverReadinessOverride,
+				},
+			},
+		}
+
+		installation := &model.Installation{
+			PodProbeOverrides: &model.PodProbeOverrides{
+				LivenessProbeOverride:  nil,
+				ReadinessProbeOverride: nil,
+			},
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-mattermost",
+			},
+			Spec: mmv1beta1.MattermostSpec{},
+		}
+
+		provisioner.ensurePodProbeOverrides(mattermost, installation)
+
+		// Should use server overrides since installation overrides are nil
+		assert.Equal(t, corev1.Probe{}, mattermost.Spec.Probes.LivenessProbe)
+		assert.Equal(t, *serverReadinessOverride, mattermost.Spec.Probes.ReadinessProbe)
+	})
+
+	t.Run("installation overrides only readiness, liveness falls back", func(t *testing.T) {
+		serverLivenessOverride := &corev1.Probe{
+			FailureThreshold:    6,
+			SuccessThreshold:    1,
+			InitialDelaySeconds: 35,
+			PeriodSeconds:       12,
+			TimeoutSeconds:      7,
+		}
+
+		// Installation only overrides specific readiness fields
+		installationReadinessOverride := &corev1.Probe{
+			FailureThreshold:    9,
+			InitialDelaySeconds: 55,
+			TimeoutSeconds:      11,
+		}
+
+		provisioner := Provisioner{
+			params: ProvisioningParams{
+				PodProbeOverrides: model.PodProbeOverrides{
+					LivenessProbeOverride:  serverLivenessOverride,
+					ReadinessProbeOverride: nil, // No server readiness override
+				},
+			},
+		}
+
+		installation := &model.Installation{
+			PodProbeOverrides: &model.PodProbeOverrides{
+				LivenessProbeOverride:  nil,
+				ReadinessProbeOverride: installationReadinessOverride,
+			},
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-mattermost",
+			},
+			Spec: mmv1beta1.MattermostSpec{},
+		}
+
+		provisioner.ensurePodProbeOverrides(mattermost, installation)
+
+		// Liveness should fall back to server override
+		assert.Equal(t, *serverLivenessOverride, mattermost.Spec.Probes.LivenessProbe)
+
+		// Readiness should use only the installation overrides (no server defaults to merge with)
 		expectedReadiness := corev1.Probe{
-			InitialDelaySeconds: 120,
-			TimeoutSeconds:      30,
-			// All other fields should be zero values
+			FailureThreshold:    9,  // from installation
+			SuccessThreshold:    0,  // not set anywhere, remains zero
+			InitialDelaySeconds: 55, // from installation
+			PeriodSeconds:       0,  // not set anywhere, remains zero
+			TimeoutSeconds:      11, // from installation
+		}
+		assert.Equal(t, expectedReadiness, mattermost.Spec.Probes.ReadinessProbe)
+	})
+
+	t.Run("no server or installation overrides", func(t *testing.T) {
+		provisioner := Provisioner{
+			params: ProvisioningParams{
+				PodProbeOverrides: model.PodProbeOverrides{}, // No server overrides
+			},
+		}
+
+		installation := &model.Installation{
+			PodProbeOverrides: nil, // No installation overrides
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-mattermost",
+			},
+			Spec: mmv1beta1.MattermostSpec{
+				// Set some initial values to ensure they get cleared
+				Probes: mmv1beta1.Probes{
+					LivenessProbe: corev1.Probe{
+						FailureThreshold: 999,
+						TimeoutSeconds:   999,
+					},
+					ReadinessProbe: corev1.Probe{
+						FailureThreshold: 888,
+						TimeoutSeconds:   888,
+					},
+				},
+			},
+		}
+
+		provisioner.ensurePodProbeOverrides(mattermost, installation)
+
+		// Both probes should be cleared to empty Probe structs
+		assert.Equal(t, corev1.Probe{}, mattermost.Spec.Probes.LivenessProbe)
+		assert.Equal(t, corev1.Probe{}, mattermost.Spec.Probes.ReadinessProbe)
+	})
+
+	t.Run("field-by-field merging preserves server settings", func(t *testing.T) {
+		// Server has comprehensive overrides for both probes
+		serverLivenessOverride := &corev1.Probe{
+			FailureThreshold:    8,
+			SuccessThreshold:    2,
+			InitialDelaySeconds: 45,
+			PeriodSeconds:       20,
+			TimeoutSeconds:      12,
+		}
+
+		serverReadinessOverride := &corev1.Probe{
+			FailureThreshold:    6,
+			SuccessThreshold:    3,
+			InitialDelaySeconds: 25,
+			PeriodSeconds:       15,
+			TimeoutSeconds:      8,
+		}
+
+		// Installation only overrides specific fields for each probe
+		installationLivenessOverride := &corev1.Probe{
+			FailureThreshold: 12, // Override only this field
+			TimeoutSeconds:   20, // And this field
+		}
+
+		installationReadinessOverride := &corev1.Probe{
+			InitialDelaySeconds: 60, // Override only this field
+		}
+
+		provisioner := Provisioner{
+			params: ProvisioningParams{
+				PodProbeOverrides: model.PodProbeOverrides{
+					LivenessProbeOverride:  serverLivenessOverride,
+					ReadinessProbeOverride: serverReadinessOverride,
+				},
+			},
+		}
+
+		installation := &model.Installation{
+			PodProbeOverrides: &model.PodProbeOverrides{
+				LivenessProbeOverride:  installationLivenessOverride,
+				ReadinessProbeOverride: installationReadinessOverride,
+			},
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-mattermost",
+			},
+			Spec: mmv1beta1.MattermostSpec{},
+		}
+
+		provisioner.ensurePodProbeOverrides(mattermost, installation)
+
+		// Liveness should merge: server settings with selective installation overrides
+		expectedLiveness := corev1.Probe{
+			FailureThreshold:    12, // from installation override
+			SuccessThreshold:    2,  // from server (preserved)
+			InitialDelaySeconds: 45, // from server (preserved)
+			PeriodSeconds:       20, // from server (preserved)
+			TimeoutSeconds:      20, // from installation override
+		}
+		assert.Equal(t, expectedLiveness, mattermost.Spec.Probes.LivenessProbe)
+
+		// Readiness should merge: server settings with selective installation overrides
+		expectedReadiness := corev1.Probe{
+			FailureThreshold:    6,  // from server (preserved)
+			SuccessThreshold:    3,  // from server (preserved)
+			InitialDelaySeconds: 60, // from installation override
+			PeriodSeconds:       15, // from server (preserved)
+			TimeoutSeconds:      8,  // from server (preserved)
 		}
 		assert.Equal(t, expectedReadiness, mattermost.Spec.Probes.ReadinessProbe)
 	})

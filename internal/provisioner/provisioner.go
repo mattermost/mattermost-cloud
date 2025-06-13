@@ -12,7 +12,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type ClusterProvisionerOption struct {
@@ -47,12 +46,7 @@ type ProvisioningParams struct {
 	SLOInstallationGroups     []string
 	SLOEnterpriseGroups       []string
 	EtcdManagerEnv            map[string]string
-	PodProbeOverrides         PodProbeOverrides
-}
-
-type PodProbeOverrides struct {
-	LivenessProbeOverride  *corev1.Probe
-	ReadinessProbeOverride *corev1.Probe
+	PodProbeOverrides         model.PodProbeOverrides
 }
 
 type Provisioner struct {

@@ -10,6 +10,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type installationCreateRequestOptions struct {
@@ -28,6 +29,19 @@ type installationCreateRequestOptions struct {
 	annotations               []string
 	groupSelectionAnnotations []string
 	scheduledDeletionTime     time.Duration
+
+	// Probe override settings
+	probeLivenessFailureThreshold    int32
+	probeLivenessSuccessThreshold    int32
+	probeLivenessInitialDelaySeconds int32
+	probeLivenessPeriodSeconds       int32
+	probeLivenessTimeoutSeconds      int32
+
+	probeReadinessFailureThreshold    int32
+	probeReadinessSuccessThreshold    int32
+	probeReadinessInitialDelaySeconds int32
+	probeReadinessPeriodSeconds       int32
+	probeReadinessTimeoutSeconds      int32
 }
 
 func (flags *installationCreateRequestOptions) addFlags(command *cobra.Command) {
@@ -46,6 +60,19 @@ func (flags *installationCreateRequestOptions) addFlags(command *cobra.Command) 
 	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 	command.Flags().StringArrayVar(&flags.groupSelectionAnnotations, "group-selection-annotation", []string{}, "Annotations for automatic group selection. Accepts multiple values, for example: '... --group-selection-annotation abc --group-selection-annotation def'")
 	command.Flags().DurationVar(&flags.scheduledDeletionTime, "scheduled-deletion-time", 0, "The time from now when the installation should be deleted. Use 0 for no scheduled deletion.")
+
+	// Probe override flags
+	command.Flags().Int32Var(&flags.probeLivenessFailureThreshold, "probe-liveness-failure-threshold", 0, "Override for the liveness probe failure threshold. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeLivenessSuccessThreshold, "probe-liveness-success-threshold", 0, "Override for the liveness probe success threshold. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeLivenessInitialDelaySeconds, "probe-liveness-initial-delay-seconds", 0, "Override for the liveness probe initial delay seconds. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeLivenessPeriodSeconds, "probe-liveness-period-seconds", 0, "Override for the liveness probe period seconds. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeLivenessTimeoutSeconds, "probe-liveness-timeout-seconds", 0, "Override for the liveness probe timeout seconds. Use 0 to use server/operator defaults.")
+
+	command.Flags().Int32Var(&flags.probeReadinessFailureThreshold, "probe-readiness-failure-threshold", 0, "Override for the readiness probe failure threshold. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeReadinessSuccessThreshold, "probe-readiness-success-threshold", 0, "Override for the readiness probe success threshold. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeReadinessInitialDelaySeconds, "probe-readiness-initial-delay-seconds", 0, "Override for the readiness probe initial delay seconds. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeReadinessPeriodSeconds, "probe-readiness-period-seconds", 0, "Override for the readiness probe period seconds. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeReadinessTimeoutSeconds, "probe-readiness-timeout-seconds", 0, "Override for the readiness probe timeout seconds. Use 0 to use server/operator defaults.")
 
 	_ = command.MarkFlagRequired("owner")
 }
@@ -88,6 +115,19 @@ type installationPatchRequestChanges struct {
 	licenseChanged          bool
 	allowedIPRangesChanged  bool
 	overrideIPRangesChanged bool
+
+	// Probe override change flags
+	probeLivenessFailureThresholdChanged    bool
+	probeLivenessSuccessThresholdChanged    bool
+	probeLivenessInitialDelaySecondsChanged bool
+	probeLivenessPeriodSecondsChanged       bool
+	probeLivenessTimeoutSecondsChanged      bool
+
+	probeReadinessFailureThresholdChanged    bool
+	probeReadinessSuccessThresholdChanged    bool
+	probeReadinessInitialDelaySecondsChanged bool
+	probeReadinessPeriodSecondsChanged       bool
+	probeReadinessTimeoutSecondsChanged      bool
 }
 
 func (flags *installationPatchRequestChanges) addFlags(command *cobra.Command) {
@@ -98,6 +138,19 @@ func (flags *installationPatchRequestChanges) addFlags(command *cobra.Command) {
 	flags.licenseChanged = command.Flags().Changed("license")
 	flags.allowedIPRangesChanged = command.Flags().Changed("allowed-ip-ranges")
 	flags.overrideIPRangesChanged = command.Flags().Changed("override-ip-ranges")
+
+	// Probe override change flags
+	flags.probeLivenessFailureThresholdChanged = command.Flags().Changed("probe-liveness-failure-threshold")
+	flags.probeLivenessSuccessThresholdChanged = command.Flags().Changed("probe-liveness-success-threshold")
+	flags.probeLivenessInitialDelaySecondsChanged = command.Flags().Changed("probe-liveness-initial-delay-seconds")
+	flags.probeLivenessPeriodSecondsChanged = command.Flags().Changed("probe-liveness-period-seconds")
+	flags.probeLivenessTimeoutSecondsChanged = command.Flags().Changed("probe-liveness-timeout-seconds")
+
+	flags.probeReadinessFailureThresholdChanged = command.Flags().Changed("probe-readiness-failure-threshold")
+	flags.probeReadinessSuccessThresholdChanged = command.Flags().Changed("probe-readiness-success-threshold")
+	flags.probeReadinessInitialDelaySecondsChanged = command.Flags().Changed("probe-readiness-initial-delay-seconds")
+	flags.probeReadinessPeriodSecondsChanged = command.Flags().Changed("probe-readiness-period-seconds")
+	flags.probeReadinessTimeoutSecondsChanged = command.Flags().Changed("probe-readiness-timeout-seconds")
 }
 
 type installationPatchRequestOptions struct {
@@ -111,6 +164,19 @@ type installationPatchRequestOptions struct {
 	mattermostEnv      []string
 	mattermostEnvClear bool
 	overrideIPRanges   bool
+
+	// Probe override settings
+	probeLivenessFailureThreshold    int32
+	probeLivenessSuccessThreshold    int32
+	probeLivenessInitialDelaySeconds int32
+	probeLivenessPeriodSeconds       int32
+	probeLivenessTimeoutSeconds      int32
+
+	probeReadinessFailureThreshold    int32
+	probeReadinessSuccessThreshold    int32
+	probeReadinessInitialDelaySeconds int32
+	probeReadinessPeriodSeconds       int32
+	probeReadinessTimeoutSeconds      int32
 }
 
 func (flags *installationPatchRequestOptions) addFlags(command *cobra.Command) {
@@ -123,6 +189,19 @@ func (flags *installationPatchRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringArrayVar(&flags.mattermostEnv, "mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	command.Flags().BoolVar(&flags.mattermostEnvClear, "mattermost-env-clear", false, "Clears all env var data.")
 	command.Flags().BoolVar(&flags.overrideIPRanges, "override-ip-ranges", true, "Overrides Allowed IP ranges and force ignoring any previous value.")
+
+	// Probe override flags
+	command.Flags().Int32Var(&flags.probeLivenessFailureThreshold, "probe-liveness-failure-threshold", 0, "Override for the liveness probe failure threshold. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeLivenessSuccessThreshold, "probe-liveness-success-threshold", 0, "Override for the liveness probe success threshold. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeLivenessInitialDelaySeconds, "probe-liveness-initial-delay-seconds", 0, "Override for the liveness probe initial delay seconds. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeLivenessPeriodSeconds, "probe-liveness-period-seconds", 0, "Override for the liveness probe period seconds. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeLivenessTimeoutSeconds, "probe-liveness-timeout-seconds", 0, "Override for the liveness probe timeout seconds. Use 0 to use server/operator defaults.")
+
+	command.Flags().Int32Var(&flags.probeReadinessFailureThreshold, "probe-readiness-failure-threshold", 0, "Override for the readiness probe failure threshold. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeReadinessSuccessThreshold, "probe-readiness-success-threshold", 0, "Override for the readiness probe success threshold. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeReadinessInitialDelaySeconds, "probe-readiness-initial-delay-seconds", 0, "Override for the readiness probe initial delay seconds. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeReadinessPeriodSeconds, "probe-readiness-period-seconds", 0, "Override for the readiness probe period seconds. Use 0 to use server/operator defaults.")
+	command.Flags().Int32Var(&flags.probeReadinessTimeoutSeconds, "probe-readiness-timeout-seconds", 0, "Override for the readiness probe timeout seconds. Use 0 to use server/operator defaults.")
 }
 
 func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *model.PatchInstallationRequest {
@@ -152,7 +231,136 @@ func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *mod
 		request.OverrideIPRanges = &flags.overrideIPRanges
 	}
 
+	// Add probe overrides if any probe flags were changed
+	request.PodProbeOverrides = flags.generateProbeOverrides()
+
 	return &request
+}
+
+// generateProbeOverrides creates PodProbeOverrides from the installation flags
+func (flags *installationPatchRequestOptions) generateProbeOverrides() *model.PodProbeOverrides {
+	var probeOverrides *model.PodProbeOverrides
+
+	livenessOverride := &corev1.Probe{}
+	var livenessChanged bool
+	if flags.probeLivenessFailureThresholdChanged {
+		livenessOverride.FailureThreshold = flags.probeLivenessFailureThreshold
+		livenessChanged = true
+	}
+	if flags.probeLivenessSuccessThresholdChanged {
+		livenessOverride.SuccessThreshold = flags.probeLivenessSuccessThreshold
+		livenessChanged = true
+	}
+	if flags.probeLivenessInitialDelaySecondsChanged {
+		livenessOverride.InitialDelaySeconds = flags.probeLivenessInitialDelaySeconds
+		livenessChanged = true
+	}
+	if flags.probeLivenessPeriodSecondsChanged {
+		livenessOverride.PeriodSeconds = flags.probeLivenessPeriodSeconds
+		livenessChanged = true
+	}
+	if flags.probeLivenessTimeoutSecondsChanged {
+		livenessOverride.TimeoutSeconds = flags.probeLivenessTimeoutSeconds
+		livenessChanged = true
+	}
+
+	readinessOverride := &corev1.Probe{}
+	var readinessChanged bool
+	if flags.probeReadinessFailureThresholdChanged {
+		readinessOverride.FailureThreshold = flags.probeReadinessFailureThreshold
+		readinessChanged = true
+	}
+	if flags.probeReadinessSuccessThresholdChanged {
+		readinessOverride.SuccessThreshold = flags.probeReadinessSuccessThreshold
+		readinessChanged = true
+	}
+	if flags.probeReadinessInitialDelaySecondsChanged {
+		readinessOverride.InitialDelaySeconds = flags.probeReadinessInitialDelaySeconds
+		readinessChanged = true
+	}
+	if flags.probeReadinessPeriodSecondsChanged {
+		readinessOverride.PeriodSeconds = flags.probeReadinessPeriodSeconds
+		readinessChanged = true
+	}
+	if flags.probeReadinessTimeoutSecondsChanged {
+		readinessOverride.TimeoutSeconds = flags.probeReadinessTimeoutSeconds
+		readinessChanged = true
+	}
+
+	if livenessChanged || readinessChanged {
+		probeOverrides = &model.PodProbeOverrides{}
+		if livenessChanged {
+			probeOverrides.LivenessProbeOverride = livenessOverride
+		}
+		if readinessChanged {
+			probeOverrides.ReadinessProbeOverride = readinessOverride
+		}
+	}
+
+	return probeOverrides
+}
+
+// generateProbeOverridesForCreate creates PodProbeOverrides from the installation create flags
+func (flags *installationCreateRequestOptions) generateProbeOverrides() *model.PodProbeOverrides {
+	var probeOverrides *model.PodProbeOverrides
+
+	livenessOverride := &corev1.Probe{}
+	var livenessChanged bool
+	if flags.probeLivenessFailureThreshold > 0 {
+		livenessOverride.FailureThreshold = flags.probeLivenessFailureThreshold
+		livenessChanged = true
+	}
+	if flags.probeLivenessSuccessThreshold > 0 {
+		livenessOverride.SuccessThreshold = flags.probeLivenessSuccessThreshold
+		livenessChanged = true
+	}
+	if flags.probeLivenessInitialDelaySeconds > 0 {
+		livenessOverride.InitialDelaySeconds = flags.probeLivenessInitialDelaySeconds
+		livenessChanged = true
+	}
+	if flags.probeLivenessPeriodSeconds > 0 {
+		livenessOverride.PeriodSeconds = flags.probeLivenessPeriodSeconds
+		livenessChanged = true
+	}
+	if flags.probeLivenessTimeoutSeconds > 0 {
+		livenessOverride.TimeoutSeconds = flags.probeLivenessTimeoutSeconds
+		livenessChanged = true
+	}
+
+	readinessOverride := &corev1.Probe{}
+	var readinessChanged bool
+	if flags.probeReadinessFailureThreshold > 0 {
+		readinessOverride.FailureThreshold = flags.probeReadinessFailureThreshold
+		readinessChanged = true
+	}
+	if flags.probeReadinessSuccessThreshold > 0 {
+		readinessOverride.SuccessThreshold = flags.probeReadinessSuccessThreshold
+		readinessChanged = true
+	}
+	if flags.probeReadinessInitialDelaySeconds > 0 {
+		readinessOverride.InitialDelaySeconds = flags.probeReadinessInitialDelaySeconds
+		readinessChanged = true
+	}
+	if flags.probeReadinessPeriodSeconds > 0 {
+		readinessOverride.PeriodSeconds = flags.probeReadinessPeriodSeconds
+		readinessChanged = true
+	}
+	if flags.probeReadinessTimeoutSeconds > 0 {
+		readinessOverride.TimeoutSeconds = flags.probeReadinessTimeoutSeconds
+		readinessChanged = true
+	}
+
+	if livenessChanged || readinessChanged {
+		probeOverrides = &model.PodProbeOverrides{}
+		if livenessChanged {
+			probeOverrides.LivenessProbeOverride = livenessOverride
+		}
+		if readinessChanged {
+			probeOverrides.ReadinessProbeOverride = readinessOverride
+		}
+	}
+
+	return probeOverrides
 }
 
 type installationUpdateFlags struct {

@@ -240,7 +240,7 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
-	provisioner.ensurePodProbeOverrides(mattermost)
+	provisioner.ensurePodProbeOverrides(mattermost, installation)
 
 	if installation.GroupID != nil && *installation.GroupID != "" {
 		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
@@ -489,7 +489,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 	addSourceRangeWhitelistToAnnotations(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
 	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
 
-	provisioner.ensurePodProbeOverrides(mattermost)
+	provisioner.ensurePodProbeOverrides(mattermost, installation)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
@@ -533,20 +533,79 @@ func (provisioner Provisioner) updateClusterInstallation(
 	return nil
 }
 
-func (provisioner Provisioner) ensurePodProbeOverrides(mattermost *mmv1beta1.Mattermost) {
+func (provisioner Provisioner) ensurePodProbeOverrides(mattermost *mmv1beta1.Mattermost, installation *model.Installation) {
+	// Start with empty probes
+	livenessProbe := corev1.Probe{}
+	readinessProbe := corev1.Probe{}
+
+	// Apply server-level defaults first (complete assignment)
 	if provisioner.params.PodProbeOverrides.LivenessProbeOverride != nil {
-		mattermost.Spec.Probes.LivenessProbe = *provisioner.params.PodProbeOverrides.LivenessProbeOverride
-	} else {
-		// Ensure previous liveness probe overrides are removed.
-		mattermost.Spec.Probes.LivenessProbe = corev1.Probe{}
+		livenessProbe = *provisioner.params.PodProbeOverrides.LivenessProbeOverride
+	}
+	if provisioner.params.PodProbeOverrides.ReadinessProbeOverride != nil {
+		readinessProbe = *provisioner.params.PodProbeOverrides.ReadinessProbeOverride
 	}
 
-	if provisioner.params.PodProbeOverrides.ReadinessProbeOverride != nil {
-		mattermost.Spec.Probes.ReadinessProbe = *provisioner.params.PodProbeOverrides.ReadinessProbeOverride
-	} else {
-		// Ensure previous readiness probe overrides are removed.
-		mattermost.Spec.Probes.ReadinessProbe = corev1.Probe{}
+	// Override with installation-level settings (field by field to preserve server settings)
+	if installation != nil && installation.PodProbeOverrides != nil {
+		if installation.PodProbeOverrides.LivenessProbeOverride != nil {
+			installLiveness := installation.PodProbeOverrides.LivenessProbeOverride
+			if installLiveness.FailureThreshold != 0 {
+				livenessProbe.FailureThreshold = installLiveness.FailureThreshold
+			}
+			if installLiveness.SuccessThreshold != 0 {
+				livenessProbe.SuccessThreshold = installLiveness.SuccessThreshold
+			}
+			if installLiveness.InitialDelaySeconds != 0 {
+				livenessProbe.InitialDelaySeconds = installLiveness.InitialDelaySeconds
+			}
+			if installLiveness.PeriodSeconds != 0 {
+				livenessProbe.PeriodSeconds = installLiveness.PeriodSeconds
+			}
+			if installLiveness.TimeoutSeconds != 0 {
+				livenessProbe.TimeoutSeconds = installLiveness.TimeoutSeconds
+			}
+			if installLiveness.TerminationGracePeriodSeconds != nil {
+				livenessProbe.TerminationGracePeriodSeconds = installLiveness.TerminationGracePeriodSeconds
+			}
+			// Override handler if present
+			if installLiveness.ProbeHandler.Exec != nil || installLiveness.ProbeHandler.HTTPGet != nil ||
+				installLiveness.ProbeHandler.TCPSocket != nil || installLiveness.ProbeHandler.GRPC != nil {
+				livenessProbe.ProbeHandler = installLiveness.ProbeHandler
+			}
+		}
+
+		if installation.PodProbeOverrides.ReadinessProbeOverride != nil {
+			installReadiness := installation.PodProbeOverrides.ReadinessProbeOverride
+			if installReadiness.FailureThreshold != 0 {
+				readinessProbe.FailureThreshold = installReadiness.FailureThreshold
+			}
+			if installReadiness.SuccessThreshold != 0 {
+				readinessProbe.SuccessThreshold = installReadiness.SuccessThreshold
+			}
+			if installReadiness.InitialDelaySeconds != 0 {
+				readinessProbe.InitialDelaySeconds = installReadiness.InitialDelaySeconds
+			}
+			if installReadiness.PeriodSeconds != 0 {
+				readinessProbe.PeriodSeconds = installReadiness.PeriodSeconds
+			}
+			if installReadiness.TimeoutSeconds != 0 {
+				readinessProbe.TimeoutSeconds = installReadiness.TimeoutSeconds
+			}
+			if installReadiness.TerminationGracePeriodSeconds != nil {
+				readinessProbe.TerminationGracePeriodSeconds = installReadiness.TerminationGracePeriodSeconds
+			}
+			// Override handler if present
+			if installReadiness.ProbeHandler.Exec != nil || installReadiness.ProbeHandler.HTTPGet != nil ||
+				installReadiness.ProbeHandler.TCPSocket != nil || installReadiness.ProbeHandler.GRPC != nil {
+				readinessProbe.ProbeHandler = installReadiness.ProbeHandler
+			}
+		}
 	}
+
+	// Apply the final probe configurations
+	mattermost.Spec.Probes.LivenessProbe = livenessProbe
+	mattermost.Spec.Probes.ReadinessProbe = readinessProbe
 }
 
 func (provisioner Provisioner) ensureCustomVolumes(
