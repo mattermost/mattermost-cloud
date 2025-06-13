@@ -94,8 +94,16 @@ func run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]by
 	var err error
 	go func() {
 		err = cmd.Run()
-		wStdout.Close()
-		wStderr.Close()
+		defer func() {
+			if err := wStdout.Close(); err != nil {
+				logger.WithError(err).Error("failed to close stdout pipe")
+			}
+		}()
+		defer func() {
+			if err := wStderr.Close(); err != nil {
+				logger.WithError(err).Error("failed to close stderr pipe")
+			}
+		}()
 	}()
 
 	wg.Wait()

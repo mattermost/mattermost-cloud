@@ -54,7 +54,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 			return nil, err
 		}
 	}
-	r.Installation.MattermostEnv = *mattermostEnv
+	r.Installation.MattermostEnv = *mattermostEnv // nolint:staticcheck
 
 	priorityEnv := &model.EnvVarMap{}
 	if r.PriorityEnvRaw != nil {
@@ -63,7 +63,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 			return nil, err
 		}
 	}
-	r.Installation.PriorityEnv = *priorityEnv
+	r.Installation.PriorityEnv = *priorityEnv // nolint:staticcheck
 
 	if r.SingleTenantDatabaseConfigRaw != nil {
 		singleTenantDBConfig := &model.SingleTenantDatabaseConfig{}
@@ -71,7 +71,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 		if err != nil {
 			return nil, err
 		}
-		r.Installation.SingleTenantDatabaseConfig = singleTenantDBConfig
+		r.Installation.SingleTenantDatabaseConfig = singleTenantDBConfig // nolint:staticcheck
 	}
 
 	if r.ExternalDatabaseConfigRaw != nil {
@@ -80,7 +80,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 		if err != nil {
 			return nil, err
 		}
-		r.Installation.ExternalDatabaseConfig = externalDBConfig
+		r.Installation.ExternalDatabaseConfig = externalDBConfig // nolint:staticcheck
 	}
 
 	return r.Installation, nil
@@ -423,7 +423,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, a
 
 	err = sqlStore.createInstallation(tx, installation)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create installation")
 	}
 
 	// We can do bulk insert for better performance, but currently we do not expect more than 1 record.
@@ -526,7 +526,6 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		if isUniqueConstraintViolation(err) {
 			return &UniqueConstraintError{}
 		}
-
 		return errors.Wrap(err, "failed to create installation")
 	}
 

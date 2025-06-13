@@ -11,6 +11,8 @@ import (
 	"slices"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/mattermost/mattermost-cloud/internal/common"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 
@@ -282,7 +284,9 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	groupUnlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -351,7 +355,9 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 
 	// Notify even if we didn't make changes, to expedite even the no-op operations above.
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -400,7 +406,9 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -473,7 +481,9 @@ func handleCreateInstallationVolume(c *Context, w http.ResponseWriter, r *http.R
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -548,7 +558,9 @@ func handleUpdateInstallationVolume(c *Context, w http.ResponseWriter, r *http.R
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -610,7 +622,9 @@ func handleDeleteInstallationVolume(c *Context, w http.ResponseWriter, r *http.R
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -631,7 +645,9 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -649,7 +665,11 @@ func handleAssignGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			log.WithError(err).Error("failed to close r.Body")
+		}
+	}()
 
 	if len(assignRequest.GroupSelectionAnnotations) == 0 {
 		c.Logger.Error("no annotations provided")
@@ -673,7 +693,9 @@ func handleAssignGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -734,7 +756,9 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -763,7 +787,9 @@ func handleHibernateInstallation(c *Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -810,7 +836,9 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -902,7 +930,9 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 }
@@ -977,7 +1007,9 @@ func handleCancelInstallationDeletion(c *Context, w http.ResponseWriter, r *http
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 }

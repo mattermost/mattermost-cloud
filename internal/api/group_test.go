@@ -745,9 +745,10 @@ func TestGroupsStatus(t *testing.T) {
 		require.NotNil(t, groupsStatus)
 		assert.Len(t, groupsStatus, 2)
 		for _, gs := range groupsStatus {
-			if gs.ID == group.ID {
+			switch gs.ID {
+			case group.ID:
 				assert.Equal(t, expectedStatusGroup1, gs)
-			} else if gs.ID == group2.ID {
+			case group2.ID:
 				assert.Equal(t, expectedStatusGroup2, gs)
 			}
 		}

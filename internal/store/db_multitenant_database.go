@@ -50,13 +50,13 @@ type rawMultitenantDatabases []*rawMultitenantDatabase
 func (r *rawMultitenantDatabase) toMultitenantDatabase() (*model.MultitenantDatabase, error) {
 	// We only need to set values that are converted from a raw database format.
 	if r.InstallationsRaw != nil {
-		err := json.Unmarshal(r.InstallationsRaw, &r.MultitenantDatabase.Installations)
+		err := json.Unmarshal(r.InstallationsRaw, &r.MultitenantDatabase.Installations) // nolint:staticcheck
 		if err != nil {
 			return nil, err
 		}
 	}
 	if r.MigratedInstallationsRaw != nil {
-		err := json.Unmarshal(r.MigratedInstallationsRaw, &r.MultitenantDatabase.MigratedInstallations)
+		err := json.Unmarshal(r.MigratedInstallationsRaw, &r.MultitenantDatabase.MigratedInstallations) // nolint:staticcheck
 		if err != nil {
 			return nil, err
 		}

@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/sirupsen/logrus"
+
 	cloud "github.com/mattermost/mattermost-cloud/model"
 
 	"github.com/0xAX/notificator"
@@ -51,7 +53,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	message := fmt.Sprintf("[ %s | %s ] %s -> %s", wType, webhook.ID[0:4], webhook.OldState, webhook.NewState)
 	log.Print(message)
-	notify.Push("Cloud Webhook Listener", message, icon, notificator.UR_NORMAL)
+	err = notify.Push("Cloud Webhook Listener", message, icon, notificator.UR_NORMAL)
+	if err != nil {
+		logrus.Errorf("failed to send notification: %v", err)
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

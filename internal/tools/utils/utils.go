@@ -61,16 +61,24 @@ func copyFile(source string, dest string) error {
 		return err
 	}
 
-	defer sourcefile.Close()
+	defer func() {
+		if err := sourcefile.Close(); err != nil {
+			log.WithError(err).Error("failed to close sourcefile")
+		}
+	}()
 
-	destfile, err := os.Create(dest)
+	destFile, err := os.Create(dest)
 	if err != nil {
 		return err
 	}
 
-	defer destfile.Close()
+	defer func() {
+		if err := destFile.Close(); err != nil {
+			log.WithError(err).Error("failed to close destFile")
+		}
+	}()
 
-	_, err = io.Copy(destfile, sourcefile)
+	_, err = io.Copy(destFile, sourcefile)
 	if err == nil {
 		sourceinfo, err := os.Stat(source)
 		if err != nil {

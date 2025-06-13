@@ -7,6 +7,8 @@ package model
 import (
 	"encoding/json"
 	"io"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Group represents a group of Mattermost installations.
@@ -48,8 +50,9 @@ func (g *Group) ToDTO(annotations []*Annotation) *GroupDTO {
 func (g *Group) Clone() *Group {
 	var clone Group
 	data, _ := json.Marshal(g)
-	json.Unmarshal(data, &clone)
-
+	if err := json.Unmarshal(data, &clone); err != nil {
+		log.WithError(err).Error("failed to unmarshal group clone")
+	}
 	return &clone
 }
 
