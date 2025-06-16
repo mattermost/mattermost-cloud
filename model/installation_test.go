@@ -805,10 +805,6 @@ func TestPodProbeOverridesSimulatedDatabaseScenario(t *testing.T) {
 		// "sql: converting argument $21 type: unsupported type model.PodProbeOverrides, a struct"
 
 		installation := &Installation{
-			ID:      "test-installation",
-			OwnerID: "test-owner",
-			Version: "1.0.0",
-			State:   "stable",
 			PodProbeOverrides: &PodProbeOverrides{
 				LivenessProbeOverride: &corev1.Probe{
 					FailureThreshold:    10,
