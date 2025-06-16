@@ -79,6 +79,34 @@ type PodProbeOverrides struct {
 	ReadinessProbeOverride *corev1.Probe `json:"ReadinessProbeOverride,omitempty"`
 }
 
+// Value implements the driver.Valuer interface for database storage
+func (p *PodProbeOverrides) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return json.Marshal(p)
+}
+
+// Scan implements the sql.Scanner interface for database retrieval
+func (p *PodProbeOverrides) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+
+	source, ok := src.([]byte)
+	if !ok {
+		return errors.New("could not assert type of PodProbeOverrides")
+	}
+
+	var override PodProbeOverrides
+	err := json.Unmarshal(source, &override)
+	if err != nil {
+		return err
+	}
+	*p = override
+	return nil
+}
+
 // InstallationsCount represents the number of installations
 type InstallationsCount struct {
 	Count int64

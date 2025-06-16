@@ -646,3 +646,209 @@ func TestAllowedIPRangesAllRulesAreDisabled(t *testing.T) {
 		require.False(t, actual)
 	})
 }
+
+func TestPodProbeOverridesValue(t *testing.T) {
+	t.Run("nil PodProbeOverrides", func(t *testing.T) {
+		var probeOverrides *PodProbeOverrides
+		value, err := probeOverrides.Value()
+		assert.NoError(t, err)
+		assert.Nil(t, value)
+	})
+
+	t.Run("empty PodProbeOverrides", func(t *testing.T) {
+		probeOverrides := &PodProbeOverrides{}
+		value, err := probeOverrides.Value()
+		assert.NoError(t, err)
+		assert.NotNil(t, value)
+
+		expected := `{}`
+		assert.JSONEq(t, expected, string(value.([]byte)))
+	})
+
+	t.Run("PodProbeOverrides with values", func(t *testing.T) {
+		probeOverrides := &PodProbeOverrides{
+			LivenessProbeOverride: &corev1.Probe{
+				FailureThreshold:    5,
+				InitialDelaySeconds: 30,
+				TimeoutSeconds:      10,
+			},
+			ReadinessProbeOverride: &corev1.Probe{
+				FailureThreshold:    3,
+				InitialDelaySeconds: 15,
+				TimeoutSeconds:      5,
+			},
+		}
+		value, err := probeOverrides.Value()
+		assert.NoError(t, err)
+		assert.NotNil(t, value)
+
+		// Unmarshal to verify JSON structure
+		var result PodProbeOverrides
+		err = json.Unmarshal(value.([]byte), &result)
+		assert.NoError(t, err)
+		assert.Equal(t, int32(5), result.LivenessProbeOverride.FailureThreshold)
+		assert.Equal(t, int32(30), result.LivenessProbeOverride.InitialDelaySeconds)
+		assert.Equal(t, int32(10), result.LivenessProbeOverride.TimeoutSeconds)
+		assert.Equal(t, int32(3), result.ReadinessProbeOverride.FailureThreshold)
+		assert.Equal(t, int32(15), result.ReadinessProbeOverride.InitialDelaySeconds)
+		assert.Equal(t, int32(5), result.ReadinessProbeOverride.TimeoutSeconds)
+	})
+}
+
+func TestPodProbeOverridesScan(t *testing.T) {
+	t.Run("nil source", func(t *testing.T) {
+		var probeOverrides PodProbeOverrides
+		err := probeOverrides.Scan(nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid source type", func(t *testing.T) {
+		var probeOverrides PodProbeOverrides
+		err := probeOverrides.Scan("invalid")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "could not assert type of PodProbeOverrides")
+	})
+
+	t.Run("invalid JSON", func(t *testing.T) {
+		var probeOverrides PodProbeOverrides
+		err := probeOverrides.Scan([]byte("invalid json"))
+		assert.Error(t, err)
+	})
+
+	t.Run("empty JSON object", func(t *testing.T) {
+		var probeOverrides PodProbeOverrides
+		err := probeOverrides.Scan([]byte(`{}`))
+		assert.NoError(t, err)
+		assert.Nil(t, probeOverrides.LivenessProbeOverride)
+		assert.Nil(t, probeOverrides.ReadinessProbeOverride)
+	})
+
+	t.Run("valid JSON with probe overrides", func(t *testing.T) {
+		jsonData := `{
+			"LivenessProbeOverride": {
+				"failureThreshold": 8,
+				"initialDelaySeconds": 45,
+				"timeoutSeconds": 15
+			},
+			"ReadinessProbeOverride": {
+				"failureThreshold": 6,
+				"initialDelaySeconds": 20,
+				"timeoutSeconds": 8
+			}
+		}`
+
+		var probeOverrides PodProbeOverrides
+		err := probeOverrides.Scan([]byte(jsonData))
+		assert.NoError(t, err)
+
+		assert.NotNil(t, probeOverrides.LivenessProbeOverride)
+		assert.Equal(t, int32(8), probeOverrides.LivenessProbeOverride.FailureThreshold)
+		assert.Equal(t, int32(45), probeOverrides.LivenessProbeOverride.InitialDelaySeconds)
+		assert.Equal(t, int32(15), probeOverrides.LivenessProbeOverride.TimeoutSeconds)
+
+		assert.NotNil(t, probeOverrides.ReadinessProbeOverride)
+		assert.Equal(t, int32(6), probeOverrides.ReadinessProbeOverride.FailureThreshold)
+		assert.Equal(t, int32(20), probeOverrides.ReadinessProbeOverride.InitialDelaySeconds)
+		assert.Equal(t, int32(8), probeOverrides.ReadinessProbeOverride.TimeoutSeconds)
+	})
+}
+
+func TestPodProbeOverridesRoundTrip(t *testing.T) {
+	t.Run("round trip serialization", func(t *testing.T) {
+		original := &PodProbeOverrides{
+			LivenessProbeOverride: &corev1.Probe{
+				FailureThreshold:    10,
+				SuccessThreshold:    2,
+				InitialDelaySeconds: 60,
+				PeriodSeconds:       20,
+				TimeoutSeconds:      15,
+			},
+			ReadinessProbeOverride: &corev1.Probe{
+				FailureThreshold:    7,
+				SuccessThreshold:    3,
+				InitialDelaySeconds: 30,
+				PeriodSeconds:       10,
+				TimeoutSeconds:      12,
+			},
+		}
+
+		// Serialize using Value()
+		value, err := original.Value()
+		assert.NoError(t, err)
+		assert.NotNil(t, value)
+
+		// Deserialize using Scan()
+		var result PodProbeOverrides
+		err = result.Scan(value)
+		assert.NoError(t, err)
+
+		// Verify the round trip preserved all values
+		assert.Equal(t, original.LivenessProbeOverride.FailureThreshold, result.LivenessProbeOverride.FailureThreshold)
+		assert.Equal(t, original.LivenessProbeOverride.SuccessThreshold, result.LivenessProbeOverride.SuccessThreshold)
+		assert.Equal(t, original.LivenessProbeOverride.InitialDelaySeconds, result.LivenessProbeOverride.InitialDelaySeconds)
+		assert.Equal(t, original.LivenessProbeOverride.PeriodSeconds, result.LivenessProbeOverride.PeriodSeconds)
+		assert.Equal(t, original.LivenessProbeOverride.TimeoutSeconds, result.LivenessProbeOverride.TimeoutSeconds)
+
+		assert.Equal(t, original.ReadinessProbeOverride.FailureThreshold, result.ReadinessProbeOverride.FailureThreshold)
+		assert.Equal(t, original.ReadinessProbeOverride.SuccessThreshold, result.ReadinessProbeOverride.SuccessThreshold)
+		assert.Equal(t, original.ReadinessProbeOverride.InitialDelaySeconds, result.ReadinessProbeOverride.InitialDelaySeconds)
+		assert.Equal(t, original.ReadinessProbeOverride.PeriodSeconds, result.ReadinessProbeOverride.PeriodSeconds)
+		assert.Equal(t, original.ReadinessProbeOverride.TimeoutSeconds, result.ReadinessProbeOverride.TimeoutSeconds)
+	})
+}
+
+func TestPodProbeOverridesSimulatedDatabaseScenario(t *testing.T) {
+	t.Run("simulates the original database error scenario", func(t *testing.T) {
+		// This test simulates what happens when trying to store an installation
+		// with both liveness and readiness probe overrides in the database.
+		// Before our fix, this would fail with:
+		// "sql: converting argument $21 type: unsupported type model.PodProbeOverrides, a struct"
+
+		installation := &Installation{
+			ID:      "test-installation",
+			OwnerID: "test-owner",
+			Version: "1.0.0",
+			State:   "stable",
+			PodProbeOverrides: &PodProbeOverrides{
+				LivenessProbeOverride: &corev1.Probe{
+					FailureThreshold:    10,
+					InitialDelaySeconds: 60,
+					TimeoutSeconds:      15,
+				},
+				ReadinessProbeOverride: &corev1.Probe{
+					FailureThreshold:    5,
+					InitialDelaySeconds: 30,
+					TimeoutSeconds:      8,
+				},
+			},
+		}
+
+		// Simulate what the SQL driver would do when trying to store this value
+		value, err := installation.PodProbeOverrides.Value()
+		assert.NoError(t, err, "PodProbeOverrides should be serializable to database value")
+		assert.NotNil(t, value, "Database value should not be nil")
+
+		// Verify the value is valid JSON
+		var result PodProbeOverrides
+		err = json.Unmarshal(value.([]byte), &result)
+		assert.NoError(t, err, "Database value should be valid JSON")
+
+		// Verify we can read it back correctly
+		var scannedOverrides PodProbeOverrides
+		err = scannedOverrides.Scan(value)
+		assert.NoError(t, err, "Should be able to scan value back from database")
+
+		// Verify the round trip preserves data
+		assert.Equal(t, installation.PodProbeOverrides.LivenessProbeOverride.FailureThreshold, scannedOverrides.LivenessProbeOverride.FailureThreshold)
+		assert.Equal(t, installation.PodProbeOverrides.LivenessProbeOverride.InitialDelaySeconds, scannedOverrides.LivenessProbeOverride.InitialDelaySeconds)
+		assert.Equal(t, installation.PodProbeOverrides.LivenessProbeOverride.TimeoutSeconds, scannedOverrides.LivenessProbeOverride.TimeoutSeconds)
+
+		assert.Equal(t, installation.PodProbeOverrides.ReadinessProbeOverride.FailureThreshold, scannedOverrides.ReadinessProbeOverride.FailureThreshold)
+		assert.Equal(t, installation.PodProbeOverrides.ReadinessProbeOverride.InitialDelaySeconds, scannedOverrides.ReadinessProbeOverride.InitialDelaySeconds)
+		assert.Equal(t, installation.PodProbeOverrides.ReadinessProbeOverride.TimeoutSeconds, scannedOverrides.ReadinessProbeOverride.TimeoutSeconds)
+
+		// This test passing means the original error:
+		// "sql: converting argument $21 type: unsupported type model.PodProbeOverrides, a struct"
+		// should no longer occur because PodProbeOverrides now implements driver.Valuer
+	})
+}
