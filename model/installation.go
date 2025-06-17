@@ -11,6 +11,8 @@ import (
 	"io"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -239,7 +241,9 @@ func (a *AllowedIPRanges) AreValid() bool {
 func (i *Installation) Clone() *Installation {
 	var clone Installation
 	data, _ := json.Marshal(i)
-	json.Unmarshal(data, &clone)
+	if err := json.Unmarshal(data, &clone); err != nil {
+		log.WithError(err).Error("failed to unmarshal installation clone")
+	}
 
 	return &clone
 }

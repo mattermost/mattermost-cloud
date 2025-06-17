@@ -56,7 +56,7 @@ func (r *rawDBMigrationOperation) toDBMigrationOperation() (*model.InstallationD
 		if err != nil {
 			return nil, err
 		}
-		r.InstallationDBMigrationOperation.SourceMultiTenant = &data
+		r.InstallationDBMigrationOperation.SourceMultiTenant = &data // nolint:staticcheck
 	}
 	if len(r.DestinationMultiTenantRaw) > 0 {
 		data := model.MultiTenantDBMigrationData{}
@@ -64,7 +64,7 @@ func (r *rawDBMigrationOperation) toDBMigrationOperation() (*model.InstallationD
 		if err != nil {
 			return nil, err
 		}
-		r.InstallationDBMigrationOperation.DestinationMultiTenant = &data
+		r.InstallationDBMigrationOperation.DestinationMultiTenant = &data // nolint:staticcheck
 	}
 
 	return r.InstallationDBMigrationOperation, nil

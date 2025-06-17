@@ -345,7 +345,9 @@ func (b *Blaster) cleanupInstallations(installations map[string]*cloud.Installat
 				fallthrough
 			case cloud.InstallationStateDeletionInProgress:
 			default:
-				b.client.DeleteInstallation(fetched.ID)
+				if err := b.client.DeleteInstallation(fetched.ID); err != nil {
+					log.WithError(err).Error("failed to delete installation")
+				}
 			}
 		}
 	}

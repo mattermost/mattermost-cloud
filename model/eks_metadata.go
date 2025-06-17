@@ -264,10 +264,7 @@ func (em *EKSMetadata) ValidateChangeRequest() error {
 		return errors.New("the EKS Metadata ChangeRequest is nil")
 	}
 
-	changeAllowed := false
-	if len(changeRequest.Version) != 0 || len(changeRequest.AMI) != 0 || changeRequest.MaxPodsPerNode != 0 {
-		changeAllowed = true
-	}
+	changeAllowed := len(changeRequest.Version) != 0 || len(changeRequest.AMI) != 0 || changeRequest.MaxPodsPerNode != 0
 
 	if changeAllowed {
 		return nil

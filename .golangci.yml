@@ -1,5 +1,4 @@
-# Docs: https://golangci-lint.run/usage/configuration/#config-file
-
+version: 2
 run:
   timeout: 5m
 
@@ -20,8 +19,6 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - gofmt
-    - gosimple
     - govet
     - ineffassign
     - predeclared

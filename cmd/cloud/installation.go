@@ -317,7 +317,7 @@ func newCmdInstallationUpdateDeletion() *cobra.Command {
 			client := createClient(command.Context(), flags.clusterFlags)
 
 			request := &model.PatchInstallationDeletionRequest{}
-			if flags.installationDeletionPatchRequestOptionsChanged.futureDeletionTimeChanged {
+			if flags.futureDeletionTimeChanged {
 				newExpiryTimeMillis := model.GetMillisAtTime(time.Now().Add(flags.futureDeletionTime))
 				request.DeletionPendingExpiry = &newExpiryTimeMillis
 			}

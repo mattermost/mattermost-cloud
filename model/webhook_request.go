@@ -60,7 +60,7 @@ type GetWebhooksRequest struct {
 func (request *GetWebhooksRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("owner", request.OwnerID)
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }

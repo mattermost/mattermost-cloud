@@ -396,7 +396,10 @@ func (flags *installationUpdateFlags) GetPatchInstallationRequest() (*model.Patc
 
 	if flags.allowedIPRangesChanged {
 		allowedIPRanges := &model.AllowedIPRanges{}
-		allowedIPRanges.FromJSONString(flags.allowedIPRanges)
+		_, jsonErr := allowedIPRanges.FromJSONString(flags.allowedIPRanges)
+		if jsonErr != nil {
+			return nil, jsonErr
+		}
 		allowedIPRanges, err := allowedIPRanges.FromJSONString(flags.allowedIPRanges)
 		if err != nil {
 			return nil, err

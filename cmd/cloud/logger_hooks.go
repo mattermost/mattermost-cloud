@@ -82,7 +82,11 @@ func (hook *ClusterLoggerHook) fileWrite(entry *logrus.Entry, kind string) error
 		log.Println("failed to open logfile:", path, err)
 		return err
 	}
-	defer fd.Close()
+	defer func() {
+		if err := fd.Close(); err != nil {
+			log.Printf("failed to close fd: %v", err)
+		}
+	}()
 
 	// use our formatter instead of entry.String()
 	msg, err := hook.formatter.Format(entry)
@@ -91,7 +95,10 @@ func (hook *ClusterLoggerHook) fileWrite(entry *logrus.Entry, kind string) error
 		log.Println("failed to generate string for entry:", err)
 		return err
 	}
-	fd.Write(msg)
+	if _, err := fd.Write(msg); err != nil {
+		log.Println("failed to write to logfile:", err)
+		return err
+	}
 	return nil
 }
 

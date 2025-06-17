@@ -121,7 +121,7 @@ func WriteContexts(contexts *Contexts) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	encoder := json.NewEncoder(file)
 	err = encoder.Encode(contexts)

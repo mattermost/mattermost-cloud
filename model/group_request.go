@@ -169,7 +169,7 @@ func (request *GetGroupsRequest) ApplyToURL(u *url.URL) {
 	if request.WithInstallationCount {
 		q.Add(ShowInstallationCountQueryParameter, "true")
 	}
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 	u.RawQuery = q.Encode()
 }
 

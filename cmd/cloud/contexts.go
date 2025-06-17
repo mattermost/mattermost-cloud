@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/mattermost/mattermost-cloud/cmd/cloud/clicontext"
 	"github.com/mattermost/mattermost-cloud/internal/auth"
 	"github.com/spf13/cobra"
@@ -90,7 +92,9 @@ type updateContextFlags struct {
 func (f *updateContextFlags) addFlags(command *cobra.Command) {
 	f.createContextFlags.addFlags(command)
 	command.Flags().StringVar(&f.Context, "context", "", "Name of the context to update")
-	command.MarkFlagRequired("context")
+	if err := command.MarkFlagRequired("context"); err != nil {
+		log.Fatalf("failed to mark flag required: %v", err)
+	}
 	command.Flags().BoolVar(&f.ClearAuth, "clear-auth", false, "Turns off authentication for this context")
 	command.Flags().BoolVar(&f.ConfirmationRequired, "confirmation-required", false, "Require confirmation for commands run in this context")
 }
@@ -244,8 +248,9 @@ func newCmdContextCreate() *cobra.Command {
 	}
 
 	flags.addFlags(cmd)
-	cmd.MarkFlagRequired("server-url")
-
+	if err := cmd.MarkFlagRequired("server-url"); err != nil {
+		log.Fatalf("failed to mark flag required: %v", err)
+	}
 	return cmd
 }
 
@@ -255,7 +260,9 @@ type deleteContextFlags struct {
 
 func (f *deleteContextFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&f.contextName, "context", "", "Name of the context to delete")
-	command.MarkFlagRequired("context")
+	if err := command.MarkFlagRequired("context"); err != nil {
+		log.Fatalf("failed to mark flag required: %v", err)
+	}
 }
 
 func newCmdContextDelete() *cobra.Command {

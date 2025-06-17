@@ -315,7 +315,7 @@ type GetClustersRequest struct {
 // ApplyToURL modifies the given url to include query string parameters for the request.
 func (request *GetClustersRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }

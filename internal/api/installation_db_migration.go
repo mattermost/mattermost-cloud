@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/common"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -121,7 +123,9 @@ func handleTriggerInstallationDatabaseMigration(c *Context, w http.ResponseWrite
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, dbMigrationOperation)
@@ -276,7 +280,9 @@ func handleRollbackInstallationDatabaseMigration(c *Context, w http.ResponseWrit
 	}
 
 	unlockOnce()
-	c.Supervisor.Do()
+	if err := c.Supervisor.Do(); err != nil {
+		log.WithError(err).Error("supervisor task failed")
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, dbMigrationOperation)

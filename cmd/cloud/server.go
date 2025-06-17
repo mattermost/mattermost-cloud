@@ -414,7 +414,11 @@ func executeServerCmd(flags serverFlags) error {
 	}
 
 	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(flags.poll)*time.Second, logger)
-	defer standardSupervisor.Close()
+	defer func() {
+		if err := standardSupervisor.Close(); err != nil {
+			logrus.WithError(err).Error("failed to close standardSupervisor")
+		}
+	}()
 
 	if flags.slowPoll == 0 {
 		logger.WithField("slow-poll", flags.slowPoll).Info("Slow scheduler is disabled")
@@ -423,7 +427,11 @@ func executeServerCmd(flags serverFlags) error {
 		var slowMultiDoer supervisor.MultiDoer
 		slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, flags.installationDeletionPendingTime, flags.installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
 		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(flags.slowPoll)*time.Second, logger)
-		defer slowSupervisor.Close()
+		defer func() {
+			if err := slowSupervisor.Close(); err != nil {
+				logrus.WithError(err).Error("failed to close slowSupervisor")
+			}
+		}()
 	}
 
 	metricsRouter := mux.NewRouter()

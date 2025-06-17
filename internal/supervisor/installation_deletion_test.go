@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
@@ -357,7 +359,10 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 
 		time.Sleep(1 * time.Millisecond)
 
-		supervisor.Do()
+		if err := supervisor.Do(); err != nil {
+			log.WithError(err).Error("supervisor task failed")
+		}
+
 		installation2, err = sqlStore.GetInstallation(installation2.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateDeletionPending, installation2.State)
