@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -30,13 +28,14 @@ type nginx struct {
 	provisioner    string
 }
 
-func newNginxOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
+func newNginxOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.NginxCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.NginxCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.NginxCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
+		return newUnmanagedHandle(model.NginxCanonicalName, kubeconfigPath, []string{}, cluster, awsClient, logger), nil
 	}
+
 	nginx := newNginxHandle(desired, cluster, kubeconfigPath, awsClient, logger)
 	err := nginx.validate()
 	if err != nil {

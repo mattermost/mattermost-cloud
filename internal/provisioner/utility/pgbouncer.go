@@ -9,9 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -30,13 +28,14 @@ type pgbouncer struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newPgbouncerOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
+func newPgbouncerOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.PgbouncerCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.PgbouncerCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.PgbouncerCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
+		return newUnmanagedHandle(model.PgbouncerCanonicalName, kubeconfigPath, []string{}, cluster, awsClient, logger), nil
 	}
+
 	pgbouncer := newPgbouncerHandle(cluster, desired, kubeconfigPath, awsClient, logger)
 	err := pgbouncer.validate()
 	if err != nil {
