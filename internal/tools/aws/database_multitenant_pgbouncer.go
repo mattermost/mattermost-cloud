@@ -6,7 +6,6 @@ package aws
 
 import (
 	"context"
-	"crypto/md5"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -489,7 +488,9 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureInstallationUserAddedToUsersTabl
 		return nil
 	}
 
-	query = fmt.Sprintf(`INSERT INTO pgbouncer.pgbouncer_users (usename, passwd) VALUES ('%s', 'md5%x')`, username, md5.Sum([]byte(password+username)))
+	// Use plaintext password instead of MD5 hash to allow PostgreSQL to use SCRAM-SHA-256
+	// when password_encryption is set to scram-sha-256
+	query = fmt.Sprintf(`INSERT INTO pgbouncer.pgbouncer_users (usename, passwd) VALUES ('%s', '%s')`, username, password)
 	_, err = d.db.QueryContext(ctx, query)
 	if err != nil {
 		return errors.Wrap(err, "failed to run create pgbouncer installation user SQL command")
