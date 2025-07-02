@@ -447,12 +447,24 @@ func (d *PerseusDatabase) provisionPerseusDatabase(vpcID string, rdsCluster *rds
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 	defer cancel()
 
-	err = ensureDatabaseUserIsCreated(ctx, d.db, perseusUser.MasterUsername, perseusUser.MasterPassword)
+	// Generate SCRAM-SHA-256 hash for perseus user
+	perseusScramHash, err := generateSCRAMSHA256Hash(perseusUser.MasterPassword)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate SCRAM-SHA-256 hash for perseus user")
+	}
+
+	err = ensureDatabaseUserIsCreatedWithHash(ctx, d.db, perseusUser.MasterUsername, perseusScramHash)
 	if err != nil {
 		return errors.Wrapf(err, "failed to ensure the perseus database user was created for %s", rdsID)
 	}
 
-	err = ensureDatabaseUserIsCreated(ctx, d.db, pgbouncerUser.MasterUsername, pgbouncerUser.MasterPassword)
+	// Generate SCRAM-SHA-256 hash for pgbouncer user
+	pgbouncerScramHash, err := generateSCRAMSHA256Hash(pgbouncerUser.MasterPassword)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate SCRAM-SHA-256 hash for pgbouncer user")
+	}
+
+	err = ensureDatabaseUserIsCreatedWithHash(ctx, d.db, pgbouncerUser.MasterUsername, pgbouncerScramHash)
 	if err != nil {
 		return errors.Wrapf(err, "failed to ensure the pgbouncer database user was created for %s", rdsID)
 	}
@@ -593,7 +605,13 @@ func (d *PerseusDatabase) ensureLogicalDatabaseSetup(databaseName, vpcID string,
 		return nil, errors.Wrap(err, "failed to get secret for installation")
 	}
 
-	err = ensureDatabaseUserIsCreated(ctx, d.db, installationSecret.MasterUsername, installationSecret.MasterPassword)
+	// Generate SCRAM-SHA-256 hash for installation user
+	installationScramHash, err := generateSCRAMSHA256Hash(installationSecret.MasterPassword)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate SCRAM-SHA-256 hash for installation user")
+	}
+
+	err = ensureDatabaseUserIsCreatedWithHash(ctx, d.db, installationSecret.MasterUsername, installationScramHash)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create Mattermost database user")
 	}
@@ -1032,7 +1050,13 @@ func ensurePerseusAuthDatabaseProvisioned(a *Client, rdsCluster *rdsTypes.DBClus
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 		defer cancel()
 
-		errInner = ensureDatabaseUserIsCreated(ctx, db, authUserCredentials.MasterUsername, authUserCredentials.MasterPassword)
+		// Generate SCRAM-SHA-256 hash for auth user
+		authScramHash, errInner := generateSCRAMSHA256Hash(authUserCredentials.MasterPassword)
+		if errInner != nil {
+			return errors.Wrap(err, "failed to generate SCRAM-SHA-256 hash for auth user")
+		}
+
+		errInner = ensureDatabaseUserIsCreatedWithHash(ctx, db, authUserCredentials.MasterUsername, authScramHash)
 		if errInner != nil {
 			return errors.Wrap(err, "failed to ensure perseus auth database user was created")
 		}

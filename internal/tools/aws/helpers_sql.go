@@ -6,12 +6,17 @@ package aws
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 
 	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/pbkdf2"
 )
 
 // SQLDatabaseManager is an interface that describes operations to query and to
@@ -106,7 +111,58 @@ func connectToPostgresRDSCluster(database, endpoint, username, password string) 
 	return db, closeFunc, nil
 }
 
-func ensureDatabaseUserIsCreated(ctx context.Context, db SQLDatabaseManager, username, password string) error {
+// generateSaltedPassword generates a salted password using PBKDF2-HMAC-SHA256
+func generateSaltedPassword(password string, salt []byte, iterations int) []byte {
+	return pbkdf2.Key([]byte(password), salt, iterations, sha256.Size, sha256.New)
+}
+
+// generateHMACSHA256 generates HMAC-SHA256 hash
+func generateHMACSHA256(key, data []byte) []byte {
+	h := hmac.New(sha256.New, key)
+	h.Write(data)
+	return h.Sum(nil)
+}
+
+// generateSHA256Hash generates SHA256 hash
+func generateSHA256Hash(data []byte) []byte {
+	h := sha256.New()
+	h.Write(data)
+	return h.Sum(nil)
+}
+
+// generateSCRAMSHA256Hash generates a PostgreSQL-compatible SCRAM-SHA-256 hash
+// for the given password in the format: SCRAM-SHA-256$<iterations>:<salt>$<storedkey>:<serverkey>
+func generateSCRAMSHA256Hash(password string) (string, error) {
+	const iterations = 4096
+
+	// Generate a random salt (16 bytes)
+	salt := make([]byte, 16)
+	if _, err := rand.Read(salt); err != nil {
+		return "", errors.Wrap(err, "failed to generate random salt")
+	}
+
+	// Generate salted password using PBKDF2-HMAC-SHA256
+	saltedPassword := generateSaltedPassword(password, salt, iterations)
+
+	// Generate client key: HMAC(salted_password, "Client Key")
+	clientKey := generateHMACSHA256(saltedPassword, []byte("Client Key"))
+
+	// Generate stored key: SHA256(client_key) - this is PostgreSQL specific!
+	storedKey := generateSHA256Hash(clientKey)
+
+	// Generate server key: HMAC(salted_password, "Server Key")
+	serverKey := generateHMACSHA256(saltedPassword, []byte("Server Key"))
+
+	// Encode components to base64
+	saltB64 := base64.StdEncoding.EncodeToString(salt)
+	storedKeyB64 := base64.StdEncoding.EncodeToString(storedKey)
+	serverKeyB64 := base64.StdEncoding.EncodeToString(serverKey)
+
+	// Format as SCRAM-SHA-256$<iterations>:<salt>$<storedkey>:<serverkey>
+	return fmt.Sprintf("SCRAM-SHA-256$%d:%s$%s:%s", iterations, saltB64, storedKeyB64, serverKeyB64), nil
+}
+
+func ensureDatabaseUserIsCreatedWithHash(ctx context.Context, db SQLDatabaseManager, username, scramHash string) error {
 	query := fmt.Sprintf("SELECT 1 FROM pg_roles WHERE rolname='%s'", username)
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
@@ -116,7 +172,7 @@ func ensureDatabaseUserIsCreated(ctx context.Context, db SQLDatabaseManager, use
 		return nil
 	}
 
-	query = fmt.Sprintf("CREATE USER %s WITH PASSWORD '%s'", username, password)
+	query = fmt.Sprintf("CREATE USER %s WITH PASSWORD '%s'", username, scramHash)
 	_, err = db.QueryContext(ctx, query)
 	if err != nil {
 		return errors.New("failed to run create user SQL command: error suppressed")
