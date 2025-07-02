@@ -7,9 +7,7 @@ package utility
 import (
 	"os"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -60,7 +58,6 @@ type utilityGroup struct {
 	logger             log.FieldLogger
 	cluster            *model.Cluster
 	awsClient          aws.AWS
-	argocdClient       argocd.Client
 	kubeconfigPath     string
 	tempDir            string
 	allowCIDRRangeList []string
@@ -83,76 +80,73 @@ var helmRepos = map[string]string{
 func NewUtilityGroupHandle(
 	allowCIDRRangeList []string,
 	kubeconfigPath string,
-	tempDir string,
 	cluster *model.Cluster,
 	awsClient aws.AWS,
-	gitClient git.Client,
-	argocdClient argocd.Client,
 	parentLogger log.FieldLogger,
 ) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
-	pgbouncer, err := newPgbouncerOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	pgbouncer, err := newPgbouncerOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
-	nginx, err := newNginxOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	nginx, err := newNginxOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
 	}
 
-	nginxInternal, err := newNginxInternalOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	nginxInternal, err := newNginxInternalOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX INTERNAL")
 	}
 
-	prometheusOperator, err := newPrometheusOperatorOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, allowCIDRRangeList, awsClient, gitClient, argocdClient, logger)
+	prometheusOperator, err := newPrometheusOperatorOrUnmanagedHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
 	}
 
-	thanos, err := newThanosOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, allowCIDRRangeList, awsClient, gitClient, argocdClient, logger)
+	thanos, err := newThanosOrUnmanagedHandle(cluster, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Thanos")
 	}
 
-	fluentbit, err := newFluentbitOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	fluentbit, err := newFluentbitOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
-	teleport, err := newTeleportOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	teleport, err := newTeleportOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Teleport")
 	}
 
-	promtail, err := newPromtailOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	promtail, err := newPromtailOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
-	rtcd, err := newRtcdOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	rtcd, err := newRtcdOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for RTCD")
 	}
 
-	nodeProblemDetector, err := newNodeProblemDetectorOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	nodeProblemDetector, err := newNodeProblemDetectorOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
 	}
 
-	metricsServer, err := newMetricsServerOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	metricsServer, err := newMetricsServerOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
 	}
 
-	velero, err := newVeleroOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	velero, err := newVeleroOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Velero")
 	}
 
-	cloudprober, err := newCloudproberOrUnmanagedHandle(cluster, kubeconfigPath, tempDir, awsClient, gitClient, argocdClient, logger)
+	cloudprober, err := newCloudproberOrUnmanagedHandle(cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for cloudprober")
 	}
@@ -178,9 +172,7 @@ func NewUtilityGroupHandle(
 		logger:             logger,
 		cluster:            cluster,
 		awsClient:          awsClient,
-		argocdClient:       argocdClient,
 		kubeconfigPath:     kubeconfigPath,
-		tempDir:            tempDir,
 		allowCIDRRangeList: allowCIDRRangeList,
 	}, nil
 

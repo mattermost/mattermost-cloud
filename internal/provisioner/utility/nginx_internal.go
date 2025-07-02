@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -32,13 +30,14 @@ type nginxInternal struct {
 	provisioner    string
 }
 
-func newNginxInternalOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
+func newNginxInternalOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.NginxInternalCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.NginxInternalCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.NginxInternalCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
+		return newUnmanagedHandle(model.NginxInternalCanonicalName, kubeconfigPath, []string{}, cluster, awsClient, logger), nil
 	}
+
 	nginxInternal := newNginxInternalHandle(desired, cluster, kubeconfigPath, awsClient, logger)
 	err := nginxInternal.validate()
 	if err != nil {

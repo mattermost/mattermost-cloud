@@ -11,9 +11,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
-	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -33,13 +31,14 @@ type prometheusOperator struct {
 	actualVersion      *model.HelmUtilityVersion
 }
 
-func newPrometheusOperatorOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, allowCIDRRangeList []string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
+func newPrometheusOperatorOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.PrometheusOperatorCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.PrometheusOperatorCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.PrometheusOperatorCanonicalName, kubeconfigPath, tempDir, allowCIDRRangeList, cluster, awsClient, gitClient, argocdClient, logger), nil
+		return newUnmanagedHandle(model.PrometheusOperatorCanonicalName, kubeconfigPath, allowCIDRRangeList, cluster, awsClient, logger), nil
 	}
+
 	prometheusOperator := newPrometheusOperatorHandle(cluster, desired, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
 	err := prometheusOperator.validate()
 	if err != nil {

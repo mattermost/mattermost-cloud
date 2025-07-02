@@ -11,9 +11,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
-	"github.com/mattermost/mattermost-cloud/internal/tools/argocd"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/git"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -29,17 +27,18 @@ type thanos struct {
 	desiredVersion     *model.HelmUtilityVersion
 }
 
-func newThanosOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath, tempDir string, allowCIDRRangeList []string, awsClient aws.AWS, gitClient git.Client, argocdClient argocd.Client, logger log.FieldLogger) (Utility, error) {
+func newThanosOrUnmanagedHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (Utility, error) {
 	desired := cluster.DesiredUtilityVersion(model.ThanosCanonicalName)
 	actual := cluster.ActualUtilityVersion(model.ThanosCanonicalName)
 
 	if model.UtilityIsUnmanaged(desired, actual) {
-		return newUnmanagedHandle(model.ThanosCanonicalName, kubeconfigPath, tempDir, []string{}, cluster, awsClient, gitClient, argocdClient, logger), nil
+		return newUnmanagedHandle(model.ThanosCanonicalName, kubeconfigPath, allowCIDRRangeList, cluster, awsClient, logger), nil
 	}
+
 	thanos := newThanosHandle(cluster, desired, kubeconfigPath, allowCIDRRangeList, awsClient, logger)
 	err := thanos.validate()
 	if err != nil {
-		return nil, errors.Wrap(err, "teleport utility config is invalid")
+		return nil, errors.Wrap(err, "thanos utility config is invalid")
 	}
 
 	return thanos, nil
