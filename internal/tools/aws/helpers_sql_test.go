@@ -5,15 +5,12 @@
 package aws
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"database/sql"
 	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -150,44 +147,7 @@ func TestGenerateSCRAMSHA256HashEdgeCases(t *testing.T) {
 	})
 }
 
-// Mock database for testing ensureDatabaseUserIsCreatedWithHash
-type mockDB struct {
-	queries   []string
-	responses [][]string
-	errors    []error
-	callCount int
-}
-
-func (m *mockDB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	defer func() { m.callCount++ }()
-
-	if m.callCount >= len(m.errors) {
-		return nil, errors.New("unexpected query call")
-	}
-
-	m.queries = append(m.queries, query)
-
-	if m.errors[m.callCount] != nil {
-		return nil, m.errors[m.callCount]
-	}
-
-	// Create a mock result based on the response
-	response := m.responses[m.callCount]
-	return createMockRows(response), nil
-}
-
-func (m *mockDB) Close() error {
-	return nil
-}
-
-// Helper to create mock SQL rows
-func createMockRows(data []string) *sql.Rows {
-	// This is a simplified mock - in a real scenario you'd want a more sophisticated mock
-	// For our test purposes, we'll use a simple approach
-	return &sql.Rows{}
-}
-
-// Since sql.Rows is difficult to mock, let's create a simpler test that focuses on the logic
+// Since sql.Rows is difficult to mock properly, we focus on testing the SQL generation logic
 func TestEnsureDatabaseUserIsCreatedWithHash(t *testing.T) {
 	t.Run("SQL query format", func(t *testing.T) {
 		// Test that the function generates the correct SQL queries
