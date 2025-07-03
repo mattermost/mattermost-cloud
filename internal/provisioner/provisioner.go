@@ -46,6 +46,7 @@ type ProvisioningParams struct {
 	SLOInstallationGroups     []string
 	SLOEnterpriseGroups       []string
 	EtcdManagerEnv            map[string]string
+	PodProbeOverrides         model.PodProbeOverrides
 }
 
 type Provisioner struct {
