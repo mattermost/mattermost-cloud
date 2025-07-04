@@ -132,7 +132,7 @@ goformat:
 
 .PHONY: dev-start
 dev-start:
-	docker-compose up -d
+	docker compose up -d
 
 ## Checks if imports are formatted correctly.
 .PHONY: goimports

@@ -24,6 +24,7 @@ listen_addr = *
 listen_port = 5432
 auth_file = /etc/userlist/userlist.txt
 auth_query = SELECT usename, passwd FROM pgbouncer.pgbouncer_users WHERE usename=$1
+auth_type = scram-sha-256
 admin_users = admin
 ignore_startup_parameters = extra_float_digits
 tcp_keepalive = 1

@@ -6,7 +6,6 @@ package aws
 
 import (
 	"context"
-	"crypto/md5"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -350,7 +349,13 @@ func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID strin
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
 
-	err = ensureDatabaseUserIsCreated(ctx, d.db, authUserSecret.MasterUsername, authUserSecret.MasterPassword)
+	// Generate SCRAM-SHA-256 hash for the auth user password
+	authScramHash, err := generateSCRAMSHA256Hash(authUserSecret.MasterPassword)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate SCRAM-SHA-256 hash for auth user")
+	}
+
+	err = ensureDatabaseUserIsCreatedWithHash(ctx, d.db, authUserSecret.MasterUsername, authScramHash)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure pgbouncer user was created")
 	}
@@ -456,12 +461,18 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseNam
 		return errors.Wrap(err, "failed to get a secret for installation")
 	}
 
-	err = ensureDatabaseUserIsCreated(ctx, d.db, installationSecret.MasterUsername, installationSecret.MasterPassword)
+	// Generate SCRAM-SHA-256 hash once to ensure consistency between PostgreSQL user and PGBouncer entry
+	scramHash, err := generateSCRAMSHA256Hash(installationSecret.MasterPassword)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate SCRAM-SHA-256 hash")
+	}
+
+	err = ensureDatabaseUserIsCreatedWithHash(ctx, d.db, installationSecret.MasterUsername, scramHash)
 	if err != nil {
 		return errors.Wrap(err, "failed to create Mattermost database user")
 	}
 
-	err = d.ensureInstallationUserAddedToUsersTable(ctx, installationSecret.MasterUsername, installationSecret.MasterPassword)
+	err = d.ensureInstallationUserAddedToUsersTableWithHash(ctx, installationSecret.MasterUsername, scramHash)
 	if err != nil {
 		return errors.Wrap(err, "failed to create Mattermost user entry for PGBouncer")
 	}
@@ -479,7 +490,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseNam
 	return nil
 }
 
-func (d *RDSMultitenantPGBouncerDatabase) ensureInstallationUserAddedToUsersTable(ctx context.Context, username, password string) error {
+func (d *RDSMultitenantPGBouncerDatabase) ensureInstallationUserAddedToUsersTableWithHash(ctx context.Context, username, scramHash string) error {
 	query := fmt.Sprintf("SELECT usename FROM pgbouncer.pgbouncer_users WHERE usename = '%s';", username)
 	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
@@ -489,7 +500,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureInstallationUserAddedToUsersTabl
 		return nil
 	}
 
-	query = fmt.Sprintf(`INSERT INTO pgbouncer.pgbouncer_users (usename, passwd) VALUES ('%s', 'md5%x')`, username, md5.Sum([]byte(password+username)))
+	query = fmt.Sprintf(`INSERT INTO pgbouncer.pgbouncer_users (usename, passwd) VALUES ('%s', '%s')`, username, scramHash)
 	_, err = d.db.QueryContext(ctx, query)
 	if err != nil {
 		return errors.Wrap(err, "failed to run create pgbouncer installation user SQL command")
