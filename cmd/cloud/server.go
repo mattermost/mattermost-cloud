@@ -94,22 +94,6 @@ func executeServerCmd(flags serverFlags) error {
 	if len(model.GetGitlabToken()) == 0 {
 		logger.Warnf("The gitlab-oauth flag and %s were empty; using local helm charts", model.GitlabOAuthTokenKey)
 	}
-	ArgocdApiToken := flags.argocdApiToken
-	if len(ArgocdApiToken) == 0 {
-		ArgocdApiToken = os.Getenv(model.ArgocdApiToken)
-	}
-	model.SetArgocdApiToken(ArgocdApiToken)
-	if len(model.GetArgocdApiToken()) == 0 {
-		logger.Warnf("The argocd-api-token flag and %s were empty; using managed utilities", model.ArgocdApiToken)
-	}
-	ArgocdServerApi := flags.argocdServerApi
-	if len(ArgocdServerApi) == 0 {
-		ArgocdServerApi = os.Getenv(model.ArgocdServerApi)
-	}
-	model.SetArgocdServerApi(ArgocdServerApi)
-	if len(model.GetArgocdServerApi()) == 0 {
-		logger.Warnf("The argocd-server-api flag and %s were empty; using managed utilities", model.ArgocdServerApi)
-	}
 
 	if flags.machineLogs {
 		logger.SetFormatter(&logrus.JSONFormatter{})
@@ -302,7 +286,6 @@ func executeServerCmd(flags serverFlags) error {
 		sqlStore,
 		logger,
 		gitlabOAuthToken,
-		ArgocdApiToken,
 	)
 
 	eksProvisioner := provisioner.NewEKSProvisioner(
@@ -600,7 +583,12 @@ func checkRequirements(logger logrus.FieldLogger) error {
 // deprecationWarnings performs all checks for deprecated settings and warns if
 // any are found.
 func deprecationWarnings(logger logrus.FieldLogger, flags serverFlags) {
-
+	if flags.argocdApiToken != "" {
+		logger.Warn("ArgocdApiToken flag is deprecated")
+	}
+	if flags.argocdServerApi != "" {
+		logger.Warn("ArgocdServerApi flag is deprecated")
+	}
 }
 
 // getHumanReadableID  represents  a  best  effort  attempt  to  retrieve  an
