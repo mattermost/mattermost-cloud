@@ -124,9 +124,24 @@ func (w *ClusterSuite) CheckClusterResize(ctx context.Context) error {
 		return errors.Wrap(err, "while getting cluster")
 	}
 
-	if cluster.ProvisionerMetadataKops.MasterInstanceType != "t3.medium" {
-		return errors.Wrapf(err, "Expected master instance type to be t2.micro, got %s", cluster.ProvisionerMetadataKops.MasterInstanceType)
-
+	// Check cluster resize success based on provisioner type
+	switch cluster.Provisioner {
+	case model.ProvisionerKops:
+		if cluster.ProvisionerMetadataKops.MasterInstanceType != "t3.medium" {
+			return errors.Errorf("Expected master instance type to be t3.medium, got %s", cluster.ProvisionerMetadataKops.MasterInstanceType)
+		}
+	case model.ProvisionerEKS:
+		// For EKS, check that cluster is stable (resize operations complete when stable)
+		if cluster.State != model.ClusterStateStable {
+			return errors.Errorf("Expected cluster to be stable after resize, got state %s", cluster.State)
+		}
+		w.logger.Info("EKS cluster resize verification: cluster is stable")
+	default:
+		// For other provisioners, just verify cluster is stable
+		if cluster.State != model.ClusterStateStable {
+			return errors.Errorf("Expected cluster to be stable after resize, got state %s", cluster.State)
+		}
+		w.logger.Infof("Cluster resize verification for provisioner %s: cluster is stable", cluster.Provisioner)
 	}
 
 	return nil

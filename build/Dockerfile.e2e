@@ -12,7 +12,7 @@ COPY go.sum .
 RUN go mod download
 COPY . .
 
-RUN CGO_ENABLED=0 go test -tags=e2e -c -ldflags="-s -w" -o mattermost-cloud-e2e-cluster-tests ./e2e/tests/cluster
+# Only build installation tests (cluster tests are deprecated)
 RUN CGO_ENABLED=0 go test -tags=e2e -c -ldflags="-s -w" -o mattermost-cloud-e2e-installation-tests ./e2e/tests/installation
 
 # Final Image
@@ -29,7 +29,6 @@ LABEL name="Mattermost Cloud E2E" \
   url="https://mattermost.com"
 
 WORKDIR /mattermost-cloud-e2e/
-COPY --from=build /mattermost-cloud-e2e/mattermost-cloud-e2e-cluster-tests /mattermost-cloud-e2e
 COPY --from=build /mattermost-cloud-e2e/mattermost-cloud-e2e-installation-tests /mattermost-cloud-e2e
 COPY --from=build /mattermost-cloud-e2e/build/bin-e2e /mattermost-cloud-e2e
 

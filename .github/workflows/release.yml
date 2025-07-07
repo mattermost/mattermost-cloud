@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push multi-platform images with clean tags
+        run: make build-image-parallel-with-tags
+        env:
+          TAG: ${{ steps.version.outputs.VERSION }}
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build binaries
+        run: make build
+
+      - name: Create release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        with:
+          generate_release_notes: true
+          files: |
+            ./build/_output/bin/cloud
+            ./build/_output/bin/cloud-darwin-amd64
+            ./build/_output/bin/cloud-darwin-arm64
+            ./build/_output/bin/cloud-linux-amd64
+            ./build/_output/bin/cloud-linux-arm64
+            ./build/_output/bin/cloud-windows-amd64.exe
+            ./build/_output/bin/cloud-windows-arm64.exe
+            ./build/_output/bin/mmctl
+            ./build/_output/bin/mmctl-darwin-amd64
+            ./build/_output/bin/mmctl-darwin-arm64
+            ./build/_output/bin/mmctl-linux-amd64
+            ./build/_output/bin/mmctl-linux-arm64
+            ./build/_output/bin/mmctl-windows-amd64.exe
+            ./build/_output/bin/mmctl-windows-arm64.exe
+            ./build/_output/bin/operator
+            ./build/_output/bin/operator-darwin-amd64
+            ./build/_output/bin/operator-darwin-arm64
+            ./build/_output/bin/operator-linux-amd64
+            ./build/_output/bin/operator-linux-arm64
+            ./build/_output/bin/operator-windows-amd64.exe
+            ./build/_output/bin/operator-windows-arm64.exe
+            ./build/_output/bin/provisioner
+            ./build/_output/bin/provisioner-darwin-amd64
+            ./build/_output/bin/provisioner-darwin-arm64
+            ./build/_output/bin/provisioner-linux-amd64
+            ./build/_output/bin/provisioner-linux-arm64
+            ./build/_output/bin/provisioner-windows-amd64.exe
+            ./build/_output/bin/provisioner-windows-arm64.exe
+            ./build/_output/bin/webhook
+            ./build/_output/bin/webhook-darwin-amd64
+            ./build/_output/bin/webhook-darwin-arm64
+            ./build/_output/bin/webhook-linux-amd64
+            ./build/_output/bin/webhook-linux-arm64
+            ./build/_output/bin/webhook-windows-amd64.exe
+            ./build/_output/bin/webhook-windows-arm64.exe
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

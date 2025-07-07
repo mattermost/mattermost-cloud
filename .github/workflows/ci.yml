@@ -81,19 +81,113 @@ jobs:
         run: make unittest
         working-directory: ./cmd/tools/testwick
 
-  build:
+  # Build AMD64 image on native AMD64 runner
+  build-amd64:
     runs-on: ubuntu-24.04
-    needs:
-      - test
-      - lint
+    needs: [test, lint]
     steps:
-      - name: ci/checkout-repo
+      - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
 
-      - name: ci/build-docker
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build AMD64 image
+        run: make build-image-amd64
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
-        uses: ./.github/actions/docker-build
+
+  # Build ARM64 image on native ARM64 runner
+  build-arm64:
+    runs-on: ubuntu-24.04-arm64
+    needs: [test, lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build ARM64 image
+        run: make build-image-arm64
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # Create clean multi-platform manifest
+  create-manifest:
+    runs-on: ubuntu-24.04
+    needs: [build-amd64, build-arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create multi-platform manifest
+        run: |
+          # Determine image tag based on event type
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            IMAGE_TAG="pr-${{ github.event.number }}"
+          elif [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            IMAGE_TAG="latest"
+          else
+            IMAGE_TAG="${{ github.ref_name }}"
+          fi
+          
+          # Create clean multi-platform manifest
+          docker manifest create mattermost/mattermost-cloud:${IMAGE_TAG} \
+            --amend mattermost/mattermost-cloud:test-amd64 \
+            --amend mattermost/mattermost-cloud:test-arm64
+          
+          docker manifest push mattermost/mattermost-cloud:${IMAGE_TAG}
+          
+          echo "✅ Clean multi-platform image ready: mattermost/mattermost-cloud:${IMAGE_TAG}"
+
+  # Build E2E images (only installation tests, only on master branch)
+  build-e2e:
+    runs-on: ubuntu-24.04
+    needs: [test, lint]
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push E2E
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
+        with:
+          context: .
+          file: ./build/Dockerfile.e2e
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: mattermost/mattermost-cloud-e2e:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
