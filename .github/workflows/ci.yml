@@ -148,9 +148,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Create unified multi-arch manifest
         run: |
           # Determine clean tag
@@ -172,28 +169,31 @@ jobs:
           
           echo "✅ Clean unified multi-arch tag: mattermost/mattermost-cloud:${CLEAN_TAG}"
           
-          # Cleanup temp tags from Docker Hub
-          echo "🗑️  Cleaning up temp tags..."
+          # Cleanup temp tags using Docker Hub API
+          echo "🗑️  Cleaning up temp tags from Docker Hub..."
           
-          # Note: Docker Hub API doesn't have direct delete via docker CLI
-          # We'll use Docker Hub API to delete the temp tags
-          
+          # Delete temp tags using Docker Hub API
           TEMP_AMD64_TAG="temp-${{ github.sha }}-amd64"
           TEMP_ARM64_TAG="temp-${{ github.sha }}-arm64"
           
-          # Get Docker Hub token
-          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "'${{ secrets.DOCKERHUB_USERNAME }}'", "password": "'${{ secrets.DOCKERHUB_TOKEN }}'"}' https://hub.docker.com/v2/users/login/ | jq -r .token)
+          # Get Docker Hub API token
+          DOCKER_HUB_TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"username": "${{ secrets.DOCKERHUB_USERNAME }}", "password": "${{ secrets.DOCKERHUB_CLEANUP_TOKEN }}"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
           
-          # Delete temp AMD64 tag
-          curl -i -X DELETE \
-            -H "Authorization: JWT ${TOKEN}" \
-            https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud/tags/${TEMP_AMD64_TAG}/
+          # Delete AMD64 temp tag
+          curl -X DELETE \
+            -H "Authorization: JWT ${DOCKER_HUB_TOKEN}" \
+            "https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud/tags/${TEMP_AMD64_TAG}/" \
+            && echo "✅ Deleted AMD64 temp tag" || echo "⚠️  AMD64 temp tag not found or already deleted"
           
-          # Delete temp ARM64 tag  
-          curl -i -X DELETE \
-            -H "Authorization: JWT ${TOKEN}" \
-            https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud/tags/${TEMP_ARM64_TAG}/
-            
+          # Delete ARM64 temp tag
+          curl -X DELETE \
+            -H "Authorization: JWT ${DOCKER_HUB_TOKEN}" \
+            "https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud/tags/${TEMP_ARM64_TAG}/" \
+            && echo "✅ Deleted ARM64 temp tag" || echo "⚠️  ARM64 temp tag not found or already deleted"
+          
           echo "✅ Temp tags cleaned up from Docker Hub"
 
   # Build E2E AMD64 (native build, parallel with main builds)
@@ -259,9 +259,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Create unified E2E multi-arch manifest
         run: |
           # Create manifest from temp tags
@@ -274,22 +271,29 @@ jobs:
           
           echo "✅ Clean unified E2E multi-arch tag: mattermost/mattermost-cloud-e2e:test"
           
-          # Cleanup temp E2E tags from Docker Hub
-          echo "🗑️  Cleaning up temp E2E tags..."
+          # Cleanup temp E2E tags using Docker Hub API
+          echo "🗑️  Cleaning up temp E2E tags from Docker Hub..."
           
+          # Delete temp E2E tags using Docker Hub API
           TEMP_AMD64_TAG="temp-${{ github.sha }}-amd64"
           TEMP_ARM64_TAG="temp-${{ github.sha }}-arm64"
           
-          # Get Docker Hub token
-          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "'${{ secrets.DOCKERHUB_USERNAME }}'", "password": "'${{ secrets.DOCKERHUB_TOKEN }}'"}' https://hub.docker.com/v2/users/login/ | jq -r .token)
+          # Get Docker Hub API token
+          DOCKER_HUB_TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"username": "${{ secrets.DOCKERHUB_USERNAME }}", "password": "${{ secrets.DOCKERHUB_CLEANUP_TOKEN }}"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
           
-          # Delete temp E2E tags
-          curl -i -X DELETE \
-            -H "Authorization: JWT ${TOKEN}" \
-            https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud-e2e/tags/${TEMP_AMD64_TAG}/
+          # Delete E2E AMD64 temp tag
+          curl -X DELETE \
+            -H "Authorization: JWT ${DOCKER_HUB_TOKEN}" \
+            "https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud-e2e/tags/${TEMP_AMD64_TAG}/" \
+            && echo "✅ Deleted E2E AMD64 temp tag" || echo "⚠️  E2E AMD64 temp tag not found or already deleted"
           
-          curl -i -X DELETE \
-            -H "Authorization: JWT ${TOKEN}" \
-            https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud-e2e/tags/${TEMP_ARM64_TAG}/
-            
+          # Delete E2E ARM64 temp tag
+          curl -X DELETE \
+            -H "Authorization: JWT ${DOCKER_HUB_TOKEN}" \
+            "https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud-e2e/tags/${TEMP_ARM64_TAG}/" \
+            && echo "✅ Deleted E2E ARM64 temp tag" || echo "⚠️  E2E ARM64 temp tag not found or already deleted"
+          
           echo "✅ Temp E2E tags cleaned up from Docker Hub"
