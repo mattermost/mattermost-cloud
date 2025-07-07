@@ -199,7 +199,7 @@ build-image-amd64:  ## Build the docker image for mattermost-cloud (AMD64 only, 
 	fi
 	docker buildx build \
 	--platform linux/amd64 \
-	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE)-amd64 \
+	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) \
 	--cache-from=type=gha \
 	--cache-to=type=gha,mode=max \
 	--push

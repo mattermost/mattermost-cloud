@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-24.04
@@ -81,7 +85,7 @@ jobs:
         run: make unittest
         working-directory: ./cmd/tools/testwick
 
-  # Build AMD64 image on native AMD64 runner
+  # Build AMD64 image (fast native build)
   build-amd64:
     runs-on: ubuntu-24.04
     needs: [test, lint]
@@ -97,13 +101,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build AMD64 image
-        run: make build-image-amd64
+      - name: Build AMD64 image (temp tag)
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            . -f build/Dockerfile -t mattermost/mattermost-cloud:temp-${{ github.sha }}-amd64 \
+            --push
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  # Build ARM64 image on native ARM runner
+  # Build ARM64 image (fast native build)
   build-arm64:
     runs-on: ubuntu-24.04-arm
     needs: [test, lint]
@@ -119,61 +127,110 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build ARM64 image
-        run: make build-image-arm64
+      - name: Build ARM64 image (temp tag)
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            . -f build/Dockerfile -t mattermost/mattermost-cloud:temp-${{ github.sha }}-arm64 \
+            --push
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  # Create clean multi-platform manifest
+  # Create unified multi-arch manifest (clean tag)
   create-manifest:
     runs-on: ubuntu-24.04
     needs: [build-amd64, build-arm64]
     steps:
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          fetch-depth: 0
-
       - name: Log in to Docker Hub
         uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Create multi-platform manifest
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Create unified multi-arch manifest
         run: |
-          # Determine image tag based on event type
+          # Determine clean tag
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            IMAGE_TAG="pr-${{ github.event.number }}"
+            CLEAN_TAG="pr-${{ github.event.number }}"
           elif [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            IMAGE_TAG="latest"
+            CLEAN_TAG="latest"
           else
-            IMAGE_TAG="${{ github.ref_name }}"
+            CLEAN_TAG="${{ github.ref_name }}"
           fi
           
-          # Create clean multi-platform manifest
-          docker manifest create mattermost/mattermost-cloud:${IMAGE_TAG} \
-            --amend mattermost/mattermost-cloud:test-amd64 \
-            --amend mattermost/mattermost-cloud:test-arm64
+          # Create manifest from temp tags
+          docker manifest create mattermost/mattermost-cloud:${CLEAN_TAG} \
+            --amend mattermost/mattermost-cloud:temp-${{ github.sha }}-amd64 \
+            --amend mattermost/mattermost-cloud:temp-${{ github.sha }}-arm64
           
-          docker manifest push mattermost/mattermost-cloud:${IMAGE_TAG}
+          # Push the clean unified tag
+          docker manifest push mattermost/mattermost-cloud:${CLEAN_TAG}
           
-          echo "✅ Clean multi-platform image ready: mattermost/mattermost-cloud:${IMAGE_TAG}"
+          echo "✅ Clean unified multi-arch tag: mattermost/mattermost-cloud:${CLEAN_TAG}"
+          
+          # Cleanup temp tags from Docker Hub
+          echo "🗑️  Cleaning up temp tags..."
+          
+          # Note: Docker Hub API doesn't have direct delete via docker CLI
+          # We'll use Docker Hub API to delete the temp tags
+          
+          TEMP_AMD64_TAG="temp-${{ github.sha }}-amd64"
+          TEMP_ARM64_TAG="temp-${{ github.sha }}-arm64"
+          
+          # Get Docker Hub token
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "'${{ secrets.DOCKERHUB_USERNAME }}'", "password": "'${{ secrets.DOCKERHUB_TOKEN }}'"}' https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          # Delete temp AMD64 tag
+          curl -i -X DELETE \
+            -H "Authorization: JWT ${TOKEN}" \
+            https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud/tags/${TEMP_AMD64_TAG}/
+          
+          # Delete temp ARM64 tag  
+          curl -i -X DELETE \
+            -H "Authorization: JWT ${TOKEN}" \
+            https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud/tags/${TEMP_ARM64_TAG}/
+            
+          echo "✅ Temp tags cleaned up from Docker Hub"
 
-  # Build E2E images (only installation tests, only on master branch)
-  build-e2e:
+  # Build E2E AMD64 (native build, parallel with main builds)
+  build-e2e-amd64:
     runs-on: ubuntu-24.04
     needs: [test, lint]
-    if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build E2E AMD64 image (temp tag)
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            . -f build/Dockerfile.e2e -t mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-amd64 \
+            --push
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # Build E2E ARM64 (native build on ARM runner, parallel with main builds)
+  build-e2e-arm64:
+    runs-on: ubuntu-24.04-arm
+    needs: [test, lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
 
       - name: Log in to Docker Hub
         uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
@@ -181,13 +238,58 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push E2E
-        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
+      - name: Build E2E ARM64 image (temp tag)
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            . -f build/Dockerfile.e2e -t mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-arm64 \
+            --push
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # Create unified E2E multi-arch manifest
+  create-e2e-manifest:
+    runs-on: ubuntu-24.04
+    needs: [build-e2e-amd64, build-e2e-arm64]
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
-          context: .
-          file: ./build/Dockerfile.e2e
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: mattermost/mattermost-cloud-e2e:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Create unified E2E multi-arch manifest
+        run: |
+          # Create manifest from temp tags
+          docker manifest create mattermost/mattermost-cloud-e2e:test \
+            --amend mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-amd64 \
+            --amend mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-arm64
+          
+          # Push the clean unified tag
+          docker manifest push mattermost/mattermost-cloud-e2e:test
+          
+          echo "✅ Clean unified E2E multi-arch tag: mattermost/mattermost-cloud-e2e:test"
+          
+          # Cleanup temp E2E tags from Docker Hub
+          echo "🗑️  Cleaning up temp E2E tags..."
+          
+          TEMP_AMD64_TAG="temp-${{ github.sha }}-amd64"
+          TEMP_ARM64_TAG="temp-${{ github.sha }}-arm64"
+          
+          # Get Docker Hub token
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "'${{ secrets.DOCKERHUB_USERNAME }}'", "password": "'${{ secrets.DOCKERHUB_TOKEN }}'"}' https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          # Delete temp E2E tags
+          curl -i -X DELETE \
+            -H "Authorization: JWT ${TOKEN}" \
+            https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud-e2e/tags/${TEMP_AMD64_TAG}/
+          
+          curl -i -X DELETE \
+            -H "Authorization: JWT ${TOKEN}" \
+            https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud-e2e/tags/${TEMP_ARM64_TAG}/
+            
+          echo "✅ Temp E2E tags cleaned up from Docker Hub"
