@@ -291,6 +291,25 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 				ExternalDatabaseConfig: model.ExternalDatabaseRequest{},
 			},
 		},
+		{
+			"valid local-ephemeral filestore",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID:   "owner1",
+				DNSNames:  []string{"my-installation.example.com"},
+				Name:      "my-installation",
+				Filestore: model.InstallationFilestoreLocalEphemeral,
+			},
+		},
+		{
+			"local-ephemeral filestore with minimal config",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID:   "owner1",
+				DNS:       "domain4321.com",
+				Filestore: model.InstallationFilestoreLocalEphemeral,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -347,6 +366,19 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 
 		assert.Equal(t, "my-installation", request.Name)
 		assert.Equal(t, []string{"my-installation.mattermost.cloud.com"}, request.DNSNames)
+	})
+
+	t.Run("set default filestore with local-ephemeral override", func(t *testing.T) {
+		request := &model.CreateInstallationRequest{
+			OwnerID:   "owner1",
+			DNS:       "my-installation.mattermost.cloud.com",
+			Filestore: model.InstallationFilestoreLocalEphemeral,
+		}
+
+		request.SetDefaults()
+
+		assert.Equal(t, model.InstallationFilestoreLocalEphemeral, request.Filestore)
+		assert.Equal(t, "my-installation", request.Name)
 	})
 }
 

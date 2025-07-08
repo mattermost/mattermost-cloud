@@ -119,6 +119,8 @@ func (r *ResourceUtil) GetFilestore(installation *model.Installation) model.File
 	switch installation.Filestore {
 	case model.InstallationFilestoreMinioOperator:
 		return model.NewMinioOperatorFilestore()
+	case model.InstallationFilestoreLocalEphemeral:
+		return model.NewLocalEphemeralFilestore()
 	case model.InstallationFilestoreAwsS3:
 		return aws.NewS3Filestore(installation.ID, r.awsClient, r.enableS3Versioning)
 	case model.InstallationFilestoreMultiTenantAwsS3:
