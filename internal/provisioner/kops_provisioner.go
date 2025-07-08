@@ -34,7 +34,6 @@ type KopsProvisioner struct {
 	logger           log.FieldLogger
 	kopsCache        map[string]*kops.Cmd
 	gitlabOAuthToken string
-	argocdApiToken   string
 }
 
 var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
@@ -46,7 +45,6 @@ func NewKopsProvisioner(
 	store model.InstallationDatabaseStoreInterface,
 	logger log.FieldLogger,
 	gitlabOAuthToken string,
-	argocdApiToken string,
 ) *KopsProvisioner {
 
 	logger = logger.WithField("provisioner", "kops")
@@ -58,7 +56,6 @@ func NewKopsProvisioner(
 		logger:           logger,
 		kopsCache:        make(map[string]*kops.Cmd),
 		gitlabOAuthToken: gitlabOAuthToken,
-		argocdApiToken:   argocdApiToken,
 	}
 }
 

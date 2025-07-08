@@ -5,8 +5,6 @@
 package utility
 
 import (
-	"os"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -59,7 +57,6 @@ type utilityGroup struct {
 	cluster            *model.Cluster
 	awsClient          aws.AWS
 	kubeconfigPath     string
-	tempDir            string
 	allowCIDRRangeList []string
 }
 
@@ -206,14 +203,6 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	}
 
 	logger.Info("Ensuring all Helm repos are added")
-	// Check if the cluster directory exists
-	_, err = os.Stat(group.tempDir + "/apps/dev/helm-values/" + group.cluster.ID)
-	if os.IsNotExist(err) {
-		// Create the cluster directory
-		if err = os.MkdirAll(group.tempDir+"/apps/dev/helm-values/"+group.cluster.ID, 0755); err != nil {
-			return errors.Wrap(err, "failed to create cluster directory for helm values")
-		}
-	}
 
 	logger.Info("Adding new Helm repos.")
 	for repoName, repoURL := range helmRepos {
