@@ -11,6 +11,7 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -67,13 +68,15 @@ func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, err
 
 // PatchGroupRequest specifies the parameters for an updated group.
 type PatchGroupRequest struct {
-	ID            string
-	MaxRolling    *int64
-	Name          *string
-	Description   *string
-	Version       *string
-	Image         *string
-	MattermostEnv EnvVarMap
+	ID             string
+	MaxRolling     *int64
+	Name           *string
+	Description    *string
+	Version        *string
+	Image          *string
+	MattermostEnv  EnvVarMap
+	ReadinessProbe *corev1.Probe
+	LivenessProbe  *corev1.Probe
 
 	ForceSequenceUpdate       bool
 	ForceInstallationsRestart bool
@@ -107,6 +110,14 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 		if group.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
 			applied = true
 		}
+	}
+	if p.ReadinessProbe != nil {
+		applied = true
+		group.ReadinessProbe = p.ReadinessProbe
+	}
+	if p.LivenessProbe != nil {
+		applied = true
+		group.LivenessProbe = p.LivenessProbe
 	}
 
 	// This special value allows us to bump the group sequence number even when

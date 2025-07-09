@@ -2279,4 +2279,17 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.52.0"), semver.MustParse("0.53.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE "Group" ADD COLUMN ReadinessProbe JSON DEFAULT NULL;`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create ReadinessProbe column")
+		}
+
+		_, err = e.Exec(`ALTER TABLE "Group" ADD COLUMN LivenessProbe JSON DEFAULT NULL;`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create LivenessProbe column")
+		}
+
+		return nil
+	}},
 }
