@@ -7,6 +7,8 @@ package model
 import (
 	"encoding/json"
 	"io"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Group represents a group of Mattermost installations.
@@ -19,6 +21,8 @@ type Group struct {
 	Image           string
 	MaxRolling      int64
 	MattermostEnv   EnvVarMap
+	ReadinessProbe  *corev1.Probe `json:"readinessProbe,omitempty"`
+	LivenessProbe   *corev1.Probe `json:"livenessProbe,omitempty"`
 	CreateAt        int64
 	DeleteAt        int64
 	APISecurityLock bool
