@@ -295,10 +295,31 @@ func fetchAMI(cloudClient *model.Client, logger logrus.FieldLogger) (string, err
 		return ami, nil
 	}
 
-	ami := clusters[0].ProvisionerMetadataKops.AMI
-	logrus.Infof("Fetched AMI from existing cluster: %q", ami)
-
-	return ami, nil
+	// Handle different provisioner types for AMI fetching
+	cluster := clusters[0]
+	switch cluster.Provisioner {
+	case model.ProvisionerKops:
+		ami := cluster.ProvisionerMetadataKops.AMI
+		logrus.Infof("Fetched AMI from existing kops cluster: %q", ami)
+		return ami, nil
+	case model.ProvisionerEKS:
+		// EKS doesn't use custom AMIs in the same way, try to fetch from AWS
+		ami, err := fetchAMIFromAWS(logger)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to fetch AMI from AWS for EKS")
+		}
+		logrus.Infof("Fetched AMI from AWS for EKS: %q", ami)
+		return ami, nil
+	default:
+		// For other provisioners, try AWS first, then fallback to empty string
+		ami, err := fetchAMIFromAWS(logger)
+		if err != nil {
+			logger.WithError(err).Warn("Failed to fetch AMI from AWS, using empty string")
+			return "", nil // Return empty AMI if not available
+		}
+		logrus.Infof("Fetched AMI from AWS for provisioner %s: %q", cluster.Provisioner, ami)
+		return ami, nil
+	}
 }
 
 func fetchAMIFromAWS(logger logrus.FieldLogger) (string, error) {

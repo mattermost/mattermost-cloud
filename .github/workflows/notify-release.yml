@@ -1,25 +1,88 @@
 name: notify-release
+
 on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
   notify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f #v3.4.0
-      - shell: bash
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Extract release information
+        id: release_info
+        shell: bash
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
         run: |
-          REPO=$(echo $GITHUB_CONTEXT | jq -r '.repository')
-          TAGVERSION=$(echo $GITHUB_CONTEXT | jq -r '.event.release.tag_name')
-          TAGURL=$(echo $GITHUB_CONTEXT | jq -r '.event.release.html_url')
-          BODY=$(echo $GITHUB_CONTEXT | jq -r '.event.release.body' | sed -E ':a;N;$!ba;s/\r{0,1}\n/\\n/g')
+          # Extract release information safely
+          REPO=$(echo "$GITHUB_CONTEXT" | jq -r '.repository')
+          TAGVERSION=$(echo "$GITHUB_CONTEXT" | jq -r '.event.release.tag_name')
+          TAGURL=$(echo "$GITHUB_CONTEXT" | jq -r '.event.release.html_url')
+          BODY=$(echo "$GITHUB_CONTEXT" | jq -r '.event.release.body // ""')
+          
+          # Clean and format the body text
+          BODY_CLEAN=$(echo "$BODY" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\r*\n/\\n/g')
+          
+          # Set outputs
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
+          echo "tag=$TAGVERSION" >> $GITHUB_OUTPUT
+          echo "url=$TAGURL" >> $GITHUB_OUTPUT
+          echo "body=$BODY_CLEAN" >> $GITHUB_OUTPUT
+          
+          # Debug output
+          echo "Repository: $REPO"
+          echo "Tag: $TAGVERSION"
+          echo "URL: $TAGURL"
+          echo "Body length: ${#BODY_CLEAN}"
 
-          echo "{\"username\":\"Cloud Bot Notify\",\"icon_url\":\"https://mattermost.com/wp-content/uploads/2022/02/icon.png\",\"text\":\"# **New Release for $REPO** - Release [$TAGVERSION]($TAGURL)\n $BODY\"}" > mattermost.json
+      - name: Create notification payload
+        id: payload
+        shell: bash
+        run: |
+          # Create JSON payload with proper escaping
+          cat > mattermost.json << 'EOF'
+          {
+            "username": "Cloud Bot Notify",
+            "icon_url": "https://mattermost.com/wp-content/uploads/2022/02/icon.png",
+            "text": "# 🚀 **New Release for ${{ steps.release_info.outputs.repo }}**\n\n**Release:** [${{ steps.release_info.outputs.tag }}](${{ steps.release_info.outputs.url }})\n\n**Release Notes:**\n${{ steps.release_info.outputs.body }}"
+          }
+          EOF
+          
+          # Validate JSON
+          if ! jq empty mattermost.json 2>/dev/null; then
+            echo "❌ Invalid JSON generated"
+            cat mattermost.json
+            exit 1
+          fi
+          
+          echo "✅ Valid JSON payload created"
           cat mattermost.json
 
-      - uses: mattermost/action-mattermost-notify@1.0.2
+      - name: Send notification to Mattermost
+        uses: mattermost/action-mattermost-notify@master
+        if: env.MATTERMOST_WEBHOOK_URL != ''
         env:
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+        with:
+          payload_file_path: ./mattermost.json
+
+      - name: Fallback notification
+        if: failure()
+        uses: mattermost/action-mattermost-notify@master
+        env:
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+        with:
+          payload: |
+            {
+              "username": "Cloud Bot Notify",
+              "icon_url": "https://mattermost.com/wp-content/uploads/2022/02/icon.png",
+              "text": "# 🚀 **New Release for ${{ steps.release_info.outputs.repo }}**\n\n**Release:** [${{ steps.release_info.outputs.tag }}](${{ steps.release_info.outputs.url }})\n\n_Note: Release notes could not be formatted properly_"
+            }

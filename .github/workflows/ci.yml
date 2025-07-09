@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-24.04
@@ -81,19 +85,215 @@ jobs:
         run: make unittest
         working-directory: ./cmd/tools/testwick
 
-  build:
+  # Build AMD64 image (fast native build)
+  build-amd64:
     runs-on: ubuntu-24.04
-    needs:
-      - test
-      - lint
+    needs: [test, lint]
     steps:
-      - name: ci/checkout-repo
+      - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
 
-      - name: ci/build-docker
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build AMD64 image (temp tag)
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            . -f build/Dockerfile -t mattermost/mattermost-cloud:temp-${{ github.sha }}-amd64 \
+            --push
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
-        uses: ./.github/actions/docker-build
+
+  # Build ARM64 image (fast native build)
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    needs: [test, lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build ARM64 image (temp tag)
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            . -f build/Dockerfile -t mattermost/mattermost-cloud:temp-${{ github.sha }}-arm64 \
+            --push
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # Create unified multi-arch manifest (clean tag)
+  create-manifest:
+    runs-on: ubuntu-24.04
+    needs: [build-amd64, build-arm64]
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create unified multi-arch manifest
+        run: |
+          # Determine clean tag
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CLEAN_TAG="pr-${{ github.event.number }}"
+          elif [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            CLEAN_TAG="latest"
+          else
+            CLEAN_TAG="${{ github.ref_name }}"
+          fi
+          
+          # Create manifest from temp tags
+          docker manifest create mattermost/mattermost-cloud:${CLEAN_TAG} \
+            --amend mattermost/mattermost-cloud:temp-${{ github.sha }}-amd64 \
+            --amend mattermost/mattermost-cloud:temp-${{ github.sha }}-arm64
+          
+          # Push the clean unified tag
+          docker manifest push mattermost/mattermost-cloud:${CLEAN_TAG}
+          
+          echo "✅ Clean unified multi-arch tag: mattermost/mattermost-cloud:${CLEAN_TAG}"
+          
+          # Cleanup temp tags using Docker Hub API
+          echo "🗑️  Cleaning up temp tags from Docker Hub..."
+          
+          # Delete temp tags using Docker Hub API
+          TEMP_AMD64_TAG="temp-${{ github.sha }}-amd64"
+          TEMP_ARM64_TAG="temp-${{ github.sha }}-arm64"
+          
+          # Get Docker Hub API token
+          DOCKER_HUB_TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"username": "${{ secrets.DOCKERHUB_USERNAME }}", "password": "${{ secrets.DOCKERHUB_CLEANUP_TOKEN }}"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          # Delete AMD64 temp tag
+          curl -X DELETE \
+            -H "Authorization: JWT ${DOCKER_HUB_TOKEN}" \
+            "https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud/tags/${TEMP_AMD64_TAG}/" \
+            && echo "✅ Deleted AMD64 temp tag" || echo "⚠️  AMD64 temp tag not found or already deleted"
+          
+          # Delete ARM64 temp tag
+          curl -X DELETE \
+            -H "Authorization: JWT ${DOCKER_HUB_TOKEN}" \
+            "https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud/tags/${TEMP_ARM64_TAG}/" \
+            && echo "✅ Deleted ARM64 temp tag" || echo "⚠️  ARM64 temp tag not found or already deleted"
+          
+          echo "✅ Temp tags cleaned up from Docker Hub"
+
+  # Build E2E AMD64 (native build, parallel with main builds)
+  build-e2e-amd64:
+    runs-on: ubuntu-24.04
+    needs: [test, lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build E2E AMD64 image (temp tag)
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            . -f build/Dockerfile.e2e -t mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-amd64 \
+            --push
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # Build E2E ARM64 (native build on ARM runner, parallel with main builds)
+  build-e2e-arm64:
+    runs-on: ubuntu-24.04-arm
+    needs: [test, lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build E2E ARM64 image (temp tag)
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            . -f build/Dockerfile.e2e -t mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-arm64 \
+            --push
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # Create unified E2E multi-arch manifest
+  create-e2e-manifest:
+    runs-on: ubuntu-24.04
+    needs: [build-e2e-amd64, build-e2e-arm64]
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create unified E2E multi-arch manifest
+        run: |
+          # Create manifest from temp tags
+          docker manifest create mattermost/mattermost-cloud-e2e:test \
+            --amend mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-amd64 \
+            --amend mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-arm64
+          
+          # Push the clean unified tag
+          docker manifest push mattermost/mattermost-cloud-e2e:test
+          
+          echo "✅ Clean unified E2E multi-arch tag: mattermost/mattermost-cloud-e2e:test"
+          
+          # Cleanup temp E2E tags using Docker Hub API
+          echo "🗑️  Cleaning up temp E2E tags from Docker Hub..."
+          
+          # Delete temp E2E tags using Docker Hub API
+          TEMP_AMD64_TAG="temp-${{ github.sha }}-amd64"
+          TEMP_ARM64_TAG="temp-${{ github.sha }}-arm64"
+          
+          # Get Docker Hub API token
+          DOCKER_HUB_TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"username": "${{ secrets.DOCKERHUB_USERNAME }}", "password": "${{ secrets.DOCKERHUB_CLEANUP_TOKEN }}"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          # Delete E2E AMD64 temp tag
+          curl -X DELETE \
+            -H "Authorization: JWT ${DOCKER_HUB_TOKEN}" \
+            "https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud-e2e/tags/${TEMP_AMD64_TAG}/" \
+            && echo "✅ Deleted E2E AMD64 temp tag" || echo "⚠️  E2E AMD64 temp tag not found or already deleted"
+          
+          # Delete E2E ARM64 temp tag
+          curl -X DELETE \
+            -H "Authorization: JWT ${DOCKER_HUB_TOKEN}" \
+            "https://hub.docker.com/v2/repositories/mattermost/mattermost-cloud-e2e/tags/${TEMP_ARM64_TAG}/" \
+            && echo "✅ Deleted E2E ARM64 temp tag" || echo "⚠️  E2E ARM64 temp tag not found or already deleted"
+          
+          echo "✅ Temp E2E tags cleaned up from Docker Hub"

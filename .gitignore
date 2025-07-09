@@ -10,3 +10,10 @@ build/kubectl
 vendor/
 helm-charts/mattermost-operator
 dist/
+
+# ACT local testing - keep these local, don't commit
+.actrc
+.act-secrets
+.github/workflows/test-events/
+scripts/setup-act.sh
+scripts/cleanup-act.sh

@@ -86,6 +86,7 @@ PATCH := $(word 3,$(VERSION_PARTS))
 export GO111MODULE=on
 
 ## Checks the code style, tests, builds and bundles.
+.PHONY: all
 all: check-style dist
 
 ## Runs govet and gofmt against all packages.
@@ -94,11 +95,13 @@ check-style: govet lint goformat goimports
 	@echo Checking for style guide compliance
 
 ## Runs lint against all packages.
+.PHONY: lint
 lint: $(GOLANGCILINT)
 	@echo Running golangci-lint
 	$(GOLANGCILINT) run
 
 ## Runs lint against all packages for changes only
+.PHONY: lint-changes
 lint-changes: $(GOLANGCILINT)
 	@echo Running golangci-lint over changes only
 	$(GOLANGCILINT) run -n
@@ -155,7 +158,8 @@ goimports: $(GOIMPORTS)
 	@echo "goimports success"; \
 
 ## Checks for vulnerabilities
-trivy: build-image
+.PHONY: trivy
+trivy: build-image-parallel
 	@echo running trivy
 	@trivy image --format table --exit-code $(TRIVY_EXIT_CODE) --ignore-unfixed --vuln-type $(TRIVY_VULN_TYPE) --severity $(TRIVY_SEVERITY) $(MATTERMOST_CLOUD_IMAGE)
 
@@ -184,46 +188,106 @@ package: build ## Package mattermost-cloud binaries
 	@mkdir -p dist
 	@tar cfz dist/mattermost-cloud-linux-$(ARCH).tar.gz --strip-components=5 ./build/_output/$(ARCH)/bin/cloud
 
-build-image:  ## Build the docker image for mattermost-cloud
-	@echo Building Mattermost-cloud Docker Image
+# OPTIMIZED TARGETS (use these for better performance)
+.PHONY: build-image-amd64
+build-image-amd64:  ## Build the docker image for mattermost-cloud (AMD64 only, FAST)
+	@echo Building Mattermost-cloud Docker Image for AMD64
 	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
 		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
 	else \
 		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
 	fi
 	docker buildx build \
-	--platform linux/amd64,linux/arm64 \
-	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
-	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	--platform linux/amd64 \
 	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) \
-	--no-cache \
+	--cache-from=type=gha \
+	--cache-to=type=gha,mode=max \
 	--push
 
-build-image-with-tag:  ## Build the docker image for mattermost-cloud
-	@echo Building Mattermost-cloud Docker Image
+.PHONY: build-image-arm64
+build-image-arm64:  ## Build the docker image for mattermost-cloud (ARM64 only, FAST)
+	@echo Building Mattermost-cloud Docker Image for ARM64
 	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
 		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
 	else \
 		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
 	fi
 	docker buildx build \
-	--platform linux/amd64,linux/arm64 \
-	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
-	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
-	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE) -t $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME) -t $(MATTERMOST_CLOUD_REPO):${TAG} \
-	--no-cache \
+	--platform linux/arm64 \
+	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE)-arm64 \
+	--cache-from=type=gha \
+	--cache-to=type=gha,mode=max \
 	--push
 
-.PHONY: push-image-pr
-push-image-pr:
-	@echo Push Image PR
-	./scripts/push-image-pr.sh
+.PHONY: build-image-amd64-with-tags
+build-image-amd64-with-tags:  ## Build AMD64 with your standard tagging pattern
+	@echo Building Mattermost-cloud Docker Image for AMD64 with full tags
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+	--platform linux/amd64 \
+	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE)-amd64 -t $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME)-amd64 -t $(MATTERMOST_CLOUD_REPO):${TAG}-amd64 \
+	--cache-from=type=gha \
+	--cache-to=type=gha,mode=max \
+	--push
 
-.PHONY: push-image
-push-image:
-	@echo Push Image
-	./scripts/push-image.sh
+.PHONY: build-image-arm64-with-tags
+build-image-arm64-with-tags:  ## Build ARM64 with your standard tagging pattern  
+	@echo Building Mattermost-cloud Docker Image for ARM64 with full tags
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+	--platform linux/arm64 \
+	. -f build/Dockerfile -t $(MATTERMOST_CLOUD_IMAGE)-arm64 -t $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME)-arm64 -t $(MATTERMOST_CLOUD_REPO):${TAG}-arm64 \
+	--cache-from=type=gha \
+	--cache-to=type=gha,mode=max \
+	--push
 
+.PHONY: build-image-parallel-with-tags
+build-image-parallel-with-tags:  ## Build both platforms with your standard tagging pattern (FAST, clean tags)
+	@echo Building Mattermost-cloud Docker Image for both platforms with full tags
+	$(MAKE) build-image-amd64-with-tags &
+	$(MAKE) build-image-arm64-with-tags &
+	wait
+	@echo Creating multi-platform manifests with clean tags (no suffixes)
+	docker manifest create $(MATTERMOST_CLOUD_IMAGE) \
+		--amend $(MATTERMOST_CLOUD_IMAGE)-amd64 \
+		--amend $(MATTERMOST_CLOUD_IMAGE)-arm64
+	docker manifest create $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME) \
+		--amend $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME)-amd64 \
+		--amend $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME)-arm64
+	docker manifest create $(MATTERMOST_CLOUD_REPO):${TAG} \
+		--amend $(MATTERMOST_CLOUD_REPO):${TAG}-amd64 \
+		--amend $(MATTERMOST_CLOUD_REPO):${TAG}-arm64
+	@echo Pushing clean multi-platform images to Docker Hub
+	docker manifest push $(MATTERMOST_CLOUD_IMAGE)
+	docker manifest push $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME)
+	docker manifest push $(MATTERMOST_CLOUD_REPO):${TAG}
+	@echo ✅ Clean multi-platform images ready on Docker Hub
+	@echo 📦 Users can now pull: $(MATTERMOST_CLOUD_IMAGE)
+	@echo 📦 Users can now pull: $(MATTERMOST_CLOUD_IMAGE)-$(BUILD_TIME)  
+	@echo 📦 Users can now pull: $(MATTERMOST_CLOUD_REPO):${TAG}
+
+.PHONY: build-image-parallel
+build-image-parallel:  ## Build both platforms as single clean image (FAST, simple)
+	@echo Building Mattermost-cloud Docker Image for both platforms  
+	$(MAKE) build-image-amd64 &
+	$(MAKE) build-image-arm64 &
+	wait
+	@echo Creating single multi-platform image
+	docker manifest create $(MATTERMOST_CLOUD_IMAGE) \
+		--amend $(MATTERMOST_CLOUD_IMAGE)-amd64 \
+		--amend $(MATTERMOST_CLOUD_IMAGE)-arm64
+	docker manifest push $(MATTERMOST_CLOUD_IMAGE)
+	@echo ✅ Clean multi-platform image ready: $(MATTERMOST_CLOUD_IMAGE)
+
+.PHONY: get-terraform
 get-terraform: ## Download terraform only if it's not available. Used in the docker build
 	@if [ ! -f build/terraform ]; then \
 		curl -Lo build/terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_$(ARCH).zip" &&\
@@ -232,12 +296,14 @@ get-terraform: ## Download terraform only if it's not available. Used in the doc
 		chmod +x terraform && rm terraform.zip;\
 	fi
 
+.PHONY: get-kops
 get-kops: ## Download kops only if it's not available. Used in the docker build
 	@if [ ! -f build/kops ]; then \
 		curl -Lo build/kops https://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-linux-$(ARCH) &&\
 		chmod +x build/kops;\
 	fi
 
+.PHONY: get-helm
 get-helm: ## Download helm only if it's not available. Used in the docker build
 	@if [ ! -f build/helm ]; then \
 		curl -Lo build/helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-linux-$(ARCH).tar.gz &&\
@@ -245,6 +311,7 @@ get-helm: ## Download helm only if it's not available. Used in the docker build
 		cp linux-$(ARCH)/helm helm && chmod +x helm && rm helm.tar.gz && rm -rf linux-$(ARCH);\
 	fi
 
+.PHONY: get-kubectl
 get-kubectl: ## Download kubectl only if it's not available. Used in the docker build
 	@if [ ! -f build/kubectl ]; then \
 		curl -Lo build/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/$(ARCH)/kubectl &&\
@@ -307,7 +374,7 @@ verify-mocks: mocks
 
 .PHONY: build-image-e2e-pr
 build-image-e2e-pr:
-	@echo Building e2e image
+	@echo Building e2e image for PR (multi-platform, installation tests only)
 	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
 		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
 	else \
@@ -323,7 +390,7 @@ build-image-e2e-pr:
 
 .PHONY: build-image-e2e
 build-image-e2e:
-	@echo Building e2e image
+	@echo Building e2e image (multi-platform, installation tests only)
 	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
 		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
 	else \
@@ -331,8 +398,6 @@ build-image-e2e:
 	fi
 	docker buildx build \
     --platform linux/amd64,linux/arm64 \
-	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
-	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
 	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE) -t  $(MATTERMOST_CLOUD_E2E_IMAGE)-$(BUILD_TIME) \
 	--no-cache \
     --push
@@ -346,19 +411,20 @@ e2e-db-migration:
 	@echo Starting DB migration e2e test.
 	go test ./e2e/tests/dbmigration -tags=e2e -v -timeout 30m
 
-.PHONY: e2e-cluster
-e2e-cluster:
-	@echo Starting cluster e2e test.
-	go test ./e2e/tests/cluster -tags=e2e -v -timeout 90m
-
 .PHONY: e2e-installation
 e2e-installation:
-	@echo Starting installation e2e test
-	go test ./e2e/tests/installation -tags=e2e -v -timeout 90m
+	@echo Starting optimized installation e2e test
+	go test ./e2e/tests/installation -tags=e2e -v -timeout 60m
 
-
+# Optimized e2e that only runs installation tests (cluster tests are deprecated)
 .PHONY: e2e
-e2e: e2e-cluster e2e-installation
+e2e: e2e-installation
+
+# Legacy e2e-cluster target (deprecated but kept for backward compatibility)
+.PHONY: e2e-cluster
+e2e-cluster:
+	@echo "⚠️  WARNING: Cluster e2e tests are deprecated due to kops deprecation"
+	@echo "⚠️  Skipping cluster tests. Use 'make e2e-installation' for installation tests."
 
 .PHONY: patch minor major
 
