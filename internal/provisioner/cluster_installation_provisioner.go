@@ -1215,6 +1215,9 @@ func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVa
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "false"}
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSL"] = model.EnvVar{Value: "false"}
 	}
+	if installation.Filestore == model.InstallationFilestoreLocalEphemeral {
+		mattermostEnv["MM_FILESETTINGS_DRIVERNAME"] = model.EnvVar{Value: "local"}
+	}
 
 	return mattermostEnv
 }
