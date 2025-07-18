@@ -89,6 +89,7 @@ jobs:
   build-amd64:
     runs-on: ubuntu-24.04
     needs: [test, lint]
+    if: ${{ (github.event_name == 'pull_request' || github.ref_name  == 'master') && github.actor != 'dependabot[bot]' }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -115,6 +116,7 @@ jobs:
   build-arm64:
     runs-on: ubuntu-24.04-arm
     needs: [test, lint]
+    if: ${{ (github.event_name == 'pull_request' || github.ref_name  == 'master') && github.actor != 'dependabot[bot]' }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -141,6 +143,7 @@ jobs:
   create-manifest:
     runs-on: ubuntu-24.04
     needs: [build-amd64, build-arm64]
+    if: ${{ (github.event_name == 'pull_request' || github.ref_name  == 'master') && github.actor != 'dependabot[bot]' }}
     steps:
       - name: Log in to Docker Hub
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
@@ -200,6 +203,7 @@ jobs:
   build-e2e-amd64:
     runs-on: ubuntu-24.04
     needs: [test, lint]
+    if: ${{ (github.event_name == 'pull_request' || github.ref_name  == 'master') && github.actor != 'dependabot[bot]' }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -226,6 +230,7 @@ jobs:
   build-e2e-arm64:
     runs-on: ubuntu-24.04-arm
     needs: [test, lint]
+    if: ${{ (github.event_name == 'pull_request' || github.ref_name  == 'master') && github.actor != 'dependabot[bot]' }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -252,6 +257,7 @@ jobs:
   create-e2e-manifest:
     runs-on: ubuntu-24.04
     needs: [build-e2e-amd64, build-e2e-arm64]
+    if: ${{ (github.event_name == 'pull_request' || github.ref_name  == 'master') && github.actor != 'dependabot[bot]' }}
     steps:
       - name: Log in to Docker Hub
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
