@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -61,6 +62,14 @@ func newCmdGroupCreate() *cobra.Command {
 				Image:         flags.image,
 				MattermostEnv: envVarMap,
 				Annotations:   flags.annotations,
+			}
+
+			if flags.scheduling != "" {
+				scheduling := &model.Scheduling{}
+				if err = json.Unmarshal([]byte(flags.scheduling), scheduling); err != nil {
+					return errors.Wrap(err, "failed to parse scheduling JSON")
+				}
+				request.Scheduling = scheduling
 			}
 
 			if flags.dryRun {
@@ -134,6 +143,15 @@ func executeGroupUpdateCmd(ctx context.Context, flags groupUpdateFlags) error {
 	}
 	if flags.isImageChanged {
 		request.Image = &flags.image
+	}
+	if flags.isSchedulingChanged {
+		if flags.scheduling != "" {
+			scheduling := &model.Scheduling{}
+			if err = json.Unmarshal([]byte(flags.scheduling), scheduling); err != nil {
+				return errors.Wrap(err, "failed to parse scheduling JSON")
+			}
+			request.Scheduling = scheduling
+		}
 	}
 
 	if flags.dryRun {

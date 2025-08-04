@@ -10,6 +10,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestCreateGroupRequestValid(t *testing.T) {
@@ -317,6 +318,183 @@ func TestPatchGroupRequestApply(t *testing.T) {
 				MattermostEnv: model.EnvVarMap{
 					"key1":                               {Value: "value1"},
 					"CLOUD_PROVISIONER_ENFORCED_RESTART": {Value: "force-restart-at-sequence-1"},
+				},
+			},
+		},
+		{
+			"scheduling only - set for first time",
+			true,
+			&model.PatchGroupRequest{
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"node-type": "worker",
+					},
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "dedicated",
+							Operator: corev1.TolerationOpEqual,
+							Value:    "mattermost",
+							Effect:   corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			},
+			&model.Group{},
+			&model.Group{
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"node-type": "worker",
+					},
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "dedicated",
+							Operator: corev1.TolerationOpEqual,
+							Value:    "mattermost",
+							Effect:   corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			},
+		},
+		{
+			"scheduling only - update existing",
+			true,
+			&model.PatchGroupRequest{
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"environment": "production",
+					},
+				},
+			},
+			&model.Group{
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"node-type": "worker",
+					},
+				},
+			},
+			&model.Group{
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"environment": "production",
+					},
+				},
+			},
+		},
+		{
+			"scheduling only - no changes",
+			false,
+			&model.PatchGroupRequest{
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"node-type": "worker",
+					},
+				},
+			},
+			&model.Group{
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"node-type": "worker",
+					},
+				},
+			},
+			&model.Group{
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"node-type": "worker",
+					},
+				},
+			},
+		},
+		{
+			"scheduling only - clear scheduling",
+			true,
+			&model.PatchGroupRequest{
+				Scheduling: &model.Scheduling{
+					NodeSelector: nil,
+					Tolerations:  []corev1.Toleration{},
+				},
+			},
+			&model.Group{
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"node-type": "worker",
+					},
+				},
+			},
+			&model.Group{
+				Scheduling: nil,
+			},
+		},
+		{
+			"scheduling only - tolerations only",
+			true,
+			&model.PatchGroupRequest{
+				Scheduling: &model.Scheduling{
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "dedicated",
+							Operator: corev1.TolerationOpEqual,
+							Value:    "mattermost",
+							Effect:   corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:      "high-priority",
+							Operator: corev1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoExecute,
+						},
+					},
+				},
+			},
+			&model.Group{},
+			&model.Group{
+				Scheduling: &model.Scheduling{
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "dedicated",
+							Operator: corev1.TolerationOpEqual,
+							Value:    "mattermost",
+							Effect:   corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:      "high-priority",
+							Operator: corev1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoExecute,
+						},
+					},
+				},
+			},
+		},
+		{
+			"scheduling with other changes",
+			true,
+			&model.PatchGroupRequest{
+				Version: util.SToP("new-version"),
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"zone": "us-east-1a",
+					},
+				},
+				MattermostEnv: model.EnvVarMap{
+					"NEW_KEY": {Value: "new-value"},
+				},
+			},
+			&model.Group{
+				Version: "old-version",
+				MattermostEnv: model.EnvVarMap{
+					"OLD_KEY": {Value: "old-value"},
+				},
+			},
+			&model.Group{
+				Version: "new-version",
+				Scheduling: &model.Scheduling{
+					NodeSelector: map[string]string{
+						"zone": "us-east-1a",
+					},
+				},
+				MattermostEnv: model.EnvVarMap{
+					"OLD_KEY": {Value: "old-value"},
+					"NEW_KEY": {Value: "new-value"},
 				},
 			},
 		},

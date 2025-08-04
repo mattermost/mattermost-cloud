@@ -30,6 +30,7 @@ type CreateGroupRequest struct {
 	MaxRolling      int64
 	APISecurityLock bool
 	MattermostEnv   EnvVarMap
+	Scheduling      *Scheduling
 	Annotations     []string
 }
 
@@ -74,6 +75,7 @@ type PatchGroupRequest struct {
 	Version       *string
 	Image         *string
 	MattermostEnv EnvVarMap
+	Scheduling    *Scheduling
 
 	ForceSequenceUpdate       bool
 	ForceInstallationsRestart bool
@@ -106,6 +108,21 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 	if p.MattermostEnv != nil {
 		if group.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
 			applied = true
+		}
+	}
+	if p.Scheduling != nil {
+		if p.Scheduling.NodeSelector == nil && len(p.Scheduling.Tolerations) == 0 {
+			// Scheduling clear request has been made.
+			applied = true
+			group.Scheduling = nil
+		} else {
+			// Compare the JSON serialization to detect changes.
+			currentSchedulingJSON, _ := json.Marshal(group.Scheduling)
+			newSchedulingJSON, _ := json.Marshal(p.Scheduling)
+			if string(currentSchedulingJSON) != string(newSchedulingJSON) {
+				applied = true
+				group.Scheduling = p.Scheduling
+			}
 		}
 	}
 

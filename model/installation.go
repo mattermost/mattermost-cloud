@@ -61,6 +61,7 @@ type Installation struct {
 	LockAcquiredAt             int64
 	GroupOverrides             map[string]string  `json:"GroupOverrides,omitempty"`
 	PodProbeOverrides          *PodProbeOverrides `json:"PodProbeOverrides,omitempty"`
+	Scheduling                 *Scheduling        `json:"Scheduling,omitempty"`
 
 	// configconfigMergedWithGroup is set when the installation configuration
 	// has been overridden with group configuration. This value can then be
@@ -418,6 +419,9 @@ func (i *Installation) MergeWithGroup(group *Group, includeOverrides bool) {
 			}
 		}
 		i.MattermostEnv[key] = value
+	}
+	if group.Scheduling != nil {
+		i.Scheduling = group.Scheduling
 	}
 }
 

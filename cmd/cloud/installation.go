@@ -952,7 +952,13 @@ func executeInstallationDeploymentReportCmd(ctx context.Context, flags installat
 		}
 		output += fmt.Sprintf(" ├ Group: %s\n", group.ID)
 		output += fmt.Sprintf(" │ ├ Name: %s\n", group.Name)
-		output += fmt.Sprintf(" │ └ Description: %s\n", group.Description)
+		output += fmt.Sprintf(" │ ├ Description: %s\n", group.Description)
+		if group.Scheduling != nil {
+			output += fmt.Sprintf(" │ ├ Node Selector: %s\n", group.Scheduling.NodeSelectorValueString())
+			output += fmt.Sprintf(" │ └ Tolerations: %s\n", group.Scheduling.TolerationsValueString())
+		} else {
+			output += " │ └ Scheduling: n/a\n"
+		}
 	}
 
 	clusterInstallations, err := client.GetClusterInstallations(&model.GetClusterInstallationsRequest{

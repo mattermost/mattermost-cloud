@@ -107,6 +107,7 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		MaxRolling:      createGroupRequest.MaxRolling,
 		APISecurityLock: createGroupRequest.APISecurityLock,
 		MattermostEnv:   createGroupRequest.MattermostEnv,
+		Scheduling:      createGroupRequest.Scheduling,
 	}
 
 	annotations, err := model.AnnotationsFromStringSlice(createGroupRequest.Annotations)

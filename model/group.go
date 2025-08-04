@@ -5,8 +5,14 @@
 package model
 
 import (
+	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"io"
+	"strings"
+
+	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Group represents a group of Mattermost installations.
@@ -19,11 +25,70 @@ type Group struct {
 	Image           string
 	MaxRolling      int64
 	MattermostEnv   EnvVarMap
+	Scheduling      *Scheduling `json:"Scheduling,omitempty"`
 	CreateAt        int64
 	DeleteAt        int64
 	APISecurityLock bool
 	LockAcquiredBy  *string
 	LockAcquiredAt  int64
+}
+
+// Scheduling contains configuration for overriding pod scheduling settings.
+type Scheduling struct {
+	NodeSelector map[string]string
+	Tolerations  []corev1.Toleration
+}
+
+// Value implements the driver.Valuer interface for database storage
+func (s *Scheduling) Value() (driver.Value, error) {
+	if s == nil {
+		return nil, nil
+	}
+	return json.Marshal(s)
+}
+
+// Scan implements the sql.Scanner interface for database retrieval
+func (s *Scheduling) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+
+	source, ok := src.([]byte)
+	if !ok {
+		return errors.New("could not assert type of Scheduling")
+	}
+
+	var override Scheduling
+	err := json.Unmarshal(source, &override)
+	if err != nil {
+		return err
+	}
+	*s = override
+	return nil
+}
+
+// NodeSelectorValueString returns the string value of the NodeSelector.
+func (s *Scheduling) NodeSelectorValueString() string {
+	if s.NodeSelector == nil {
+		return "null"
+	}
+	var kvPairs []string
+	for k, v := range s.NodeSelector {
+		kvPairs = append(kvPairs, fmt.Sprintf("%s=%s", k, v))
+	}
+	return strings.Join(kvPairs, ", ")
+}
+
+// TolerationsValueString returns the string value of the Tolerations.
+func (s *Scheduling) TolerationsValueString() string {
+	if s.Tolerations == nil {
+		return "null"
+	}
+	var tolerations []string
+	for _, toleration := range s.Tolerations {
+		tolerations = append(tolerations, toleration.String())
+	}
+	return strings.Join(tolerations, ", ")
 }
 
 // GroupFilter describes the parameters used to constrain a set of groups.
