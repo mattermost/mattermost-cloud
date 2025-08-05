@@ -6,6 +6,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -29,7 +30,7 @@ type rawGroups []*rawGroup
 func init() {
 	groupSelect = sq.
 		Select(`"Group".ID`, `"Group".Name`, "Description", "Version", "Image", "Sequence",
-			"CreateAt", "DeleteAt", "MattermostEnvRaw", "MaxRolling",
+			"CreateAt", "DeleteAt", "MattermostEnvRaw", "MaxRolling", "Scheduling",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
 		From(groupTable)
 }
@@ -386,6 +387,7 @@ func (sqlStore *SQLStore) createGroup(db execer, group *model.Group) error {
 			"Version":          group.Version,
 			"MattermostEnvRaw": envVarMap,
 			"MaxRolling":       group.MaxRolling,
+			"Scheduling":       group.Scheduling,
 			"CreateAt":         group.CreateAt,
 			"DeleteAt":         0,
 			"APISecurityLock":  group.APISecurityLock,
@@ -417,6 +419,20 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group, forceUpdateSequence bo
 		return errors.Wrap(err, "failed to create new EnvVarMap JSON")
 	}
 
+	var originalSchedulingJSON, schedulingJSON []byte
+	if originalGroup.Scheduling != nil {
+		originalSchedulingJSON, err = json.Marshal(originalGroup.Scheduling)
+		if err != nil {
+			return errors.Wrap(err, "failed to create original Scheduling JSON")
+		}
+	}
+	if group.Scheduling != nil {
+		schedulingJSON, err = json.Marshal(group.Scheduling)
+		if err != nil {
+			return errors.Wrap(err, "failed to create new Scheduling JSON")
+		}
+	}
+
 	// Values that don't bump the group sequence number:
 	// - Name
 	// - Description
@@ -424,7 +440,8 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group, forceUpdateSequence bo
 	if forceUpdateSequence ||
 		originalGroup.Version != group.Version ||
 		originalGroup.Image != group.Image ||
-		string(originalEnvVarMap) != string(envVarMap) {
+		string(originalEnvVarMap) != string(envVarMap) ||
+		string(originalSchedulingJSON) != string(schedulingJSON) {
 		group.Sequence = originalGroup.Sequence + 1
 	}
 
@@ -438,6 +455,7 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group, forceUpdateSequence bo
 			"Image":            group.Image,
 			"MattermostEnvRaw": envVarMap,
 			"MaxRolling":       group.MaxRolling,
+			"Scheduling":       group.Scheduling,
 		}).
 		Where("ID = ?", group.ID),
 	)

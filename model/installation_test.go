@@ -182,6 +182,8 @@ func TestMergeWithGroup(t *testing.T) {
 		for key := range group.MattermostEnv {
 			assert.Equal(t, installation.MattermostEnv[key].Value, group.MattermostEnv[key].Value)
 		}
+
+		assert.Equal(t, installation.Scheduling, group.Scheduling)
 	}
 
 	t.Run("without overrides", func(t *testing.T) {
@@ -307,6 +309,36 @@ func TestMergeWithGroup(t *testing.T) {
 		installation.MergeWithGroup(group, false)
 		checkMergeValues(t, installation, group)
 		assert.True(t, installation.InstallationSequenceMatchesMergedGroupSequence())
+	})
+
+	t.Run("scheduling set", func(t *testing.T) {
+		installation := &Installation{
+			ID:            NewID(),
+			OwnerID:       "owner",
+			Version:       "iversion",
+			Image:         "iImage",
+			Name:          "test",
+			License:       "this_is_my_license",
+			Affinity:      InstallationAffinityIsolated,
+			GroupID:       util.SToP("group_id"),
+			GroupSequence: util.IToP(1),
+			State:         InstallationStateStable,
+		}
+
+		group := &Group{
+			ID:       NewID(),
+			Sequence: 2,
+			Version:  "gversion",
+			Image:    "gImage",
+			Scheduling: &Scheduling{
+				NodeSelector: map[string]string{
+					"key": "value",
+				},
+			},
+		}
+
+		installation.MergeWithGroup(group, false)
+		checkMergeValues(t, installation, group)
 	})
 
 	t.Run("without overrides, group sequence doesn't match", func(t *testing.T) {

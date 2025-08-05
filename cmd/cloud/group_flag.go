@@ -10,6 +10,7 @@ type groupCreateFlags struct {
 	image         string
 	maxRolling    int64
 	mattermostEnv []string
+	scheduling    string
 	annotations   []string
 }
 
@@ -20,6 +21,7 @@ func (flags *groupCreateFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.image, "image", "", "The Mattermost container image to use.")
 	command.Flags().Int64Var(&flags.maxRolling, "max-rolling", 1, "The maximum number of installations that can be updated at one time when a group is updated")
 	command.Flags().StringArrayVar(&flags.mattermostEnv, "mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	command.Flags().StringVar(&flags.scheduling, "scheduling", "", "Scheduling configuration as JSON string containing nodeSelector and tolerations for pod placement.")
 	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Annotations for a group used for automatic group selection. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
 	_ = command.MarkFlagRequired("name")
@@ -31,6 +33,7 @@ type groupUpgradeFlagChanged struct {
 	isVersionChanged     bool
 	isImageChanged       bool
 	isMaxRollingChanged  bool
+	isSchedulingChanged  bool
 }
 
 func (flags *groupUpgradeFlagChanged) addFlags(command *cobra.Command) {
@@ -39,6 +42,7 @@ func (flags *groupUpgradeFlagChanged) addFlags(command *cobra.Command) {
 	flags.isVersionChanged = command.Flags().Changed("version")
 	flags.isImageChanged = command.Flags().Changed("image")
 	flags.isMaxRollingChanged = command.Flags().Changed("max-rolling")
+	flags.isSchedulingChanged = command.Flags().Changed("scheduling")
 }
 
 type groupUpdateFlags struct {
@@ -52,6 +56,7 @@ type groupUpdateFlags struct {
 	maxRolling               int64
 	mattermostEnv            []string
 	mattermostEnvClear       bool
+	scheduling               string
 	forceSequenceUpdate      bool
 	forceInstallationRestart bool
 }
@@ -65,6 +70,7 @@ func (flags *groupUpdateFlags) addFlags(command *cobra.Command) {
 	command.Flags().Int64Var(&flags.maxRolling, "max-rolling", 0, "The maximum number of installations that can be updated at one time when a group is updated")
 	command.Flags().StringArrayVar(&flags.mattermostEnv, "mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	command.Flags().BoolVar(&flags.mattermostEnvClear, "mattermost-env-clear", false, "Clears all env var data.")
+	command.Flags().StringVar(&flags.scheduling, "scheduling", "", "Scheduling configuration as JSON string containing nodeSelector and tolerations for pod placement.")
 	command.Flags().BoolVar(&flags.forceSequenceUpdate, "force-sequence-update", false, "Forces the group version sequence to be increased by 1 even when no updates are present.")
 	command.Flags().BoolVar(&flags.forceInstallationRestart, "force-installation-restart", false, "Forces the restart of all installations in the group even if Mattermost CR does not change.")
 

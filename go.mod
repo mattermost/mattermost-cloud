@@ -39,7 +39,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/mattermost/awat v0.2.0
-	github.com/mattermost/mattermost-operator v1.24.0-rc.1
+	github.com/mattermost/mattermost-operator v1.24.0
 	github.com/mattermost/rotator v0.2.1-0.20230830064954-61490ed26761
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1

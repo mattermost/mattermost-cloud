@@ -205,7 +205,9 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation, cluster),
 			Scheduling: mmv1beta1.Scheduling{
-				Affinity: generateAffinityConfig(installation, clusterInstallation, cluster),
+				Affinity:     generateAffinityConfig(installation, clusterInstallation, cluster),
+				NodeSelector: installation.Scheduling.NodeSelector,
+				Tolerations:  installation.Scheduling.Tolerations,
 			},
 			DNSConfig: setNdots(provisioner.params.NdotsValue),
 			DeploymentTemplate: &mmv1beta1.DeploymentTemplate{
@@ -423,6 +425,8 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster)
 
 	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation, cluster)
+	mattermost.Spec.Scheduling.NodeSelector = installation.Scheduling.NodeSelector
+	mattermost.Spec.Scheduling.Tolerations = installation.Scheduling.Tolerations
 
 	mattermost.Spec.DNSConfig = setNdots(provisioner.params.NdotsValue)
 
