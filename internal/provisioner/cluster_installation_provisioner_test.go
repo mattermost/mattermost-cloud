@@ -774,3 +774,241 @@ func TestEnsurePodProbeOverrides_InstallationLevel(t *testing.T) {
 		assert.Equal(t, expectedReadiness, mattermost.Spec.Probes.ReadinessProbe)
 	})
 }
+
+func TestEnsureScheduling(t *testing.T) {
+	// Test data
+	installation := &model.Installation{
+		ID: "test-installation-id",
+	}
+	clusterInstallation := &model.ClusterInstallation{
+		ID:        "test-cluster-installation-id",
+		Namespace: "test-namespace",
+	}
+	cluster := &model.Cluster{
+		Name: "test-cluster",
+	}
+
+	t.Run("installation with scheduling configuration", func(t *testing.T) {
+		// Setup installation with scheduling configuration
+		installationWithScheduling := &model.Installation{
+			ID: "test-installation-id",
+			Scheduling: &model.Scheduling{
+				NodeSelector: map[string]string{
+					"node-type": "compute",
+					"zone":      "us-west-1a",
+				},
+				Tolerations: []corev1.Toleration{
+					{
+						Key:      "special-node",
+						Operator: corev1.TolerationOpEqual,
+						Value:    "true",
+						Effect:   corev1.TaintEffectNoSchedule,
+					},
+				},
+			},
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			Spec: mmv1beta1.MattermostSpec{
+				Scheduling: mmv1beta1.Scheduling{},
+			},
+		}
+
+		ensureScheduling(mattermost, installationWithScheduling, clusterInstallation, cluster)
+
+		// Verify affinity is always set
+		require.NotNil(t, mattermost.Spec.Scheduling.Affinity)
+		require.NotNil(t, mattermost.Spec.Scheduling.Affinity.PodAntiAffinity)
+		require.Len(t, mattermost.Spec.Scheduling.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution, 2)
+
+		// Verify NodeSelector and Tolerations are set from installation
+		require.NotNil(t, mattermost.Spec.Scheduling.NodeSelector)
+		assert.Equal(t, map[string]string{
+			"node-type": "compute",
+			"zone":      "us-west-1a",
+		}, mattermost.Spec.Scheduling.NodeSelector)
+
+		require.NotNil(t, mattermost.Spec.Scheduling.Tolerations)
+		require.Len(t, mattermost.Spec.Scheduling.Tolerations, 1)
+		assert.Equal(t, corev1.Toleration{
+			Key:      "special-node",
+			Operator: corev1.TolerationOpEqual,
+			Value:    "true",
+			Effect:   corev1.TaintEffectNoSchedule,
+		}, mattermost.Spec.Scheduling.Tolerations[0])
+	})
+
+	t.Run("installation without scheduling configuration", func(t *testing.T) {
+		mattermost := &mmv1beta1.Mattermost{
+			Spec: mmv1beta1.MattermostSpec{
+				Scheduling: mmv1beta1.Scheduling{
+					// Pre-existing values that should be cleared
+					NodeSelector: map[string]string{
+						"old-selector": "old-value",
+					},
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "old-toleration",
+							Operator: corev1.TolerationOpEqual,
+							Value:    "old-value",
+							Effect:   corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			},
+		}
+
+		ensureScheduling(mattermost, installation, clusterInstallation, cluster)
+
+		// Verify affinity is always set
+		require.NotNil(t, mattermost.Spec.Scheduling.Affinity)
+		require.NotNil(t, mattermost.Spec.Scheduling.Affinity.PodAntiAffinity)
+		require.Len(t, mattermost.Spec.Scheduling.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution, 2)
+
+		// Verify NodeSelector and Tolerations are cleared
+		assert.Nil(t, mattermost.Spec.Scheduling.NodeSelector)
+		assert.Nil(t, mattermost.Spec.Scheduling.Tolerations)
+	})
+
+	t.Run("installation with nil scheduling - existing values cleared", func(t *testing.T) {
+		installationNilScheduling := &model.Installation{
+			ID:         "test-installation-id",
+			Scheduling: nil,
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			Spec: mmv1beta1.MattermostSpec{
+				Scheduling: mmv1beta1.Scheduling{
+					// Pre-existing values that should be cleared
+					NodeSelector: map[string]string{
+						"existing-key": "existing-value",
+					},
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "existing-toleration",
+							Operator: corev1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoExecute,
+						},
+					},
+				},
+			},
+		}
+
+		ensureScheduling(mattermost, installationNilScheduling, clusterInstallation, cluster)
+
+		// Verify affinity is always set
+		require.NotNil(t, mattermost.Spec.Scheduling.Affinity)
+
+		// Verify existing NodeSelector and Tolerations are cleared
+		assert.Nil(t, mattermost.Spec.Scheduling.NodeSelector)
+		assert.Nil(t, mattermost.Spec.Scheduling.Tolerations)
+	})
+
+	t.Run("installation with empty scheduling configuration", func(t *testing.T) {
+		installationEmptyScheduling := &model.Installation{
+			ID: "test-installation-id",
+			Scheduling: &model.Scheduling{
+				NodeSelector: nil,
+				Tolerations:  nil,
+			},
+		}
+
+		mattermost := &mmv1beta1.Mattermost{
+			Spec: mmv1beta1.MattermostSpec{
+				Scheduling: mmv1beta1.Scheduling{},
+			},
+		}
+
+		ensureScheduling(mattermost, installationEmptyScheduling, clusterInstallation, cluster)
+
+		// Verify affinity is always set
+		require.NotNil(t, mattermost.Spec.Scheduling.Affinity)
+
+		// Verify NodeSelector and Tolerations are set to nil (from installation)
+		assert.Nil(t, mattermost.Spec.Scheduling.NodeSelector)
+		assert.Nil(t, mattermost.Spec.Scheduling.Tolerations)
+	})
+}
+
+func TestGenerateAffinityConfig(t *testing.T) {
+	installation := &model.Installation{
+		ID: "test-installation-id",
+	}
+	clusterInstallation := &model.ClusterInstallation{
+		ID:        "test-cluster-installation-id",
+		Namespace: "test-namespace",
+	}
+	cluster := &model.Cluster{
+		Name: "test-cluster",
+	}
+
+	t.Run("generates correct affinity configuration", func(t *testing.T) {
+		affinity := generateAffinityConfig(installation, clusterInstallation, cluster)
+
+		require.NotNil(t, affinity)
+		require.NotNil(t, affinity.PodAntiAffinity)
+		require.NotNil(t, affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution)
+
+		terms := affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution
+		require.Len(t, terms, 2)
+
+		// First term: hostname topology
+		firstTerm := terms[0]
+		assert.Equal(t, int32(100), firstTerm.Weight)
+		assert.Equal(t, "kubernetes.io/hostname", firstTerm.PodAffinityTerm.TopologyKey)
+		assert.Equal(t, []string{"test-namespace"}, firstTerm.PodAffinityTerm.Namespaces)
+
+		expectedLabels := map[string]string{
+			"installation-id":         "test-installation-id",
+			"cluster-installation-id": "test-cluster-installation-id",
+			"dns":                     "test-cluster-public",
+		}
+		assert.Equal(t, expectedLabels, firstTerm.PodAffinityTerm.LabelSelector.MatchLabels)
+
+		// Second term: zone topology
+		secondTerm := terms[1]
+		assert.Equal(t, int32(100), secondTerm.Weight)
+		assert.Equal(t, "topology.kubernetes.io/zone", secondTerm.PodAffinityTerm.TopologyKey)
+		assert.Equal(t, []string{"test-namespace"}, secondTerm.PodAffinityTerm.Namespaces)
+		assert.Equal(t, expectedLabels, secondTerm.PodAffinityTerm.LabelSelector.MatchLabels)
+	})
+
+	t.Run("generates affinity with nil cluster", func(t *testing.T) {
+		affinity := generateAffinityConfig(installation, clusterInstallation, nil)
+
+		require.NotNil(t, affinity)
+		require.NotNil(t, affinity.PodAntiAffinity)
+
+		terms := affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution
+		require.Len(t, terms, 2)
+
+		// Labels should not include DNS when cluster is nil
+		expectedLabels := map[string]string{
+			"installation-id":         "test-installation-id",
+			"cluster-installation-id": "test-cluster-installation-id",
+		}
+		assert.Equal(t, expectedLabels, terms[0].PodAffinityTerm.LabelSelector.MatchLabels)
+		assert.Equal(t, expectedLabels, terms[1].PodAffinityTerm.LabelSelector.MatchLabels)
+	})
+
+	t.Run("generates affinity with empty cluster name", func(t *testing.T) {
+		emptyNameCluster := &model.Cluster{
+			Name: "",
+		}
+		affinity := generateAffinityConfig(installation, clusterInstallation, emptyNameCluster)
+
+		require.NotNil(t, affinity)
+		require.NotNil(t, affinity.PodAntiAffinity)
+
+		terms := affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution
+		require.Len(t, terms, 2)
+
+		// Labels should not include DNS when cluster name is empty
+		expectedLabels := map[string]string{
+			"installation-id":         "test-installation-id",
+			"cluster-installation-id": "test-cluster-installation-id",
+		}
+		assert.Equal(t, expectedLabels, terms[0].PodAffinityTerm.LabelSelector.MatchLabels)
+		assert.Equal(t, expectedLabels, terms[1].PodAffinityTerm.LabelSelector.MatchLabels)
+	})
+}

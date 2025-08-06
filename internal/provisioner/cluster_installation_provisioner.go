@@ -206,20 +206,15 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 			Ingress:       makeIngressSpec(installationDNS, getIngressAnnotations()),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation, cluster),
-			Scheduling: mmv1beta1.Scheduling{
-				Affinity: generateAffinityConfig(installation, clusterInstallation, cluster),
-			},
-			DNSConfig: setNdots(provisioner.params.NdotsValue),
+			Scheduling:     mmv1beta1.Scheduling{},
+			DNSConfig:      setNdots(provisioner.params.NdotsValue),
 			DeploymentTemplate: &mmv1beta1.DeploymentTemplate{
 				RevisionHistoryLimit: ptr.Int32(1),
 			},
 		},
 	}
 
-	if installation.Scheduling != nil {
-		mattermost.Spec.Scheduling.NodeSelector = installation.Scheduling.NodeSelector
-		mattermost.Spec.Scheduling.Tolerations = installation.Scheduling.Tolerations
-	}
+	ensureScheduling(mattermost, installation, clusterInstallation, cluster)
 
 	err = setMMInstanceSize(installation, mattermost)
 	if err != nil {
@@ -434,11 +429,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster)
 	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster)
 
-	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation, cluster)
-	if installation.Scheduling != nil {
-		mattermost.Spec.Scheduling.NodeSelector = installation.Scheduling.NodeSelector
-		mattermost.Spec.Scheduling.Tolerations = installation.Scheduling.Tolerations
-	}
+	ensureScheduling(mattermost, installation, clusterInstallation, cluster)
 
 	mattermost.Spec.DNSConfig = setNdots(provisioner.params.NdotsValue)
 
@@ -667,6 +658,24 @@ func (provisioner Provisioner) ensureCustomVolumes(
 	mattermost.Spec.VolumeMounts = installation.Volumes.ToCoreV1VolumeMounts()
 
 	return nil
+}
+
+func ensureScheduling(
+	mattermost *mmv1beta1.Mattermost,
+	installation *model.Installation,
+	clusterInstallation *model.ClusterInstallation,
+	cluster *model.Cluster,
+) {
+	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation, cluster)
+	if installation.Scheduling != nil {
+		mattermost.Spec.Scheduling.NodeSelector = installation.Scheduling.NodeSelector
+		mattermost.Spec.Scheduling.Tolerations = installation.Scheduling.Tolerations
+		return
+	}
+
+	// Ensure existing NodeSelector and Tolerations are removed.
+	mattermost.Spec.Scheduling.NodeSelector = nil
+	mattermost.Spec.Scheduling.Tolerations = nil
 }
 
 // getMattermostCustomResource gets the cluster installation resource from
