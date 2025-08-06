@@ -27,6 +27,17 @@ func (kc *KubeClient) createOrUpdatePodDisruptionBudgetBetaV1(namespace string, 
 	return kc.Clientset.PolicyV1beta1().PodDisruptionBudgets(namespace).Update(ctx, podDisruptionBudget, metav1.UpdateOptions{})
 }
 
+// CreateOrUpdatePodDisruptionBudgetV1 creates or updates a PodDisruptionBudget.
+func (kc *KubeClient) CreateOrUpdatePodDisruptionBudgetV1(namespace string, podDisruptionBudget *v1.PodDisruptionBudget) (metav1.Object, error) {
+	return kc.createOrUpdatePodDisruptionBudgetV1(namespace, podDisruptionBudget)
+}
+
+// DeletePodDisruptionBudgetV1 deletes a PodDisruptionBudget by name.
+func (kc *KubeClient) DeletePodDisruptionBudgetV1(namespace, name string) error {
+	ctx := context.TODO()
+	return kc.Clientset.PolicyV1().PodDisruptionBudgets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
 func (kc *KubeClient) createOrUpdatePodDisruptionBudgetV1(namespace string, podDisruptionBudget *v1.PodDisruptionBudget) (metav1.Object, error) {
 	ctx := context.TODO()
 	pdb, err := kc.Clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, podDisruptionBudget.GetName(), metav1.GetOptions{})

@@ -20,14 +20,16 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/mattermost/mattermost-operator/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -204,17 +206,15 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 			Ingress:       makeIngressSpec(installationDNS, getIngressAnnotations()),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation, cluster),
-			Scheduling: mmv1beta1.Scheduling{
-				Affinity:     generateAffinityConfig(installation, clusterInstallation, cluster),
-				NodeSelector: installation.Scheduling.NodeSelector,
-				Tolerations:  installation.Scheduling.Tolerations,
-			},
-			DNSConfig: setNdots(provisioner.params.NdotsValue),
+			Scheduling:     mmv1beta1.Scheduling{},
+			DNSConfig:      setNdots(provisioner.params.NdotsValue),
 			DeploymentTemplate: &mmv1beta1.DeploymentTemplate{
 				RevisionHistoryLimit: ptr.Int32(1),
 			},
 		},
 	}
+
+	ensureScheduling(mattermost, installation, clusterInstallation, cluster)
 
 	err = setMMInstanceSize(installation, mattermost)
 	if err != nil {
@@ -267,6 +267,11 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Create(ctx, mattermost, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster installation")
+	}
+
+	err = ensurePodDisruptionBudget(installation, clusterInstallation, cluster, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure PodDisruptionBudget")
 	}
 
 	logger.Info("Successfully created cluster installation")
@@ -424,9 +429,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster)
 	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster)
 
-	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation, cluster)
-	mattermost.Spec.Scheduling.NodeSelector = installation.Scheduling.NodeSelector
-	mattermost.Spec.Scheduling.Tolerations = installation.Scheduling.Tolerations
+	ensureScheduling(mattermost, installation, clusterInstallation, cluster)
 
 	mattermost.Spec.DNSConfig = setNdots(provisioner.params.NdotsValue)
 
@@ -530,6 +533,11 @@ func (provisioner Provisioner) updateClusterInstallation(
 	err = cleanupOldCustomSecrets(installation, clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure old custom secrets were cleaned up")
+	}
+
+	err = ensurePodDisruptionBudget(installation, clusterInstallation, cluster, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure PodDisruptionBudget")
 	}
 
 	logger.Info("Updated cluster installation")
@@ -650,6 +658,24 @@ func (provisioner Provisioner) ensureCustomVolumes(
 	mattermost.Spec.VolumeMounts = installation.Volumes.ToCoreV1VolumeMounts()
 
 	return nil
+}
+
+func ensureScheduling(
+	mattermost *mmv1beta1.Mattermost,
+	installation *model.Installation,
+	clusterInstallation *model.ClusterInstallation,
+	cluster *model.Cluster,
+) {
+	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation, cluster)
+	if installation.Scheduling != nil {
+		mattermost.Spec.Scheduling.NodeSelector = installation.Scheduling.NodeSelector
+		mattermost.Spec.Scheduling.Tolerations = installation.Scheduling.Tolerations
+		return
+	}
+
+	// Ensure existing NodeSelector and Tolerations are removed.
+	mattermost.Spec.Scheduling.NodeSelector = nil
+	mattermost.Spec.Scheduling.Tolerations = nil
 }
 
 // getMattermostCustomResource gets the cluster installation resource from
@@ -794,6 +820,12 @@ func deleteClusterInstallation(
 		if err != nil {
 			return errors.Wrap(err, "failed to delete license secret")
 		}
+	}
+
+	// Delete PodDisruptionBudget before deleting the namespace
+	err = deletePodDisruptionBudget(clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete PodDisruptionBudget")
 	}
 
 	err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, clusterInstallation.Namespace, metav1.DeleteOptions{})
@@ -1046,7 +1078,7 @@ func setMMInstanceSize(installation *model.Installation, mattermost *mmv1beta1.M
 
 // This function is adapted from Mattermost Operator, we can make it public
 // there to avoid copying.
-func overrideReplicasAndResourcesFromSize(size v1alpha1.ClusterInstallationSize, mm *mmv1beta1.Mattermost) {
+func overrideReplicasAndResourcesFromSize(size mmv1alpha1.ClusterInstallationSize, mm *mmv1beta1.Mattermost) {
 	mm.Spec.Size = ""
 
 	mm.Spec.Replicas = utils.NewInt32(size.App.Replicas)
@@ -1145,6 +1177,79 @@ func cleanupOldCustomSecrets(installation *model.Installation, clusterInstallati
 	}
 
 	return nil
+}
+
+// ensurePodDisruptionBudget creates or updates a PodDisruptionBudget for the
+// installation if needed. If the installation size is miniSingleton, any
+// existing PodDisruptionBudget is removed.
+func ensurePodDisruptionBudget(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	if !shouldCreatePodDisruptionBudget(installation) {
+		logger.Debug("Installation size is miniSingleton, removing any existing PodDisruptionBudget")
+		err := deletePodDisruptionBudget(clusterInstallation, k8sClient, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete existing PodDisruptionBudget for miniSingleton")
+		}
+		return nil
+	}
+
+	pdb := generatePodDisruptionBudget(installation, clusterInstallation, cluster)
+
+	_, err := k8sClient.CreateOrUpdatePodDisruptionBudgetV1(clusterInstallation.Namespace, pdb)
+	if err != nil {
+		return errors.Wrap(err, "failed to create or update PodDisruptionBudget")
+	}
+
+	logger.Debugf("Successfully ensured PodDisruptionBudget %s", pdb.Name)
+	return nil
+}
+
+// deletePodDisruptionBudget removes the PodDisruptionBudget for the installation if it exists
+func deletePodDisruptionBudget(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	pdbName := makePodDisruptionBudgetName(clusterInstallation)
+
+	err := k8sClient.DeletePodDisruptionBudgetV1(clusterInstallation.Namespace, pdbName)
+	if k8sErrors.IsNotFound(err) {
+		logger.Debugf("PodDisruptionBudget %s not found, assuming already deleted", pdbName)
+		return nil
+	} else if err != nil {
+		return errors.Wrapf(err, "failed to delete PodDisruptionBudget %s", pdbName)
+	}
+
+	logger.Debugf("Successfully deleted PodDisruptionBudget %s", pdbName)
+	return nil
+}
+
+// shouldCreatePodDisruptionBudget returns true if a PodDisruptionBudget should be created
+// for the given installation. PDBs are created for all sizes except miniSingleton.
+func shouldCreatePodDisruptionBudget(installation *model.Installation) bool {
+	return installation.Size != mmv1alpha1.SizeMiniSingletonString
+}
+
+// generatePodDisruptionBudget creates a PodDisruptionBudget for a Mattermost installation
+func generatePodDisruptionBudget(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster) *policyv1.PodDisruptionBudget {
+	pdbName := makePodDisruptionBudgetName(clusterInstallation)
+
+	minAvailable := intstr.FromInt(1)
+
+	return &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pdbName,
+			Namespace: clusterInstallation.Namespace,
+			Labels:    generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster),
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MinAvailable: &minAvailable,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "mattermost",
+				},
+			},
+		},
+	}
+}
+
+func makePodDisruptionBudgetName(clusterInstallation *model.ClusterInstallation) string {
+	return fmt.Sprintf("%s-pdb", makeClusterInstallationName(clusterInstallation))
 }
 
 // generateClusterInstallationResourceLabels generates standard resource labels
