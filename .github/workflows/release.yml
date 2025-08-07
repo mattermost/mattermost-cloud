@@ -82,5 +82,5 @@ jobs:
             ./build/_output/bin/webhook-linux-arm64
             ./build/_output/bin/webhook-windows-amd64.exe
             ./build/_output/bin/webhook-windows-arm64.exe
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
