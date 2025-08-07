@@ -157,7 +157,9 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             CLEAN_TAG="pr-${{ github.event.number }}"
           elif [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            CLEAN_TAG="latest"
+            # Create timestamp-based tag for master merges (format: test-YYYYMMDD.HHMMSS)
+            TIMESTAMP=$(date -u +"%Y%m%d.%H%M%S")
+            CLEAN_TAG="test-${TIMESTAMP}"
           else
             CLEAN_TAG="${{ github.ref_name }}"
           fi
@@ -267,15 +269,26 @@ jobs:
 
       - name: Create unified E2E multi-arch manifest
         run: |
+          # Determine E2E tag based on event type (same logic as main image)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            E2E_TAG="test"
+          elif [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            # Create timestamp-based tag for master merges (format: test-YYYYMMDD.HHMMSS)
+            TIMESTAMP=$(date -u +"%Y%m%d.%H%M%S")
+            E2E_TAG="test-${TIMESTAMP}"
+          else
+            E2E_TAG="test"
+          fi
+          
           # Create manifest from temp tags
-          docker manifest create mattermost/mattermost-cloud-e2e:test \
+          docker manifest create mattermost/mattermost-cloud-e2e:${E2E_TAG} \
             --amend mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-amd64 \
             --amend mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-arm64
           
           # Push the clean unified tag
-          docker manifest push mattermost/mattermost-cloud-e2e:test
+          docker manifest push mattermost/mattermost-cloud-e2e:${E2E_TAG}
           
-          echo "✅ Clean unified E2E multi-arch tag: mattermost/mattermost-cloud-e2e:test"
+          echo "✅ Clean unified E2E multi-arch tag: mattermost/mattermost-cloud-e2e:${E2E_TAG}"
           
           # Cleanup temp E2E tags using Docker Hub API
           echo "🗑️  Cleaning up temp E2E tags from Docker Hub..."
