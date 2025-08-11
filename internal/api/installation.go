@@ -244,6 +244,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		SingleTenantDatabaseConfig: createInstallationRequest.SingleTenantDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
 		ExternalDatabaseConfig:     createInstallationRequest.ExternalDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
 		PodProbeOverrides:          createInstallationRequest.PodProbeOverrides,
+		Command:                    createInstallationRequest.Command,
 		CRVersion:                  model.DefaultCRVersion,
 		State:                      model.InstallationStateCreationRequested,
 	}

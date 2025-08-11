@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/mattermost/mattermost-cloud/internal/util"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -789,6 +790,281 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 					"key1": {Value: "patch-value-1"},
 					"key2": {Value: "value2"},
 					"key3": {Value: "patch-value-3"},
+				},
+			},
+		},
+		// No-change scenarios
+		{
+			"ownerID same value should not apply",
+			false,
+			&model.PatchInstallationRequest{
+				OwnerID: util.SToP("same-owner"),
+			},
+			&model.Installation{
+				OwnerID: "same-owner",
+			},
+			&model.Installation{
+				OwnerID: "same-owner",
+			},
+		},
+		{
+			"version same value should not apply",
+			false,
+			&model.PatchInstallationRequest{
+				Version: util.SToP("same-version"),
+			},
+			&model.Installation{
+				Version: "same-version",
+			},
+			&model.Installation{
+				Version: "same-version",
+			},
+		},
+		{
+			"image same value should not apply",
+			false,
+			&model.PatchInstallationRequest{
+				Image: util.SToP("same-image"),
+			},
+			&model.Installation{
+				Image: "same-image",
+			},
+			&model.Installation{
+				Image: "same-image",
+			},
+		},
+		{
+			"size same value should not apply",
+			false,
+			&model.PatchInstallationRequest{
+				Size: util.SToP("same-size"),
+			},
+			&model.Installation{
+				Size: "same-size",
+			},
+			&model.Installation{
+				Size: "same-size",
+			},
+		},
+		{
+			"license same value should not apply",
+			false,
+			&model.PatchInstallationRequest{
+				License: util.SToP("same-license"),
+			},
+			&model.Installation{
+				License: "same-license",
+			},
+			&model.Installation{
+				License: "same-license",
+			},
+		},
+		// PriorityEnv scenarios
+		{
+			"priority env only, no installation env",
+			true,
+			&model.PatchInstallationRequest{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "priority_value1"},
+				},
+			},
+			&model.Installation{},
+			&model.Installation{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "priority_value1"},
+				},
+			},
+		},
+		{
+			"priority env only, patch installation env with no changes",
+			false,
+			&model.PatchInstallationRequest{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "priority_value1"},
+				},
+			},
+			&model.Installation{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "priority_value1"},
+				},
+			},
+			&model.Installation{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "priority_value1"},
+				},
+			},
+		},
+		{
+			"priority env only, patch installation env with changes",
+			true,
+			&model.PatchInstallationRequest{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "new_priority_value1"},
+				},
+			},
+			&model.Installation{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "old_priority_value1"},
+				},
+			},
+			&model.Installation{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "new_priority_value1"},
+				},
+			},
+		},
+		{
+			"priority env only, patch installation env with new key",
+			true,
+			&model.PatchInstallationRequest{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key2": {Value: "priority_value2"},
+				},
+			},
+			&model.Installation{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "priority_value1"},
+				},
+			},
+			&model.Installation{
+				PriorityEnv: model.EnvVarMap{
+					"priority_key1": {Value: "priority_value1"},
+					"priority_key2": {Value: "priority_value2"},
+				},
+			},
+		},
+		// PodProbeOverrides scenarios
+		{
+			"pod probe overrides only",
+			true,
+			&model.PatchInstallationRequest{
+				PodProbeOverrides: &model.PodProbeOverrides{
+					LivenessProbeOverride: &corev1.Probe{
+						TimeoutSeconds: 30,
+					},
+				},
+			},
+			&model.Installation{},
+			&model.Installation{
+				PodProbeOverrides: &model.PodProbeOverrides{
+					LivenessProbeOverride: &corev1.Probe{
+						TimeoutSeconds: 30,
+					},
+				},
+			},
+		},
+		{
+			"pod probe overrides replacement",
+			true,
+			&model.PatchInstallationRequest{
+				PodProbeOverrides: &model.PodProbeOverrides{
+					ReadinessProbeOverride: &corev1.Probe{
+						TimeoutSeconds: 45,
+					},
+				},
+			},
+			&model.Installation{
+				PodProbeOverrides: &model.PodProbeOverrides{
+					LivenessProbeOverride: &corev1.Probe{
+						TimeoutSeconds: 30,
+					},
+				},
+			},
+			&model.Installation{
+				PodProbeOverrides: &model.PodProbeOverrides{
+					ReadinessProbeOverride: &corev1.Probe{
+						TimeoutSeconds: 45,
+					},
+				},
+			},
+		},
+		// Command scenarios
+		{
+			"command only",
+			true,
+			&model.PatchInstallationRequest{
+				Command: &model.Commmand{"echo", "hello"},
+			},
+			&model.Installation{},
+			&model.Installation{
+				Command: &model.Commmand{"echo", "hello"},
+			},
+		},
+		{
+			"command replacement",
+			true,
+			&model.PatchInstallationRequest{
+				Command: &model.Commmand{"ls", "-la"},
+			},
+			&model.Installation{
+				Command: &model.Commmand{"echo", "hello"},
+			},
+			&model.Installation{
+				Command: &model.Commmand{"ls", "-la"},
+			},
+		},
+		// AllowedIPRanges additional scenarios
+		{
+			"ranges only, without override should merge",
+			true,
+			&model.PatchInstallationRequest{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
+					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
+				},
+				OverrideIPRanges: util.BToP(false),
+			},
+			&model.Installation{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+				},
+			},
+			&model.Installation{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
+					model.AllowedIPRange{CIDRBlock: "192.168.0.1/24"},
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+				},
+			},
+		},
+		{
+			"ranges only, without override (default behavior) should merge",
+			true,
+			&model.PatchInstallationRequest{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "10.0.0.1/8"},
+				},
+			},
+			&model.Installation{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+				},
+			},
+			&model.Installation{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "10.0.0.1/8"},
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+				},
+			},
+		},
+		{
+			"invalid ranges with override should fail to apply",
+			false,
+			&model.PatchInstallationRequest{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "127.0.0.1"},
+					model.AllowedIPRange{CIDRBlock: "invalid-cidr"},
+				},
+				OverrideIPRanges: util.BToP(true),
+			},
+			&model.Installation{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
+				},
+			},
+			&model.Installation{
+				AllowedIPRanges: &model.AllowedIPRanges{
+					model.AllowedIPRange{CIDRBlock: "192.168.1.1/24"},
 				},
 			},
 		},

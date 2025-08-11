@@ -27,7 +27,7 @@ func init() {
 			"Database", "Filestore", "Size", "Affinity", "GroupID", "GroupSequence",
 			"Installation.State", "License", "MattermostEnvRaw", "PriorityEnvRaw",
 			"SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
-			"Installation.CreateAt", "Installation.DeleteAt",
+			"Command", "Installation.CreateAt", "Installation.DeleteAt",
 			"Installation.DeletionPendingExpiry", "APISecurityLock", "LockAcquiredBy",
 			"LockAcquiredAt", "CRVersion", "Installation.DeletionLocked",
 			"AllowedIPRanges", "Volumes", "ScheduledDeletionTime", "PodProbeOverrides",
@@ -496,6 +496,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"AllowedIPRanges":       installation.AllowedIPRanges,
 		"Volumes":               installation.Volumes,
 		"PodProbeOverrides":     installation.PodProbeOverrides,
+		"Command":               installation.Command,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -574,6 +575,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"AllowedIPRanges":       installation.AllowedIPRanges,
 			"Volumes":               installation.Volumes,
 			"PodProbeOverrides":     installation.PodProbeOverrides,
+			"Command":               installation.Command,
 		}).
 		Where("ID = ?", installation.ID),
 	)

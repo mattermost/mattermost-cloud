@@ -216,6 +216,9 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 
 	ensureScheduling(mattermost, installation, clusterInstallation, cluster)
 
+	// Set custom command if provided
+	ensureCustomCommand(mattermost, installation)
+
 	err = setMMInstanceSize(installation, mattermost)
 	if err != nil {
 		return errors.Wrap(err, "failed to set Mattermost instance size")
@@ -430,6 +433,9 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster)
 
 	ensureScheduling(mattermost, installation, clusterInstallation, cluster)
+
+	// Set custom command if provided
+	ensureCustomCommand(mattermost, installation)
 
 	mattermost.Spec.DNSConfig = setNdots(provisioner.params.NdotsValue)
 
@@ -1387,6 +1393,18 @@ func translateMattermostVersion(version string) string {
 	}
 
 	return version
+}
+
+// ensureCustomCommand sets the custom command for the Mattermost container if provided.
+func ensureCustomCommand(mattermost *mmv1beta1.Mattermost, installation *model.Installation) {
+	if installation.Command == nil {
+		return
+	}
+
+	if mattermost.Spec.PodTemplate == nil {
+		mattermost.Spec.PodTemplate = &mmv1beta1.PodTemplate{}
+	}
+	mattermost.Spec.PodTemplate.Command = *installation.Command
 }
 
 func makeClusterInstallationName(clusterInstallation *model.ClusterInstallation) string {

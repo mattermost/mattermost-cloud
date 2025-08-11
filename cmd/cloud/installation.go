@@ -110,6 +110,11 @@ func executeInstallationCreateCmd(ctx context.Context, flags installationCreateF
 		PodProbeOverrides:         flags.generateProbeOverrides(),
 	}
 
+	if len(flags.command) > 0 {
+		command := model.Commmand(flags.command)
+		request.Command = &command
+	}
+
 	// For CLI to be backward compatible, if only one DNS is passed we use
 	// the old field.
 	// TODO: properly replace with DNSNames

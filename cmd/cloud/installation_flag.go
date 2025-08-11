@@ -28,6 +28,7 @@ type installationCreateRequestOptions struct {
 	priorityEnv               []string
 	annotations               []string
 	groupSelectionAnnotations []string
+	command                   []string
 	scheduledDeletionTime     time.Duration
 
 	// Probe override settings
@@ -60,6 +61,7 @@ func (flags *installationCreateRequestOptions) addFlags(command *cobra.Command) 
 	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 	command.Flags().StringArrayVar(&flags.groupSelectionAnnotations, "group-selection-annotation", []string{}, "Annotations for automatic group selection. Accepts multiple values, for example: '... --group-selection-annotation abc --group-selection-annotation def'")
 	command.Flags().DurationVar(&flags.scheduledDeletionTime, "scheduled-deletion-time", 0, "The time from now when the installation should be deleted. Use 0 for no scheduled deletion.")
+	command.Flags().StringSliceVar(&flags.command, "command", []string{}, "Override the default command for the Mattermost container. Accepts multiple values, for example: 'mattermost --example-flag test'")
 
 	// Probe override flags
 	command.Flags().Int32Var(&flags.probeLivenessFailureThreshold, "probe-liveness-failure-threshold", 0, "Override for the liveness probe failure threshold. Use 0 to use server/operator defaults.")
@@ -115,6 +117,7 @@ type installationPatchRequestChanges struct {
 	licenseChanged          bool
 	allowedIPRangesChanged  bool
 	overrideIPRangesChanged bool
+	commandChanged          bool
 
 	// Probe override change flags
 	probeLivenessFailureThresholdChanged    bool
@@ -138,6 +141,7 @@ func (flags *installationPatchRequestChanges) addFlags(command *cobra.Command) {
 	flags.licenseChanged = command.Flags().Changed("license")
 	flags.allowedIPRangesChanged = command.Flags().Changed("allowed-ip-ranges")
 	flags.overrideIPRangesChanged = command.Flags().Changed("override-ip-ranges")
+	flags.commandChanged = command.Flags().Changed("command")
 
 	// Probe override change flags
 	flags.probeLivenessFailureThresholdChanged = command.Flags().Changed("probe-liveness-failure-threshold")
@@ -164,6 +168,7 @@ type installationPatchRequestOptions struct {
 	mattermostEnv      []string
 	mattermostEnvClear bool
 	overrideIPRanges   bool
+	command            []string
 
 	// Probe override settings
 	probeLivenessFailureThreshold    int32
@@ -189,6 +194,7 @@ func (flags *installationPatchRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringArrayVar(&flags.mattermostEnv, "mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	command.Flags().BoolVar(&flags.mattermostEnvClear, "mattermost-env-clear", false, "Clears all env var data.")
 	command.Flags().BoolVar(&flags.overrideIPRanges, "override-ip-ranges", true, "Overrides Allowed IP ranges and force ignoring any previous value.")
+	command.Flags().StringSliceVar(&flags.command, "command", []string{}, "Override the default command for the Mattermost container. Accepts multiple values, for example: 'mattermost --example-flag test'")
 
 	// Probe override flags
 	command.Flags().Int32Var(&flags.probeLivenessFailureThreshold, "probe-liveness-failure-threshold", 0, "Override for the liveness probe failure threshold. Use 0 to use server/operator defaults.")
@@ -233,6 +239,11 @@ func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *mod
 
 	// Add probe overrides if any probe flags were changed
 	request.PodProbeOverrides = flags.generateProbeOverrides()
+
+	if flags.commandChanged {
+		command := model.Commmand(flags.command)
+		request.Command = &command
+	}
 
 	return &request
 }

@@ -35,8 +35,11 @@ type Installation struct {
 	OwnerID                    string
 	GroupID                    *string
 	GroupSequence              *int64 `json:"GroupSequence,omitempty"`
+	State                      string
+	Size                       string
 	Version                    string
 	Image                      string
+	Command                    *Commmand `json:"command,omitempty"`
 	Name                       string
 	Database                   string
 	SingleTenantDatabaseConfig *SingleTenantDatabaseConfig `json:"SingleTenantDatabaseConfig,omitempty"`
@@ -47,9 +50,7 @@ type Installation struct {
 	Volumes                    *VolumeMap
 	MattermostEnv              EnvVarMap
 	PriorityEnv                EnvVarMap
-	Size                       string
 	Affinity                   string
-	State                      string
 	CRVersion                  string
 	CreateAt                   int64
 	DeleteAt                   int64
@@ -72,6 +73,37 @@ type Installation struct {
 	// configMergeGroupSequence is the Sequence value of the group at the time
 	// it was merged with the installation.
 	configMergeGroupSequence int64
+}
+
+// Commmand contains configuration for overriding the Mattermost container command.
+type Commmand []string
+
+// Value implements the driver.Valuer interface for database storage
+func (c *Commmand) Value() (driver.Value, error) {
+	if c == nil {
+		return nil, nil
+	}
+	return json.Marshal(c)
+}
+
+// Scan implements the sql.Scanner interface for database retrieval
+func (c *Commmand) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+
+	source, ok := src.([]byte)
+	if !ok {
+		return errors.New("could not assert type of Commmand")
+	}
+
+	var command Commmand
+	err := json.Unmarshal(source, &command)
+	if err != nil {
+		return err
+	}
+	*c = command
+	return nil
 }
 
 // PodProbeOverrides contains configuration for overriding pod probe settings.

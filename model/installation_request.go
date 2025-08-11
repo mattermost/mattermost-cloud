@@ -63,8 +63,8 @@ type CreateInstallationRequest struct {
 	SingleTenantDatabaseConfig SingleTenantDatabaseRequest
 	// ExternalDatabaseConfig is ignored if Database is not single external.
 	ExternalDatabaseConfig ExternalDatabaseRequest
-	// PodProbeOverrides contains probe override settings for this installation.
-	PodProbeOverrides *PodProbeOverrides
+	PodProbeOverrides      *PodProbeOverrides
+	Command                *Commmand
 }
 
 // https://man7.org/linux/man-pages/man7/hostname.7.html
@@ -343,17 +343,17 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 
 // PatchInstallationRequest specifies the parameters for an updated installation.
 type PatchInstallationRequest struct {
-	OwnerID          *string
-	Image            *string
-	Version          *string
-	Size             *string
-	License          *string
-	AllowedIPRanges  *AllowedIPRanges
-	OverrideIPRanges *bool
-	PriorityEnv      EnvVarMap
-	MattermostEnv    EnvVarMap
-	// PodProbeOverrides contains probe override settings for this installation.
+	OwnerID           *string
+	Image             *string
+	Version           *string
+	Size              *string
+	License           *string
+	AllowedIPRanges   *AllowedIPRanges
+	OverrideIPRanges  *bool
+	PriorityEnv       EnvVarMap
+	MattermostEnv     EnvVarMap
 	PodProbeOverrides *PodProbeOverrides
+	Command           *Commmand
 }
 
 // Validate validates the values of a installation patch request.
@@ -435,6 +435,11 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 
 	if p.PodProbeOverrides != nil {
 		installation.PodProbeOverrides = p.PodProbeOverrides
+		applied = true
+	}
+
+	if p.Command != nil {
+		installation.Command = p.Command
 		applied = true
 	}
 

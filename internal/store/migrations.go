@@ -2287,4 +2287,12 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.53.0"), semver.MustParse("0.54.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN Command JSON DEFAULT NULL;`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create Command column")
+		}
+
+		return nil
+	}},
 }
