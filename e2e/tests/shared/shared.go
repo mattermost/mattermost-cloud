@@ -44,6 +44,9 @@ const (
 // TestConfig is test configuration coming from env vars.
 type TestConfig struct {
 	Provisioner               string `envconfig:"default=kops"`
+	ProvisionerClientID       string `envconfig:"optional"`
+	ProvisionerClientSecret   string `envconfig:"optional"`
+	ProvisionerTokenEndpoint  string `envconfig:"optional"`
 	CloudURL                  string `envconfig:"default=http://localhost:8075"`
 	UseExistingCluster        bool   `envconfig:"optional,default=false"`
 	InstallationDBType        string `envconfig:"default=aws-rds-postgres"`
@@ -94,7 +97,7 @@ func SetupTestWithDefaults(testName string) (*Test, error) {
 		logger.Logger.SetLevel(logrus.DebugLevel)
 	}
 
-	client := model.NewClient(config.CloudURL)
+	client := model.NewClientWithOAuth(config.CloudURL, nil, config.ProvisionerClientID, config.ProvisionerClientSecret, config.ProvisionerTokenEndpoint)
 	testAnnotations := testAnnotations(testID)
 
 	clusterParams, err := buildClusterSuiteParams(config, client, testAnnotations, logger)
