@@ -200,6 +200,30 @@ jobs:
             && echo "✅ Deleted ARM64 temp tag" || echo "⚠️  ARM64 temp tag not found or already deleted"
           
           echo "✅ Temp tags cleaned up from Docker Hub"
+          
+          # Store the clean tag for the notification step
+          echo "IMAGE_TAG=${CLEAN_TAG}" >> $GITHUB_ENV
+
+      - name: Get GitHub App installation token for cross-repo dispatch
+        if: ${{ github.ref == 'refs/heads/master' }}
+        id: gitopsToken
+        uses: mattermost/github-app-installation-token-action@4d4c8c09a49df5b54e1eafd372d1a1e44fdcab13
+        with:
+          appId: "${{ vars.UNIFIED_CI_APP_ID }}"
+          installationId: "${{ vars.UNIFIED_CI_INSTALLATION_ID }}"
+          privateKey: ${{ secrets.UNIFIED_CI_PRIVATE_KEY }}
+
+      - name: Notify GitOps Platform of new image
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ steps.gitopsToken.outputs.token }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Content-Type: application/json" \
+            -d '{"event_type": "provisioner-image-published", "client_payload": {"image_tag": "${{ env.IMAGE_TAG }}", "source": "mattermost-cloud", "commit_sha": "${{ github.sha }}"}}' \
+            https://api.github.com/repos/mattermost/${{ secrets.GITOPS_TARGET_REPOSITORY }}/dispatches
+          
+          echo "✅ Notified GitOps Platform of new image: ${{ env.IMAGE_TAG }}"
 
   # Build E2E AMD64 (native build, parallel with main builds)
   build-e2e-amd64:
