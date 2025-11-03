@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: "postgres:14.8"
+    image: "postgres:14.17"
     container_name: "cloud-postgres"
     restart: on-failure
     networks:
