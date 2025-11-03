@@ -263,7 +263,7 @@ The simplest migration method to PostgreSQL is to remove all running resources a
 
 Your existing `cloud.db` SQLite database will remain and can by kept for historical purposes if you want to lookup old resource IDs or events.
 
-#### Cloud Server Postgres Version 12.5 -> 14.8 Migration
+#### Cloud Server Postgres Version 12.5 -> 14.17 Migration
 
 When upgrading the Postgres image in the docker-compose.yaml file for local development, the following steps can be followed:
 

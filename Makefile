@@ -12,7 +12,7 @@ TERRAFORM_VERSION=1.5.7
 KOPS_VERSION=v1.28.4
 HELM_VERSION=v3.13.3
 KUBECTL_VERSION=v1.28.9
-POSTGRES_VERSION=14.8
+POSTGRES_VERSION=14.17
 ARCH ?= amd64
 
 APP_NAME    := $(shell basename -s .git `git config --get remote.origin.url`)
