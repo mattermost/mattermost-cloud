@@ -30,10 +30,10 @@ type SQLDatabaseManager interface {
 // MattermostMySQLConnStrings formats the connection string used for accessing a
 // Mattermost database.
 func MattermostMySQLConnStrings(schema, username, password string, dbCluster *rdsTypes.DBCluster) (string, string, string) {
-	datasourceConnection := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
+	datasourceConnection := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
 		username, password, *dbCluster.Endpoint, schema)
 	dbConnection := fmt.Sprintf("mysql://%s", datasourceConnection)
-	readReplicas := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30",
+	readReplicas := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
 		username, password, *dbCluster.ReaderEndpoint, schema)
 
 	return dbConnection, readReplicas, datasourceConnection
