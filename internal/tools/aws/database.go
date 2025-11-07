@@ -168,10 +168,10 @@ func (d *RDSDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseSto
 	}
 	rdsCluster := dbClusters.DBClusters[0]
 
-	var databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck string
+	var databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck, dataSourceURL string
 	switch d.databaseType {
 	case model.DatabaseEngineTypeMySQL:
-		databaseConnectionString, databaseReadReplicasString =
+		databaseConnectionString, databaseReadReplicasString, dataSourceURL =
 			MattermostMySQLConnStrings(
 				"mattermost",
 				installationSecret.MasterUsername,
@@ -199,6 +199,7 @@ func (d *RDSDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseSto
 		ConnectionString:       databaseConnectionString,
 		DBCheckURL:             databaseConnectionCheck,
 		ReadReplicasURL:        databaseReadReplicasString,
+		DataSourceURL:          dataSourceURL,
 	}
 
 	logger.Debug("AWS multitenant database configuration generated for cluster installation")

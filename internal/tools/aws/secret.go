@@ -16,6 +16,7 @@ type InstallationDBSecret struct {
 	ConnectionString       string
 	DBCheckURL             string
 	ReadReplicasURL        string
+	DataSourceURL          string // MySQL datasource URL without mysql:// prefix
 }
 
 // ToK8sSecret creates Kubernetes secret from InstallationDBSecret.
@@ -31,6 +32,10 @@ func (s InstallationDBSecret) ToK8sSecret(disableDBCheck bool) *corev1.Secret {
 	}
 	if !disableDBCheck && s.DBCheckURL != "" {
 		secret.StringData["DB_CONNECTION_CHECK_URL"] = s.DBCheckURL
+	}
+	// Add datasource URL without prefix for MySQL configurations
+	if s.DataSourceURL != "" {
+		secret.StringData["MM_SQLSETTINGS_DATASOURCE"] = s.DataSourceURL
 	}
 
 	return &secret

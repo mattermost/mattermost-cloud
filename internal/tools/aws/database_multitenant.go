@@ -246,9 +246,9 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.Installation
 		return nil, errors.Wrap(err, "failed to get secret value for database")
 	}
 
-	var databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck string
+	var databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck, dataSourceURL string
 	if d.databaseType == model.DatabaseEngineTypeMySQL {
-		databaseConnectionString, databaseReadReplicasString =
+		databaseConnectionString, databaseReadReplicasString, dataSourceURL =
 			MattermostMySQLConnStrings(
 				installationDatabaseName,
 				installationSecret.MasterUsername,
@@ -272,6 +272,7 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.Installation
 		ConnectionString:       databaseConnectionString,
 		DBCheckURL:             databaseConnectionCheck,
 		ReadReplicasURL:        databaseReadReplicasString,
+		DataSourceURL:          dataSourceURL,
 	}
 
 	logger.Debug("AWS RDS multitenant database configuration generated for cluster installation")
