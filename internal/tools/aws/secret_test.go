@@ -76,6 +76,47 @@ func TestInstallationDBSecret_ToK8sSecret(t *testing.T) {
 				},
 			},
 		},
+		{
+			description: "MySQL secret with datasource URL",
+			installationSecret: InstallationDBSecret{
+				InstallationSecretName: "mysql-secret",
+				ConnectionString:       "mysql://user:pass@tcp(db.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+				DBCheckURL:             "http://db.example.com:3306",
+				ReadReplicasURL:        "user:pass@tcp(db-ro.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+				DataSourceURL:          "user:pass@tcp(db.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+			},
+			disableDBCheck: false,
+			expectedSecret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mysql-secret",
+				},
+				StringData: map[string]string{
+					"DB_CONNECTION_STRING":              "mysql://user:pass@tcp(db.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+					"MM_SQLSETTINGS_DATASOURCEREPLICAS": "user:pass@tcp(db-ro.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+					"DB_CONNECTION_CHECK_URL":           "http://db.example.com:3306",
+					"MM_SQLSETTINGS_DATASOURCE":         "user:pass@tcp(db.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+				},
+			},
+		},
+		{
+			description: "MySQL secret without datasource URL",
+			installationSecret: InstallationDBSecret{
+				InstallationSecretName: "mysql-secret-no-datasource",
+				ConnectionString:       "mysql://user:pass@tcp(db.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+				ReadReplicasURL:        "user:pass@tcp(db-ro.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+				DataSourceURL:          "", // Empty datasource URL
+			},
+			disableDBCheck: false,
+			expectedSecret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mysql-secret-no-datasource",
+				},
+				StringData: map[string]string{
+					"DB_CONNECTION_STRING":              "mysql://user:pass@tcp(db.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+					"MM_SQLSETTINGS_DATASOURCEREPLICAS": "user:pass@tcp(db-ro.example.com:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+				},
+			},
+		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			k8sSecret := testCase.installationSecret.ToK8sSecret(testCase.disableDBCheck)
