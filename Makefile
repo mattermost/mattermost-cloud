@@ -390,17 +390,21 @@ build-image-e2e-pr:
 
 .PHONY: build-image-e2e
 build-image-e2e:
-	@echo Building e2e image (multi-platform, installation tests only)
+	@echo "Building e2e image (multi-platform, installation tests only)"
 	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
 		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
 	else \
-		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+		printf '%s\n' "$(DOCKER_PASSWORD)" | docker login --username "$(DOCKER_USERNAME)" --password-stdin; \
 	fi
 	docker buildx build \
-    --platform linux/amd64,linux/arm64 \
-	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE) -t  $(MATTERMOST_CLOUD_E2E_IMAGE)-$(BUILD_TIME) \
-	--no-cache \
-    --push
+		--platform linux/amd64,linux/arm64 \
+		-f build/Dockerfile.e2e \
+		-t "$(MATTERMOST_CLOUD_E2E_IMAGE)" \
+		-t "$(MATTERMOST_CLOUD_E2E_IMAGE)-$(BUILD_TIME)" \
+		--no-cache \
+		--push \
+		.
+	@echo "Done."
 
 .PHONY: e2e-db-migration
 e2e-db-migration:
