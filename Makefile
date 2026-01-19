@@ -287,6 +287,13 @@ build-image-parallel:  ## Build both platforms as single clean image (FAST, simp
 	docker manifest push $(MATTERMOST_CLOUD_IMAGE)
 	@echo ✅ Clean multi-platform image ready: $(MATTERMOST_CLOUD_IMAGE)
 
+# Backwards-compatible aliases for CI/CD
+.PHONY: push-image-pr
+push-image-pr: build-image-parallel  ## Alias for backwards compatibility (PR builds)
+
+.PHONY: push-image
+push-image: build-image-parallel-with-tags  ## Alias for backwards compatibility (main builds)
+
 .PHONY: get-terraform
 get-terraform: ## Download terraform only if it's not available. Used in the docker build
 	@if [ ! -f build/terraform ]; then \
