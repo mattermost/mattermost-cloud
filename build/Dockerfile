@@ -11,8 +11,8 @@ WORKDIR /mattermost-cloud/
 COPY . /mattermost-cloud/
 
 RUN apt-get update -yq && apt-get install -yq unzip && \
-  make get-terraform ARCH=${TARGETARCH} get-kops ARCH=${TARGETARCH} get-helm ARCH=${TARGETARCH} get-kubectl ARCH=${TARGETARCH} && \
-  make build ARCH=${TARGETARCH}
+  ARCH=${TARGETARCH} make get-terraform get-kops get-helm get-kubectl && \
+  ARCH=${TARGETARCH} make build
 
 # Final Image
 FROM --platform=${TARGETPLATFORM} ${DOCKER_BASE_IMAGE}
