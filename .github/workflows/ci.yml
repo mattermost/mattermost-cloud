@@ -96,6 +96,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
+
       - name: Log in to Docker Hub
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
@@ -106,6 +109,7 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/amd64 \
+            --provenance=false \
             . -f build/Dockerfile -t mattermost/mattermost-cloud:temp-${{ github.sha }}-amd64 \
             --push
         env:
@@ -123,6 +127,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
+
       - name: Log in to Docker Hub
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
@@ -133,6 +140,7 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/arm64 \
+            --provenance=false \
             . -f build/Dockerfile -t mattermost/mattermost-cloud:temp-${{ github.sha }}-arm64 \
             --push
         env:
@@ -212,6 +220,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
+
       - name: Log in to Docker Hub
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
@@ -222,6 +233,7 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/amd64 \
+            --provenance=false \
             . -f build/Dockerfile.e2e -t mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-amd64 \
             --push
         env:
@@ -239,6 +251,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
+
       - name: Log in to Docker Hub
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
@@ -249,6 +264,7 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/arm64 \
+            --provenance=false \
             . -f build/Dockerfile.e2e -t mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-arm64 \
             --push
         env:

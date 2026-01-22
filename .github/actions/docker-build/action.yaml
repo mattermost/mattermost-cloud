@@ -8,7 +8,7 @@ runs:
       uses: ./.github/actions/docker-prepare
 
     - name: cd/scan-docker-security
-      uses: aquasecurity/trivy-action@062f2592684a31eb3aa050cc61e7ca1451cecd3d # v0.18.0
+      uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # v0.29.0
       with:
         image-ref: "mattermost/mattermost-cloud"
         format: "table"
@@ -27,7 +27,7 @@ runs:
       if: github.event_name != 'pull_request'
 
     - name: cd/scan-docker-security-e2e
-      uses: aquasecurity/trivy-action@062f2592684a31eb3aa050cc61e7ca1451cecd3d # v0.18.0
+      uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # v0.29.0
       with:
         image-ref: "mattermost/mattermost-cloud-e2e"
         format: "table"
