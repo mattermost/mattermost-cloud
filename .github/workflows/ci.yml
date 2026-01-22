@@ -109,6 +109,7 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/amd64 \
+            --provenance=false \
             . -f build/Dockerfile -t mattermost/mattermost-cloud:temp-${{ github.sha }}-amd64 \
             --push
         env:
@@ -139,6 +140,7 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/arm64 \
+            --provenance=false \
             . -f build/Dockerfile -t mattermost/mattermost-cloud:temp-${{ github.sha }}-arm64 \
             --push
         env:
@@ -231,6 +233,7 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/amd64 \
+            --provenance=false \
             . -f build/Dockerfile.e2e -t mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-amd64 \
             --push
         env:
@@ -261,6 +264,7 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/arm64 \
+            --provenance=false \
             . -f build/Dockerfile.e2e -t mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-arm64 \
             --push
         env:
