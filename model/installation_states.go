@@ -223,7 +223,6 @@ var (
 		InstallationStateUpdateRequested: {
 			InstallationStateStable,
 			InstallationStateUpdateRequested,
-			InstallationStateUpdateInProgress,
 			InstallationStateUpdateFailed,
 		},
 		InstallationStateDeletionPendingRequested: {
