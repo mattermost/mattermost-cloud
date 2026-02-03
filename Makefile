@@ -258,7 +258,7 @@ build-image-parallel-with-tags:  ## Build both platforms with your standard tagg
 	$(MAKE) build-image-amd64-with-tags &
 	$(MAKE) build-image-arm64-with-tags &
 	wait
-	@echo Creating multi-platform manifests with clean tags (no suffixes)
+	@echo "Creating multi-platform manifests with clean tags (no suffixes)"
 	docker manifest create $(MATTERMOST_CLOUD_IMAGE) \
 		--amend $(MATTERMOST_CLOUD_IMAGE)-amd64 \
 		--amend $(MATTERMOST_CLOUD_IMAGE)-arm64
@@ -384,7 +384,7 @@ verify-mocks: mocks
 
 .PHONY: build-image-e2e-pr
 build-image-e2e-pr:
-	@echo Building e2e image for PR (multi-platform, installation tests only)
+	@echo "Building e2e image for PR (multi-platform, installation tests only)"
 	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
 		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
 	else \
