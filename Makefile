@@ -259,8 +259,8 @@ build-image-arm64-with-tags:  ## Build ARM64 with your standard tagging pattern
 .PHONY: build-image-parallel-with-tags
 build-image-parallel-with-tags:  ## Build both platforms with your standard tagging pattern (FAST, clean tags)
 	@echo Building Mattermost-cloud Docker Image for both platforms with full tags
-	$(MAKE) build-image-amd64-with-tags BUILD_TIME=$(BUILD_TIME) &
-	$(MAKE) build-image-arm64-with-tags BUILD_TIME=$(BUILD_TIME) &
+	$(MAKE) build-image-amd64-with-tags BUILD_TIME=$(BUILD_TIME) & \
+	$(MAKE) build-image-arm64-with-tags BUILD_TIME=$(BUILD_TIME) & \
 	wait
 	@echo "Creating multi-platform manifests with clean tags (no suffixes)"
 	docker manifest create $(MATTERMOST_CLOUD_IMAGE) \
@@ -284,8 +284,8 @@ build-image-parallel-with-tags:  ## Build both platforms with your standard tagg
 .PHONY: build-image-parallel
 build-image-parallel:  ## Build both platforms as single clean image (FAST, simple)
 	@echo Building Mattermost-cloud Docker Image for both platforms  
-	$(MAKE) build-image-amd64 BUILD_TIME=$(BUILD_TIME) &
-	$(MAKE) build-image-arm64 BUILD_TIME=$(BUILD_TIME) &
+	$(MAKE) build-image-amd64 BUILD_TIME=$(BUILD_TIME) & \
+	$(MAKE) build-image-arm64 BUILD_TIME=$(BUILD_TIME) & \
 	wait
 	@echo Creating single multi-platform image
 	docker manifest create $(MATTERMOST_CLOUD_IMAGE) \
