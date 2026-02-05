@@ -78,6 +78,11 @@ func TestInstallation_ValidTransitionState(t *testing.T) {
 			newState: InstallationStateDeletionRequested,
 			isValid:  true,
 		},
+		{
+			oldState: InstallationStateUpdateInProgress,
+			newState: InstallationStateUpdateRequested,
+			isValid:  false,
+		},
 	} {
 		t.Run(testCase.oldState+" to "+testCase.newState, func(t *testing.T) {
 			installation := Installation{State: testCase.oldState}
