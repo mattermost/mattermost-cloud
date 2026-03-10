@@ -233,7 +233,7 @@ func (sqlStore *SQLStore) GetGroupStatus(groupID string) (*model.GroupStatus, er
 		Select("Count (*)").
 		From("Installation").
 		Where("GroupID = ?", group.ID).
-		Where("State = ?", model.InstallationStateDeletionPending).
+		Where(sq.Eq{"State": model.AllInstallationDeletionStates}).
 		Where("DeleteAt = 0")
 	err = sqlStore.selectBuilder(sqlStore.db, &pendingDeletionResult, installationBuilder)
 	if err != nil {

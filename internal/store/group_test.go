@@ -795,6 +795,66 @@ func TestGetGroupStatus(t *testing.T) {
 			assert.Equal(t, expectedStatus, groupStatus)
 		})
 
+		t.Run("deletion pending requested", func(t *testing.T) {
+			installation1.State = model.InstallationStateDeletionPendingRequested
+			errTest := sqlStore.UpdateInstallation(installation1)
+			require.NoError(t, errTest)
+
+			time.Sleep(1 * time.Millisecond)
+
+			expectedStatus := &model.GroupStatus{
+				InstallationsTotal:           1,
+				InstallationsUpdated:         0,
+				InstallationsUpdating:        0,
+				InstallationsAwaitingUpdate:  0,
+				InstallationsHibernating:     0,
+				InstallationsPendingDeletion: 1,
+			}
+			groupStatus, errTest := sqlStore.GetGroupStatus(group1.ID)
+			require.NoError(t, errTest)
+			assert.Equal(t, expectedStatus, groupStatus)
+		})
+
+		t.Run("deletion pending in progress", func(t *testing.T) {
+			installation1.State = model.InstallationStateDeletionPendingInProgress
+			errTest := sqlStore.UpdateInstallation(installation1)
+			require.NoError(t, errTest)
+
+			time.Sleep(1 * time.Millisecond)
+
+			expectedStatus := &model.GroupStatus{
+				InstallationsTotal:           1,
+				InstallationsUpdated:         0,
+				InstallationsUpdating:        0,
+				InstallationsAwaitingUpdate:  0,
+				InstallationsHibernating:     0,
+				InstallationsPendingDeletion: 1,
+			}
+			groupStatus, errTest := sqlStore.GetGroupStatus(group1.ID)
+			require.NoError(t, errTest)
+			assert.Equal(t, expectedStatus, groupStatus)
+		})
+
+		t.Run("deletion failed", func(t *testing.T) {
+			installation1.State = model.InstallationStateDeletionFailed
+			errTest := sqlStore.UpdateInstallation(installation1)
+			require.NoError(t, errTest)
+
+			time.Sleep(1 * time.Millisecond)
+
+			expectedStatus := &model.GroupStatus{
+				InstallationsTotal:           1,
+				InstallationsUpdated:         0,
+				InstallationsUpdating:        0,
+				InstallationsAwaitingUpdate:  0,
+				InstallationsHibernating:     0,
+				InstallationsPendingDeletion: 1,
+			}
+			groupStatus, errTest := sqlStore.GetGroupStatus(group1.ID)
+			require.NoError(t, errTest)
+			assert.Equal(t, expectedStatus, groupStatus)
+		})
+
 		t.Run("awaiting update", func(t *testing.T) {
 			installation1.State = model.InstallationStateStable
 			errTest := sqlStore.UpdateInstallation(installation1)
