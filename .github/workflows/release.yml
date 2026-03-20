@@ -42,6 +42,24 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Scan docker security :test
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+        with:
+          image: "mattermost/mattermost-cloud:test"
+          output-format: table
+          only-fixed: true
+          fail-build: false
+          severity-cutoff: critical
+
+      - name: Scan docker security :tag
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+        with:
+          image: "mattermost/mattermost-cloud:${{ steps.version.outputs.VERSION }}"
+          output-format: table
+          only-fixed: true
+          fail-build: false
+          severity-cutoff: critical
+
       - name: Build binaries
         run: make build
 

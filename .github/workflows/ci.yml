@@ -116,6 +116,15 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: ci/scan-docker-security
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+        with:
+          image: "mattermost/mattermost-cloud:temp-${{ github.sha }}-amd64"
+          output-format: table
+          only-fixed: true
+          fail-build: false
+          severity-cutoff: critical
+
   # Build ARM64 image (fast native build)
   build-arm64:
     runs-on: ubuntu-24.04-arm
@@ -146,6 +155,15 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: ci/scan-docker-security
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+        with:
+          image: "mattermost/mattermost-cloud:temp-${{ github.sha }}-arm64"
+          output-format: table
+          only-fixed: true
+          fail-build: false
+          severity-cutoff: critical
 
   # Create unified multi-arch manifest (clean tag)
   create-manifest:
@@ -240,6 +258,15 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: ci/scan-docker-security
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+        with:
+          image: "mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-amd64"
+          output-format: table
+          only-fixed: true
+          fail-build: false
+          severity-cutoff: critical
+
   # Build E2E ARM64 (native build on ARM runner, parallel with main builds)
   build-e2e-arm64:
     runs-on: ubuntu-24.04-arm
@@ -270,6 +297,15 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: ci/scan-docker-security
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+        with:
+          image: "mattermost/mattermost-cloud-e2e:temp-${{ github.sha }}-arm64"
+          output-format: table
+          only-fixed: true
+          fail-build: false
+          severity-cutoff: critical
 
   # Create unified E2E multi-arch manifest
   create-e2e-manifest:
