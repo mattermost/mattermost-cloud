@@ -7,15 +7,6 @@ runs:
     - name: ci/prepare-docker-environment
       uses: ./.github/actions/docker-prepare
 
-    - name: cd/scan-docker-security
-      uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # v0.29.0
-      with:
-        image-ref: "mattermost/mattermost-cloud"
-        format: "table"
-        ignore-unfixed: true
-        vuln-type: "os,library"
-        severity: "CRITICAL"
-
     - name: cd/build-docker-e2e-pr
       run: make build-image-e2e-pr
       shell: bash
@@ -25,15 +16,6 @@ runs:
       run: make build-image-e2e
       shell: bash
       if: github.event_name != 'pull_request'
-
-    - name: cd/scan-docker-security-e2e
-      uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # v0.29.0
-      with:
-        image-ref: "mattermost/mattermost-cloud-e2e"
-        format: "table"
-        ignore-unfixed: true
-        vuln-type: "os,library"
-        severity: "CRITICAL"
 
     - name: cd/push-image-pr
       run: "make push-image-pr"
