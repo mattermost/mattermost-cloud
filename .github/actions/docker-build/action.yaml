@@ -7,6 +7,15 @@ runs:
     - name: ci/prepare-docker-environment
       uses: ./.github/actions/docker-prepare
 
+    - name: cd/scan-docker-security
+      uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+      with:
+        image: "mattermost/mattermost-cloud"
+        output-format: table
+        only-fixed: true
+        fail-build: false
+        severity-cutoff: critical
+
     - name: cd/build-docker-e2e-pr
       run: make build-image-e2e-pr
       shell: bash
@@ -16,6 +25,15 @@ runs:
       run: make build-image-e2e
       shell: bash
       if: github.event_name != 'pull_request'
+
+    - name: cd/scan-docker-security-e2e
+      uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+      with:
+        image: "mattermost/mattermost-cloud-e2e"
+        output-format: table
+        only-fixed: true
+        fail-build: false
+        severity-cutoff: critical
 
     - name: cd/push-image-pr
       run: "make push-image-pr"
