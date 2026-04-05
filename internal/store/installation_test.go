@@ -337,6 +337,22 @@ func TestInstallations(t *testing.T) {
 			[]*model.Installation{installation3},
 		},
 		{
+			"dns LIKE pattern",
+			&model.InstallationFilter{
+				DNS:    "dns-%",
+				Paging: model.AllPagesNotDeleted(),
+			},
+			[]*model.Installation{installation1, installation2, installation3},
+		},
+		{
+			"dns LIKE pattern no match",
+			&model.InstallationFilter{
+				DNS:    "nonexistent-%",
+				Paging: model.AllPagesNotDeleted(),
+			},
+			nil,
+		},
+		{
 			"state stable",
 			&model.InstallationFilter{
 				State:  model.InstallationStateStable,
