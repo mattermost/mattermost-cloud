@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -191,7 +192,11 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 		builder = builder.Where("State = ?", filter.State)
 	}
 	if filter.DNS != "" {
-		builder = builder.Where("InstallationDNS.DomainName = ?", filter.DNS)
+		if strings.Contains(filter.DNS, "%") {
+			builder = builder.Where("InstallationDNS.DomainName LIKE ?", filter.DNS)
+		} else {
+			builder = builder.Where("InstallationDNS.DomainName = ?", filter.DNS)
+		}
 	}
 	if filter.Name != "" {
 		builder = builder.Where("Installation.Name = ?", filter.Name)
