@@ -194,7 +194,7 @@ func (ev *EventsRecorder) VerifyInOrder(expectedEvents []EventOccurrence) error 
 
 	if len(expectedEvents) > 0 {
 		return fmt.Errorf("not all expected events appeared in correct order, "+
-			"%d expected events occured, "+
+			"%d expected events occurred, "+
 			"stuck at expected event: %v", expEvLen-len(expectedEvents), expectedEvents[0])
 	}
 
