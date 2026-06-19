@@ -34,6 +34,10 @@ var gitlabFetchClient = &http.Client{
 const (
 	defaultKubeConfigPath            = ""
 	defaultHelmDeploymentSetArgument = ""
+
+	// maxGitlabResponseSize caps the response body read from the GitLab
+	// values endpoint to keep memory usage bounded.
+	maxGitlabResponseSize = 10 << 20 // 10 MiB
 )
 
 // helmDeployment deploys Helm charts.
@@ -332,7 +336,7 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 		return "", nil, errors.Errorf("request to Gitlab failed with status: %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxGitlabResponseSize))
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to read body from Gitlab response")
 	}
@@ -347,18 +351,21 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to create temporary file for Helm values file")
 	}
+	tmpPath := temporaryValuesFile.Name()
+	temporaryValuesFile.Close()
 
 	content, err := base64.StdEncoding.DecodeString(valuesFileBytes.Content)
 	if err != nil {
+		os.Remove(tmpPath)
 		return "", nil, errors.Wrap(err, "failed to decode base64-encoded YAML file")
 	}
 
-	err = os.WriteFile(temporaryValuesFile.Name(), content, 0600)
-	if err != nil {
+	if err := os.WriteFile(tmpPath, content, 0600); err != nil {
+		os.Remove(tmpPath)
 		return "", nil, errors.Wrap(err, "failed to write values file to disk for Helm to read")
 	}
 
-	return temporaryValuesFile.Name(), func(path string) {
+	return tmpPath, func(path string) {
 		if strings.HasPrefix(path, os.TempDir()) {
 			os.Remove(path)
 		}

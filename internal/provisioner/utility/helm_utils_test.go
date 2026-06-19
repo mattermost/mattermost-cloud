@@ -168,6 +168,80 @@ func TestFetchFromGitlabIfNecessary_SendsTokenViaPrivateTokenHeader(t *testing.T
 	assert.Equal(t, "key: value\n", string(content))
 }
 
+// TestFetchFromGitlabIfNecessary_CleansUpTempFileOnDecodeError verifies
+// that a malformed (non-base64) response body does not leave an orphan
+// temp file behind.
+func TestFetchFromGitlabIfNecessary_CleansUpTempFileOnDecodeError(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Content field is not valid base64.
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"content":"!!!not base64!!!"}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	srvURL, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+
+	withGitlabConfig(t, "secret-token", "https://"+srvURL.Host)
+	_ = withFetchClient(t)
+
+	before := countHelmValuesTempFiles(t)
+
+	in := "https://" + srvURL.Host + "/api/v4/projects/1/repository/files/values.yaml?ref=main"
+	_, cleanup, err := fetchFromGitlabIfNecessary(in)
+	require.Error(t, err)
+	assert.Nil(t, cleanup)
+
+	after := countHelmValuesTempFiles(t)
+	assert.Equal(t, before, after, "no orphan temp file should remain after a decode error")
+}
+
+// TestFetchFromGitlabIfNecessary_LimitsResponseBodySize verifies that an
+// oversized response is truncated by the limit reader and surfaces as a
+// JSON parse error rather than being read into memory in full.
+func TestFetchFromGitlabIfNecessary_LimitsResponseBodySize(t *testing.T) {
+	// Build a payload larger than maxGitlabResponseSize so the limit
+	// reader truncates mid-stream and JSON parsing fails.
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"content":"`))
+		buf := make([]byte, 1<<20)
+		for i := range buf {
+			buf[i] = 'A'
+		}
+		for written := 0; written < maxGitlabResponseSize+(2<<20); written += len(buf) {
+			_, _ = w.Write(buf)
+		}
+		w.Write([]byte(`"}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	srvURL, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+
+	withGitlabConfig(t, "secret-token", "https://"+srvURL.Host)
+	_ = withFetchClient(t)
+
+	in := "https://" + srvURL.Host + "/api/v4/projects/1/repository/files/values.yaml?ref=main"
+	_, _, err = fetchFromGitlabIfNecessary(in)
+	require.Error(t, err)
+}
+
+// countHelmValuesTempFiles returns the number of files in os.TempDir()
+// whose name matches the helm-values-file- prefix used by the function.
+func countHelmValuesTempFiles(t *testing.T) int {
+	t.Helper()
+	entries, err := os.ReadDir(os.TempDir())
+	require.NoError(t, err)
+	count := 0
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), "helm-values-file-") {
+			count++
+		}
+	}
+	return count
+}
+
 // TestFetchFromGitlabIfNecessary_DoesNotFollowRedirects ensures the
 // fetch client surfaces a redirect response as an error rather than
 // silently following it.
