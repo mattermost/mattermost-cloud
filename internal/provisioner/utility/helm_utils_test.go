@@ -235,7 +235,7 @@ func countHelmValuesTempFiles(t *testing.T) int {
 	require.NoError(t, err)
 	count := 0
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), "helm-values-file-") {
+		if !e.IsDir() && strings.HasPrefix(e.Name(), "helm-values-file-") {
 			count++
 		}
 	}
