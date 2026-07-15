@@ -209,10 +209,10 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 			Image:         installation.Image,
 			MattermostEnv: mattermostEnv.ToEnvList(),
 			Ingress:       makeIngressSpec(installationDNS, getIngressAnnotations()),
-			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
-			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation, cluster, nodeSeparation),
-			Scheduling:     mmv1beta1.Scheduling{},
-			DNSConfig:      setNdots(provisioner.params.NdotsValue),
+			// ResourceLabels (installation-id, cluster-installation-id, ...) are set by
+			// ensureScheduling below, the single owner of the scheduling-related spec.
+			Scheduling: mmv1beta1.Scheduling{},
+			DNSConfig:  setNdots(provisioner.params.NdotsValue),
 			DeploymentTemplate: &mmv1beta1.DeploymentTemplate{
 				RevisionHistoryLimit: ptr.Int32(1),
 			},
@@ -440,8 +440,8 @@ func (provisioner Provisioner) updateClusterInstallation(
 	}
 
 	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster)
-	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster, nodeSeparation)
 
+	// ensureScheduling is the single owner of ResourceLabels + Affinity; it sets both.
 	ensureScheduling(mattermost, installation, clusterInstallation, cluster, nodeSeparation)
 
 	// Set custom command if provided
@@ -683,6 +683,10 @@ func ensureScheduling(
 	cluster *model.Cluster,
 	nodeSeparation bool,
 ) {
+	// Single owner of the scheduling-related spec: the provisioner overwrites both the
+	// affinity and the resource labels (which seed pod labels) on every reconcile, so the
+	// node-separation affinity term and the label it selects always stay in sync.
+	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster, nodeSeparation)
 	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation, cluster, nodeSeparation)
 	if installation.Scheduling != nil {
 		mattermost.Spec.Scheduling.NodeSelector = installation.Scheduling.NodeSelector
