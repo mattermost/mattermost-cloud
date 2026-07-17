@@ -192,6 +192,11 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 		return errors.Wrap(err, "failed to prepare cluster installation env")
 	}
 
+	nodeSeparation, err := provisioner.resolveNodeSeparation(installation)
+	if err != nil {
+		return errors.Wrap(err, "failed to resolve node separation annotation")
+	}
+
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
 	mattermost := &mmv1beta1.Mattermost{
 		ObjectMeta: metav1.ObjectMeta{
@@ -204,17 +209,17 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 			Image:         installation.Image,
 			MattermostEnv: mattermostEnv.ToEnvList(),
 			Ingress:       makeIngressSpec(installationDNS, getIngressAnnotations()),
-			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
-			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation, cluster),
-			Scheduling:     mmv1beta1.Scheduling{},
-			DNSConfig:      setNdots(provisioner.params.NdotsValue),
+			// ResourceLabels (installation-id, cluster-installation-id, ...) are set by
+			// ensureScheduling below, the single owner of the scheduling-related spec.
+			Scheduling: mmv1beta1.Scheduling{},
+			DNSConfig:  setNdots(provisioner.params.NdotsValue),
 			DeploymentTemplate: &mmv1beta1.DeploymentTemplate{
 				RevisionHistoryLimit: ptr.Int32(1),
 			},
 		},
 	}
 
-	ensureScheduling(mattermost, installation, clusterInstallation, cluster)
+	ensureScheduling(mattermost, installation, clusterInstallation, cluster, nodeSeparation)
 
 	// Set custom command if provided
 	ensureCustomCommand(mattermost, installation)
@@ -429,10 +434,15 @@ func (provisioner Provisioner) updateClusterInstallation(
 
 	logger.WithField("status", fmt.Sprintf("%+v", mattermost.Status)).Debug("Got mattermost installation")
 
-	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster)
-	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster)
+	nodeSeparation, err := provisioner.resolveNodeSeparation(installation)
+	if err != nil {
+		return errors.Wrap(err, "failed to resolve node separation annotation")
+	}
 
-	ensureScheduling(mattermost, installation, clusterInstallation, cluster)
+	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster)
+
+	// ensureScheduling is the single owner of ResourceLabels + Affinity; it sets both.
+	ensureScheduling(mattermost, installation, clusterInstallation, cluster, nodeSeparation)
 
 	// Set custom command if provided
 	ensureCustomCommand(mattermost, installation)
@@ -671,8 +681,13 @@ func ensureScheduling(
 	installation *model.Installation,
 	clusterInstallation *model.ClusterInstallation,
 	cluster *model.Cluster,
+	nodeSeparation bool,
 ) {
-	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation, cluster)
+	// Single owner of the scheduling-related spec: the provisioner overwrites both the
+	// affinity and the resource labels (which seed pod labels) on every reconcile, so the
+	// node-separation affinity term and the label it selects always stay in sync.
+	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster, nodeSeparation)
+	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation, cluster, nodeSeparation)
 	if installation.Scheduling != nil {
 		mattermost.Spec.Scheduling.NodeSelector = installation.Scheduling.NodeSelector
 		mattermost.Spec.Scheduling.Tolerations = installation.Scheduling.Tolerations
@@ -1038,10 +1053,48 @@ func mapDomains(installationDNS []*model.InstallationDNS) []mmv1beta1.IngressHos
 	return hosts
 }
 
+const (
+	// nodeSeparationAnnotation, when present on an installation, opts it into
+	// cross-installation node-level anti-affinity (SEC-9253): the installation's
+	// pods will not share a node with any OTHER installation that also carries
+	// this annotation. Applied to `community` and `hub` on the internal cluster.
+	nodeSeparationAnnotation = "separate-nodes"
+	// nodeSeparationLabel is stamped on the pods of opted-in installations (via
+	// ResourceLabels) so the cross-namespace anti-affinity term can select them.
+	nodeSeparationLabel = "node-separation-group"
+)
+
+// resolveNodeSeparation fetches the installation's annotations from the store and
+// reports whether it opted into cross-installation node separation. model.Installation
+// does not carry its annotations (they are a separate join), so the lookup happens
+// here at the reconcile call sites.
+func (provisioner Provisioner) resolveNodeSeparation(installation *model.Installation) (bool, error) {
+	annotations, err := provisioner.store.GetAnnotationsForInstallation(installation.ID)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get annotations for installation")
+	}
+	return installationWantsNodeSeparation(annotations), nil
+}
+
+// installationWantsNodeSeparation reports whether the installation opted into
+// cross-installation node separation via nodeSeparationAnnotation.
+//
+// Installations without the annotation get affinity and labels byte-identical to today.
+func installationWantsNodeSeparation(annotations []*model.Annotation) bool {
+	for _, annotation := range annotations {
+		if annotation != nil && annotation.Name == nodeSeparationAnnotation {
+			return true
+		}
+	}
+	return false
+}
+
 // generateAffinityConfig generates pods Affinity configuration aiming to spread pods of single cluster installation
-// across different availability zones and nodes.
-func generateAffinityConfig(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster) *corev1.Affinity {
-	return &corev1.Affinity{
+// across different availability zones and nodes. When the installation opts into node separation
+// (nodeSeparationAnnotation), it additionally keeps the installation's pods off any node running a
+// pod from another opted-in installation (SEC-9253).
+func generateAffinityConfig(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster, nodeSeparation bool) *corev1.Affinity {
+	affinity := &corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
 				{
@@ -1067,6 +1120,35 @@ func generateAffinityConfig(installation *model.Installation, clusterInstallatio
 			},
 		},
 	}
+
+	if nodeSeparation {
+		// Cross-installation, node-level separation. NamespaceSelector is the empty
+		// selector (ALL namespaces) on purpose: peer installations live in their own
+		// namespaces, so unlike the self-spread terms above this must match across
+		// namespaces. topologyKey is the node.
+		//
+		// Modeled as a soft preference (weight 100) so it never blocks scheduling: the
+		// scheduler strongly prefers to keep opted-in installations on distinct nodes
+		// but will co-locate rather than leave a pod Pending when node headroom is
+		// tight. For a hard guarantee, move this into
+		// RequiredDuringSchedulingIgnoredDuringExecution instead (requires guaranteed
+		// spare-node capacity).
+		affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+			affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution,
+			corev1.WeightedPodAffinityTerm{
+				Weight: 100,
+				PodAffinityTerm: corev1.PodAffinityTerm{
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{nodeSeparationLabel: nodeSeparationAnnotation},
+					},
+					NamespaceSelector: &metav1.LabelSelector{},
+					TopologyKey:       "kubernetes.io/hostname",
+				},
+			},
+		)
+	}
+
+	return affinity
 }
 
 func setMMInstanceSize(installation *model.Installation, mattermost *mmv1beta1.Mattermost) error {
@@ -1285,9 +1367,15 @@ func clusterInstallationBaseLabels(installation *model.Installation, clusterInst
 	return labels
 }
 
-func clusterInstallationStableLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster) map[string]string {
+func clusterInstallationStableLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation, cluster *model.Cluster, nodeSeparation bool) map[string]string {
 	labels := clusterInstallationBaseLabels(installation, clusterInstallation, cluster)
 	labels["state"] = "running"
+	if nodeSeparation {
+		// Stamp the separation label so it reaches the pods (via Spec.ResourceLabels)
+		// and the cross-namespace anti-affinity term in generateAffinityConfig can
+		// select it. Only opted-in installations carry it (SEC-9253).
+		labels[nodeSeparationLabel] = nodeSeparationAnnotation
+	}
 	return labels
 }
 

@@ -814,7 +814,7 @@ func TestEnsureScheduling(t *testing.T) {
 			},
 		}
 
-		ensureScheduling(mattermost, installationWithScheduling, clusterInstallation, cluster)
+		ensureScheduling(mattermost, installationWithScheduling, clusterInstallation, cluster, false)
 
 		// Verify affinity is always set
 		require.NotNil(t, mattermost.Spec.Scheduling.Affinity)
@@ -858,7 +858,7 @@ func TestEnsureScheduling(t *testing.T) {
 			},
 		}
 
-		ensureScheduling(mattermost, installation, clusterInstallation, cluster)
+		ensureScheduling(mattermost, installation, clusterInstallation, cluster, false)
 
 		// Verify affinity is always set
 		require.NotNil(t, mattermost.Spec.Scheduling.Affinity)
@@ -894,7 +894,7 @@ func TestEnsureScheduling(t *testing.T) {
 			},
 		}
 
-		ensureScheduling(mattermost, installationNilScheduling, clusterInstallation, cluster)
+		ensureScheduling(mattermost, installationNilScheduling, clusterInstallation, cluster, false)
 
 		// Verify affinity is always set
 		require.NotNil(t, mattermost.Spec.Scheduling.Affinity)
@@ -919,7 +919,7 @@ func TestEnsureScheduling(t *testing.T) {
 			},
 		}
 
-		ensureScheduling(mattermost, installationEmptyScheduling, clusterInstallation, cluster)
+		ensureScheduling(mattermost, installationEmptyScheduling, clusterInstallation, cluster, false)
 
 		// Verify affinity is always set
 		require.NotNil(t, mattermost.Spec.Scheduling.Affinity)
@@ -943,7 +943,7 @@ func TestGenerateAffinityConfig(t *testing.T) {
 	}
 
 	t.Run("generates correct affinity configuration", func(t *testing.T) {
-		affinity := generateAffinityConfig(installation, clusterInstallation, cluster)
+		affinity := generateAffinityConfig(installation, clusterInstallation, cluster, false)
 
 		require.NotNil(t, affinity)
 		require.NotNil(t, affinity.PodAntiAffinity)
@@ -974,7 +974,7 @@ func TestGenerateAffinityConfig(t *testing.T) {
 	})
 
 	t.Run("generates affinity with nil cluster", func(t *testing.T) {
-		affinity := generateAffinityConfig(installation, clusterInstallation, nil)
+		affinity := generateAffinityConfig(installation, clusterInstallation, nil, false)
 
 		require.NotNil(t, affinity)
 		require.NotNil(t, affinity.PodAntiAffinity)
@@ -995,7 +995,7 @@ func TestGenerateAffinityConfig(t *testing.T) {
 		emptyNameCluster := &model.Cluster{
 			Name: "",
 		}
-		affinity := generateAffinityConfig(installation, clusterInstallation, emptyNameCluster)
+		affinity := generateAffinityConfig(installation, clusterInstallation, emptyNameCluster, false)
 
 		require.NotNil(t, affinity)
 		require.NotNil(t, affinity.PodAntiAffinity)
@@ -1010,5 +1010,106 @@ func TestGenerateAffinityConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedLabels, terms[0].PodAffinityTerm.LabelSelector.MatchLabels)
 		assert.Equal(t, expectedLabels, terms[1].PodAffinityTerm.LabelSelector.MatchLabels)
+	})
+
+	t.Run("opted-out affinity is byte-identical to today", func(t *testing.T) {
+		baseLabels := map[string]string{
+			"installation-id":         "test-installation-id",
+			"cluster-installation-id": "test-cluster-installation-id",
+			"dns":                     "test-cluster-public",
+		}
+		expected := &corev1.Affinity{
+			PodAntiAffinity: &corev1.PodAntiAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+					{
+						Weight: 100,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							LabelSelector: &metav1.LabelSelector{MatchLabels: baseLabels},
+							Namespaces:    []string{"test-namespace"},
+							TopologyKey:   "kubernetes.io/hostname",
+						},
+					},
+					{
+						Weight: 100,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							LabelSelector: &metav1.LabelSelector{MatchLabels: baseLabels},
+							Namespaces:    []string{"test-namespace"},
+							TopologyKey:   "topology.kubernetes.io/zone",
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t, expected, generateAffinityConfig(installation, clusterInstallation, cluster, false))
+	})
+
+	t.Run("opted-in adds the cross-installation node separation term", func(t *testing.T) {
+		affinity := generateAffinityConfig(installation, clusterInstallation, cluster, true)
+
+		require.NotNil(t, affinity)
+		require.NotNil(t, affinity.PodAntiAffinity)
+
+		terms := affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution
+		// The two self-spread terms are preserved and the extra term is appended.
+		require.Len(t, terms, 3)
+
+		// Self-spread terms unchanged: own namespace, no NamespaceSelector.
+		for _, term := range terms[:2] {
+			assert.Equal(t, []string{"test-namespace"}, term.PodAffinityTerm.Namespaces)
+			assert.Nil(t, term.PodAffinityTerm.NamespaceSelector)
+		}
+
+		sep := terms[2]
+		assert.Equal(t, int32(100), sep.Weight)
+		assert.Equal(t, "kubernetes.io/hostname", sep.PodAffinityTerm.TopologyKey)
+		// Cross-namespace: empty (all-namespaces) selector, no Namespaces restriction.
+		require.NotNil(t, sep.PodAffinityTerm.NamespaceSelector)
+		assert.Equal(t, &metav1.LabelSelector{}, sep.PodAffinityTerm.NamespaceSelector)
+		assert.Empty(t, sep.PodAffinityTerm.Namespaces)
+		assert.Equal(t, map[string]string{
+			"node-separation-group": "separate-nodes",
+		}, sep.PodAffinityTerm.LabelSelector.MatchLabels)
+	})
+}
+
+func TestClusterInstallationStableLabels(t *testing.T) {
+	installation := &model.Installation{ID: "test-installation-id"}
+	clusterInstallation := &model.ClusterInstallation{
+		ID:        "test-cluster-installation-id",
+		Namespace: "test-namespace",
+	}
+	cluster := &model.Cluster{Name: "test-cluster"}
+
+	t.Run("opted-out omits the node-separation-group label", func(t *testing.T) {
+		labels := clusterInstallationStableLabels(installation, clusterInstallation, cluster, false)
+		assert.NotContains(t, labels, "node-separation-group")
+		assert.Equal(t, map[string]string{
+			"installation-id":         "test-installation-id",
+			"cluster-installation-id": "test-cluster-installation-id",
+			"dns":                     "test-cluster-public",
+			"state":                   "running",
+		}, labels)
+	})
+
+	t.Run("opted-in includes the node-separation-group label", func(t *testing.T) {
+		labels := clusterInstallationStableLabels(installation, clusterInstallation, cluster, true)
+		assert.Equal(t, "separate-nodes", labels["node-separation-group"])
+	})
+}
+
+func TestInstallationWantsNodeSeparation(t *testing.T) {
+	t.Run("no annotations", func(t *testing.T) {
+		assert.False(t, installationWantsNodeSeparation(nil))
+	})
+
+	t.Run("unrelated annotations", func(t *testing.T) {
+		annotations := []*model.Annotation{{Name: "multi-tenant"}, {Name: "internal"}}
+		assert.False(t, installationWantsNodeSeparation(annotations))
+	})
+
+	t.Run("separate-nodes annotation present", func(t *testing.T) {
+		annotations := []*model.Annotation{{Name: "internal"}, {Name: "separate-nodes"}}
+		assert.True(t, installationWantsNodeSeparation(annotations))
 	})
 }

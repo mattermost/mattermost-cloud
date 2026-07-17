@@ -32,6 +32,18 @@ The scheduling is guided by the following principles:
     - The Installation cannot be scheduled on any Cluster.
 
 
+## Special annotations
+
+Most Annotations only constrain Cluster scheduling as described above. A few Annotations
+additionally change how an Installation's pods are scheduled *within* a Cluster:
+
+- **`separate-nodes`** — Opts the Installation into cross-installation, node-level
+  anti-affinity (SEC-9253). The Installation's pods will avoid sharing a node with the pods
+  of any other Installation that also carries this Annotation. It is used to keep
+  `community` and `hub` on distinct nodes. This is a soft preference: the scheduler strongly
+  prefers separate nodes but will co-locate rather than leave a pod Pending when node
+  capacity is tight. Installations without the Annotation are scheduled exactly as before.
+
 ## Assigning annotations
 
 Annotations can be assigned to the Cluster and Installation during the creation. 
