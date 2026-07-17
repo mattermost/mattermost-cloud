@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -20,9 +21,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// gitlabFetchClient is the HTTP client used to download Helm values files
+// from the configured GitLab instance. Redirects are not followed and a
+// timeout is applied to keep the supervisor goroutine responsive.
+var gitlabFetchClient = &http.Client{
+	Timeout: 30 * time.Second,
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
+
 const (
 	defaultKubeConfigPath            = ""
 	defaultHelmDeploymentSetArgument = ""
+
+	// maxGitlabResponseSize caps the response body read from the GitLab
+	// values endpoint to keep memory usage bounded.
+	maxGitlabResponseSize = 10 << 20 // 10 MiB
 )
 
 // helmDeployment deploys Helm charts.
@@ -264,13 +279,28 @@ type gitlabValuesFileResponse struct {
 	Content string `json:"content"`
 }
 
+// isConfiguredGitlabHost reports whether valPathURL points at the GitLab
+// instance configured via --utilities-git-url. The hostname comparison is
+// exact and case-insensitive.
+func isConfiguredGitlabHost(valPathURL *url.URL) bool {
+	configured := model.GetGitopsRepoURL()
+	if configured == "" {
+		return false
+	}
+	configuredURL, err := url.Parse(configured)
+	if err != nil || configuredURL.Hostname() == "" {
+		return false
+	}
+	return strings.EqualFold(valPathURL.Hostname(), configuredURL.Hostname())
+}
+
 // fetchFromGitlabIfNecessary returns the path of the values file. If
 // this is a local path or a non-Gitlab URL, the path is simply
-// returned unchanged. If a Gitlab URL is provided, the values file is
-// fetched and stored in the OS's temp dir and the filename of the
-// file is returned. If a temp file is created, a cleanup routine will
-// be returned as the second return value, otherwise that value will
-// be nil
+// returned unchanged. If the configured Gitlab host is provided over
+// HTTPS, the values file is fetched and stored in the OS's temp dir and
+// the filename of the file is returned. If a temp file is created, a
+// cleanup routine will be returned as the second return value,
+// otherwise that value will be nil
 func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 	gitlabKey := model.GetGitlabToken()
 	if gitlabKey == "" {
@@ -283,22 +313,30 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 	}
 
 	// silently allow other public non-Gitlab URLs
-	if !strings.HasPrefix(valPathURL.Host, "git") {
+	if !isConfiguredGitlabHost(valPathURL) {
 		return path, nil, nil
 	}
 
-	// if Gitlab, fetch the file using the API
-	path = fmt.Sprintf("%s&private_token=%s", path, gitlabKey)
+	if !strings.EqualFold(valPathURL.Scheme, "https") {
+		return "", nil, errors.New("Gitlab values file URL must use HTTPS")
+	}
 
-	resp, err := http.Get(path)
+	req, err := http.NewRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "failed to build Gitlab request")
+	}
+	req.Header.Set("PRIVATE-TOKEN", gitlabKey)
+
+	resp, err := gitlabFetchClient.Do(req)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to request the values file from Gitlab")
 	}
-	if resp.StatusCode >= 400 {
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return "", nil, errors.Errorf("request to Gitlab failed with status: %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxGitlabResponseSize))
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to read body from Gitlab response")
 	}
@@ -313,18 +351,21 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to create temporary file for Helm values file")
 	}
+	tmpPath := temporaryValuesFile.Name()
+	temporaryValuesFile.Close()
 
 	content, err := base64.StdEncoding.DecodeString(valuesFileBytes.Content)
 	if err != nil {
+		os.Remove(tmpPath)
 		return "", nil, errors.Wrap(err, "failed to decode base64-encoded YAML file")
 	}
 
-	err = os.WriteFile(temporaryValuesFile.Name(), content, 0600)
-	if err != nil {
+	if err := os.WriteFile(tmpPath, content, 0600); err != nil {
+		os.Remove(tmpPath)
 		return "", nil, errors.Wrap(err, "failed to write values file to disk for Helm to read")
 	}
 
-	return temporaryValuesFile.Name(), func(path string) {
+	return tmpPath, func(path string) {
 		if strings.HasPrefix(path, os.TempDir()) {
 			os.Remove(path)
 		}
