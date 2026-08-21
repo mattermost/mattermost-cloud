@@ -713,7 +713,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		OwnerID:  "owner1",
 		Version:  "version",
 		Image:    "custom-image",
-		DNS:      "dns1.example.com",
+		DNSNames: []string{"dns1.example.com"},
 		Affinity: model.InstallationAffinityIsolated,
 	})
 	require.NoError(t, err)
@@ -724,7 +724,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		OwnerID:  "owner2",
 		Version:  "version",
 		Image:    "custom-image",
-		DNS:      "dns2.example.com",
+		DNSNames: []string{"dns2.example.com"},
 		Affinity: model.InstallationAffinityIsolated,
 	})
 	require.NoError(t, err)
@@ -772,7 +772,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		OwnerID:  "owner1",
 		Version:  "version",
 		Image:    "custom-image",
-		DNS:      "dns3.example.com",
+		DNSNames: []string{"dns3.example.com"},
 		Affinity: model.InstallationAffinityIsolated,
 	})
 	require.NoError(t, err)
@@ -869,7 +869,7 @@ func TestMigrateDNS(t *testing.T) {
 		OwnerID:  "owner1",
 		Version:  "version",
 		Image:    "custom-image",
-		DNS:      "dns1.example.com",
+		DNSNames: []string{"dns1.example.com"},
 		Affinity: model.InstallationAffinityIsolated,
 	})
 	require.NoError(t, err)
@@ -880,7 +880,7 @@ func TestMigrateDNS(t *testing.T) {
 		OwnerID:  "owner2",
 		Version:  "version",
 		Image:    "custom-image",
-		DNS:      "dns2.example.com",
+		DNSNames: []string{"dns2.example.com"},
 		Affinity: model.InstallationAffinityIsolated,
 	})
 	require.NoError(t, err)

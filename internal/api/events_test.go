@@ -41,7 +41,7 @@ func TestListStateChangeEvents(t *testing.T) {
 	// Create Installation and Cluster
 	installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID: "test",
-		DNS:     "test.com",
+		DNSNames: []string{"test.com"},
 	})
 	require.NoError(t, err)
 	time.Sleep(1 * time.Millisecond)

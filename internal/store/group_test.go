@@ -10,7 +10,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -398,7 +398,7 @@ func TestGetUnlockedGroupsPendingWork(t *testing.T) {
 		Version:   "version",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateCreationRequested,
 	}
@@ -480,7 +480,7 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 		Version:   "version",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateCreationRequested,
 	}
@@ -730,7 +730,7 @@ func TestGetGroupStatus(t *testing.T) {
 		Version:   "version",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateCreationRequested,
 	}

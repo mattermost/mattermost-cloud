@@ -10,7 +10,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -655,7 +655,7 @@ func TestSwitchDNS(t *testing.T) {
 		Version:   "version",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID1,
 		CRVersion: model.V1betaCRVersion,
@@ -673,7 +673,7 @@ func TestSwitchDNS(t *testing.T) {
 		Image:     "custom-image",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID2,
 		CRVersion: model.DefaultCRVersion,
@@ -692,7 +692,7 @@ func TestSwitchDNS(t *testing.T) {
 		Image:     "custom-image",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID2,
 		CRVersion: model.DefaultCRVersion,

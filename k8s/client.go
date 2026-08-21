@@ -7,7 +7,6 @@ package k8s
 import (
 	log "github.com/sirupsen/logrus"
 
-	mmclientv1alpha1 "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned"
 	mmclientv1beta1 "github.com/mattermost/mattermost-operator/pkg/client/v1beta1/clientset/versioned"
 	monitoringclientV1 "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	slothclientV1 "github.com/slok/sloth/pkg/kubernetes/gen/clientset/versioned"
@@ -20,15 +19,14 @@ import (
 
 // KubeClient interfaces with a Kubernetes cluster in the same way kubectl would.
 type KubeClient struct {
-	config                     *rest.Config
-	Clientset                  kubernetes.Interface
-	ApixClientset              apixclient.Interface
-	MattermostClientsetV1Alpha mmclientv1alpha1.Interface
-	MattermostClientsetV1Beta  mmclientv1beta1.Interface
-	MonitoringClientsetV1      monitoringclientV1.Interface
-	SlothClientsetV1           slothclientV1.Interface
-	KubeagClientSet            kubeagclient.Interface
-	logger                     log.FieldLogger
+	config                    *rest.Config
+	Clientset                 kubernetes.Interface
+	ApixClientset             apixclient.Interface
+	MattermostClientsetV1Beta mmclientv1beta1.Interface
+	MonitoringClientsetV1     monitoringclientV1.Interface
+	SlothClientsetV1          slothclientV1.Interface
+	KubeagClientSet           kubeagclient.Interface
+	logger                    log.FieldLogger
 }
 
 // NewFromConfig takes in an already created Kubernetes config object, and returns a KubeClient for accessing the kubernetes API
@@ -57,11 +55,6 @@ func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient,
 		return nil, err
 	}
 
-	mattermostV1AlphaClientset, err := mmclientv1alpha1.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
 	mattermostV1BetaClientset, err := mmclientv1beta1.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -82,15 +75,14 @@ func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient,
 	}
 
 	return &KubeClient{
-			config:                     config,
-			Clientset:                  clientset,
-			MattermostClientsetV1Alpha: mattermostV1AlphaClientset,
-			MattermostClientsetV1Beta:  mattermostV1BetaClientset,
-			MonitoringClientsetV1:      monitoringV1Clientset,
-			SlothClientsetV1:           slothV1Clientset,
-			ApixClientset:              apixClientset,
-			KubeagClientSet:            kubeagClientset,
-			logger:                     logger,
+			config:                    config,
+			Clientset:                 clientset,
+			MattermostClientsetV1Beta: mattermostV1BetaClientset,
+			MonitoringClientsetV1:     monitoringV1Clientset,
+			SlothClientsetV1:          slothV1Clientset,
+			ApixClientset:             apixClientset,
+			KubeagClientSet:           kubeagClientset,
+			logger:                    logger,
 		},
 		nil
 }

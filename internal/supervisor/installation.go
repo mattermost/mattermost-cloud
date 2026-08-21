@@ -495,14 +495,8 @@ func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*mod
 			continue
 		}
 
-		installationCPURequirement := size.CalculateCPUMilliRequirement(
-			installation.InternalDatabase(),
-			installation.InternalFilestore(),
-		)
-		installationMemRequirement := size.CalculateMemoryMilliRequirement(
-			installation.InternalDatabase(),
-			installation.InternalFilestore(),
-		)
+		installationCPURequirement := size.CalculateCPUMilliRequirement()
+		installationMemRequirement := size.CalculateMemoryMilliRequirement()
 		installationPodCountRequirement := int64(size.App.Replicas)
 		cpuPercent := clusterResources.CalculateCPUPercentUsed(installationCPURequirement)
 		memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
@@ -588,14 +582,8 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		return nil
 	}
 
-	installationCPURequirement := size.CalculateCPUMilliRequirement(
-		installation.InternalDatabase(),
-		installation.InternalFilestore(),
-	)
-	installationMemRequirement := size.CalculateMemoryMilliRequirement(
-		installation.InternalDatabase(),
-		installation.InternalFilestore(),
-	)
+	installationCPURequirement := size.CalculateCPUMilliRequirement()
+	installationMemRequirement := size.CalculateMemoryMilliRequirement()
 	installationPodCountRequirement := int64(size.App.Replicas)
 	cpuPercent := clusterResources.CalculateCPUPercentUsed(installationCPURequirement)
 	memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
