@@ -56,7 +56,7 @@ func (r *rawDBMigrationOperation) toDBMigrationOperation() (*model.InstallationD
 		if err != nil {
 			return nil, err
 		}
-		r.SourceMultiTenant = &data
+		r.InstallationDBMigrationOperation.SourceMultiTenant = &data
 	}
 	if len(r.DestinationMultiTenantRaw) > 0 {
 		data := model.MultiTenantDBMigrationData{}
@@ -64,7 +64,7 @@ func (r *rawDBMigrationOperation) toDBMigrationOperation() (*model.InstallationD
 		if err != nil {
 			return nil, err
 		}
-		r.DestinationMultiTenant = &data
+		r.InstallationDBMigrationOperation.DestinationMultiTenant = &data
 	}
 
 	return r.InstallationDBMigrationOperation, nil

@@ -428,7 +428,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 
 	logger.WithField("status", fmt.Sprintf("%+v", mattermost.Status)).Debug("Got mattermost installation")
 
-	mattermost.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster)
+	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation, cluster)
 	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation, cluster)
 
 	ensureScheduling(mattermost, installation, clusterInstallation, cluster)
@@ -586,8 +586,8 @@ func (provisioner Provisioner) ensurePodProbeOverrides(mattermost *mmv1beta1.Mat
 				livenessProbe.TerminationGracePeriodSeconds = installLiveness.TerminationGracePeriodSeconds
 			}
 			// Override handler if present
-			if installLiveness.Exec != nil || installLiveness.HTTPGet != nil ||
-				installLiveness.TCPSocket != nil || installLiveness.GRPC != nil {
+			if installLiveness.ProbeHandler.Exec != nil || installLiveness.ProbeHandler.HTTPGet != nil ||
+				installLiveness.ProbeHandler.TCPSocket != nil || installLiveness.ProbeHandler.GRPC != nil {
 				livenessProbe.ProbeHandler = installLiveness.ProbeHandler
 			}
 		}
@@ -613,8 +613,8 @@ func (provisioner Provisioner) ensurePodProbeOverrides(mattermost *mmv1beta1.Mat
 				readinessProbe.TerminationGracePeriodSeconds = installReadiness.TerminationGracePeriodSeconds
 			}
 			// Override handler if present
-			if installReadiness.Exec != nil || installReadiness.HTTPGet != nil ||
-				installReadiness.TCPSocket != nil || installReadiness.GRPC != nil {
+			if installReadiness.ProbeHandler.Exec != nil || installReadiness.ProbeHandler.HTTPGet != nil ||
+				installReadiness.ProbeHandler.TCPSocket != nil || installReadiness.ProbeHandler.GRPC != nil {
 				readinessProbe.ProbeHandler = installReadiness.ProbeHandler
 			}
 		}

@@ -40,7 +40,7 @@ func TestListStateChangeEvents(t *testing.T) {
 
 	// Create Installation and Cluster
 	installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
-		OwnerID:  "test",
+		OwnerID: "test",
 		DNSNames: []string{"test.com"},
 	})
 	require.NoError(t, err)

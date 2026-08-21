@@ -142,10 +142,18 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 	}
 
 	recordToUpdate := existingRecords[0]
-	doUpdate := recordToUpdate.Content != record.Content ||
-		recordToUpdate.TTL != record.TTL ||
-		(recordToUpdate.Proxied != nil && record.Proxied != nil && *recordToUpdate.Proxied != *record.Proxied) ||
-		(recordToUpdate.Proxied == nil) != (record.Proxied == nil)
+	doUpdate := false
+
+	if recordToUpdate.Content != record.Content || recordToUpdate.TTL != record.TTL {
+		doUpdate = true
+	}
+	if recordToUpdate.Proxied != nil && record.Proxied != nil {
+		if *recordToUpdate.Proxied != *record.Proxied {
+			doUpdate = true
+		}
+	} else if recordToUpdate.Proxied != record.Proxied {
+		doUpdate = true
+	}
 
 	if doUpdate {
 		err = c.updateDNSRecord(zoneID, recordToUpdate.ID, record)

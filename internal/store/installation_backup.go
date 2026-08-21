@@ -54,7 +54,7 @@ func (r *rawInstallationBackup) toInstallationBackup() (*model.InstallationBacku
 		if err != nil {
 			return nil, err
 		}
-		r.DataResidence = &dataResidence
+		r.InstallationBackup.DataResidence = &dataResidence
 	}
 
 	return r.InstallationBackup, nil

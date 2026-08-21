@@ -25,14 +25,14 @@ func TestImportSupervisor(t *testing.T) {
 	gmctrl := gomock.NewController(t)
 	defer gmctrl.Finish()
 	var (
-		translationID  = "some-translation-id"
-		importID       = "some-import-id"
-		installationID = "some-installation-id"
-		sourceBucket   = "awat-bucket"
-		destBucket     = "the-multitenant-bucket"
-		inputArchive   = "user_upload.zip"
+		translationID  string = "some-translation-id"
+		importID       string = "some-import-id"
+		installationID string = "some-installation-id"
+		sourceBucket   string = "awat-bucket"
+		destBucket     string = "the-multitenant-bucket"
+		inputArchive   string = "user_upload.zip"
 
-		resource = fmt.Sprintf("%s/%s", sourceBucket, inputArchive)
+		resource string = fmt.Sprintf("%s/%s", sourceBucket, inputArchive)
 	)
 
 	t.Run("successfully import a translation", func(t *testing.T) {

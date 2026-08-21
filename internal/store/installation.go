@@ -55,7 +55,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 			return nil, err
 		}
 	}
-	r.MattermostEnv = *mattermostEnv
+	r.Installation.MattermostEnv = *mattermostEnv
 
 	priorityEnv := &model.EnvVarMap{}
 	if r.PriorityEnvRaw != nil {
@@ -64,7 +64,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 			return nil, err
 		}
 	}
-	r.PriorityEnv = *priorityEnv
+	r.Installation.PriorityEnv = *priorityEnv
 
 	if r.SingleTenantDatabaseConfigRaw != nil {
 		singleTenantDBConfig := &model.SingleTenantDatabaseConfig{}
@@ -72,7 +72,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 		if err != nil {
 			return nil, err
 		}
-		r.SingleTenantDatabaseConfig = singleTenantDBConfig
+		r.Installation.SingleTenantDatabaseConfig = singleTenantDBConfig
 	}
 
 	if r.ExternalDatabaseConfigRaw != nil {
@@ -81,7 +81,7 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 		if err != nil {
 			return nil, err
 		}
-		r.ExternalDatabaseConfig = externalDBConfig
+		r.Installation.ExternalDatabaseConfig = externalDBConfig
 	}
 
 	return r.Installation, nil

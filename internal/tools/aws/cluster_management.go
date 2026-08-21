@@ -506,7 +506,7 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 //
 // If any of the VPC checks either returns no VPCs or more than one VPC this method will fail.
 func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) error {
-	isSecondaryCluster := false
+	var isSecondaryCluster bool = false
 	secondaryVpcFilters := []ec2Types.Filter{
 		{
 			Name:   aws.String(VpcAvailableTagKey),

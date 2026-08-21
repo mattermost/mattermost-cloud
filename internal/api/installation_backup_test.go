@@ -39,7 +39,7 @@ func TestRequestInstallationBackup(t *testing.T) {
 		&model.CreateInstallationRequest{
 			OwnerID:   "owner",
 			Version:   "version",
-			DNSNames:  []string{"dns1.example.com"},
+			DNSNames: []string{"dns1.example.com"},
 			Affinity:  model.InstallationAffinityMultiTenant,
 			Database:  model.InstallationDatabaseSingleTenantRDSPostgres,
 			Filestore: model.InstallationFilestoreBifrost,
@@ -72,7 +72,7 @@ func TestRequestInstallationBackup(t *testing.T) {
 			&model.CreateInstallationRequest{
 				OwnerID:   "owner",
 				Version:   "version",
-				DNSNames:  []string{"dns2.example.com"},
+				DNSNames: []string{"dns2.example.com"},
 				Affinity:  model.InstallationAffinityMultiTenant,
 				Database:  model.InstallationDatabaseMultiTenantRDSPostgres,
 				Filestore: model.InstallationFilestoreBifrost,

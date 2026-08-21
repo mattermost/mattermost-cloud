@@ -24,7 +24,7 @@ func (request *GetClusterInstallationsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("cluster", request.ClusterID)
 	q.Add("installation", request.InstallationID)
-	request.AddToQuery(q)
+	request.Paging.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }
