@@ -26,6 +26,11 @@ linters:
       enable-all: true
       disable:
         - fieldalignment
+    staticcheck:
+      checks:
+        - "all"
+        - "-QF*"
+        - "-ST*"
 
 formatters:
   enable:
