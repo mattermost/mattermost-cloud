@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -51,7 +51,7 @@ func TestInstallations(t *testing.T) {
 		Version:        "version",
 		Database:       model.InstallationDatabaseMysqlOperator,
 		Filestore:      model.InstallationFilestoreMinioOperator,
-		Size:           mmv1alpha1.Size100String,
+		Size:           mmv1beta1.Size100String,
 		Affinity:       model.InstallationAffinityIsolated,
 		GroupID:        &groupID1,
 		CRVersion:      model.V1betaCRVersion,
@@ -94,7 +94,7 @@ func TestInstallations(t *testing.T) {
 		Image:     "custom-image",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID2,
 		CRVersion: model.DefaultCRVersion,
@@ -112,7 +112,7 @@ func TestInstallations(t *testing.T) {
 		Version:   "version",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID1,
 		State:     model.InstallationStateCreationRequested,
@@ -135,7 +135,7 @@ func TestInstallations(t *testing.T) {
 		Version:                    "version",
 		Database:                   model.InstallationDatabaseMysqlOperator,
 		Filestore:                  model.InstallationFilestoreMinioOperator,
-		Size:                       mmv1alpha1.Size100String,
+		Size:                       mmv1beta1.Size100String,
 		Affinity:                   model.InstallationAffinityIsolated,
 		GroupID:                    &groupID2,
 		State:                      model.InstallationStateCreationRequested,
@@ -153,7 +153,7 @@ func TestInstallations(t *testing.T) {
 		Version:                "version",
 		Database:               model.InstallationDatabaseMysqlOperator,
 		Filestore:              model.InstallationFilestoreMinioOperator,
-		Size:                   mmv1alpha1.Size100String,
+		Size:                   mmv1beta1.Size100String,
 		Affinity:               model.InstallationAffinityIsolated,
 		State:                  model.InstallationStateCreationRequested,
 		ExternalDatabaseConfig: &model.ExternalDatabaseConfig{SecretName: "test-secret"},
@@ -749,7 +749,7 @@ func TestUpdateInstallation(t *testing.T) {
 				},
 			},
 		},
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID1,
 		CRVersion: model.DefaultCRVersion,
@@ -766,7 +766,7 @@ func TestUpdateInstallation(t *testing.T) {
 		Image:     "custom/image",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID2,
 		State:     model.InstallationStateStable,
@@ -778,7 +778,7 @@ func TestUpdateInstallation(t *testing.T) {
 	installation1.OwnerID = ownerID2
 	installation1.Version = "version3"
 	installation1.Version = "custom/image"
-	installation1.Size = mmv1alpha1.Size1000String
+	installation1.Size = mmv1beta1.Size1000String
 	installation1.Affinity = model.InstallationAffinityIsolated
 	installation1.GroupID = &groupID2
 	installation1.CRVersion = model.V1betaCRVersion
@@ -864,7 +864,7 @@ func TestUpdateInstallationSequence(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &group1.ID,
 		State:     model.InstallationStateCreationRequested,
@@ -907,7 +907,7 @@ func TestUpdateInstallationState(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateCreationRequested,
 	}
@@ -941,7 +941,7 @@ func TestGetInstallationsStatus(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateCreationRequested,
 	}
@@ -966,7 +966,7 @@ func TestGetInstallationsStatus(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.ClusterInstallationStateStable,
 	}
@@ -991,7 +991,7 @@ func TestGetInstallationsStatus(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateHibernating,
 	}
@@ -1016,7 +1016,7 @@ func TestGetInstallationsStatus(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateDeletionPending,
 	}
@@ -1126,7 +1126,7 @@ func TestUpdateInstallationCRVersion(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateCreationRequested,
 		CRVersion: model.V1betaCRVersion,
@@ -1157,7 +1157,7 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateStable,
 		CRVersion: model.V1betaCRVersion,
@@ -1175,7 +1175,7 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateStable,
 		CRVersion: model.V1betaCRVersion,
@@ -1193,7 +1193,7 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateHibernating,
 		CRVersion: model.V1betaCRVersion,

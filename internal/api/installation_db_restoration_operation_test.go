@@ -38,7 +38,7 @@ func TestTriggerInstallationDBRestoration(t *testing.T) {
 	installation1, err := client.CreateInstallation(
 		&model.CreateInstallationRequest{
 			OwnerID:   "owner",
-			DNS:       "dns1.example.com",
+			DNSNames: []string{"dns1.example.com"},
 			Database:  model.InstallationDatabaseMultiTenantRDSPostgres,
 			Filestore: model.InstallationFilestoreBifrost,
 		})

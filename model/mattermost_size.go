@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -21,10 +21,10 @@ const ProvisionerSizePrefix = "provisioner"
 const SizeProvisionerXL = "provisionerXL"
 
 // GetInstallationSize returns Installation size based on its name.
-func GetInstallationSize(size string) (v1alpha1.ClusterInstallationSize, error) {
+func GetInstallationSize(size string) (mmv1beta1.Size, error) {
 	// We check first if it is one of Operator sizes, if not we expect custom
 	// provisioner size.
-	mmSize, err := v1alpha1.GetClusterSize(size)
+	mmSize, err := mmv1beta1.GetClusterSize(size)
 	if err == nil {
 		return mmSize, nil
 	}
@@ -38,30 +38,30 @@ func GetInstallationSize(size string) (v1alpha1.ClusterInstallationSize, error) 
 // [SIZE_NAME]-[NUMBER_OF_REPLICAS]
 // If number of replicas is not specified the default value for the size will
 // be used.
-func ParseProvisionerSize(size string) (v1alpha1.ClusterInstallationSize, error) {
+func ParseProvisionerSize(size string) (mmv1beta1.Size, error) {
 	parts := strings.Split(size, "-")
 
-	var resources v1alpha1.ClusterInstallationSize
+	var resources mmv1beta1.Size
 	switch parts[0] {
 	case SizeProvisionerXL:
 		resources = SizeProvisionerXLResources
 	default:
-		return v1alpha1.ClusterInstallationSize{}, errors.Errorf("unrecognized installation size %q", parts[0])
+		return mmv1beta1.Size{}, errors.Errorf("unrecognized installation size %q", parts[0])
 	}
 
 	if len(parts) == 1 {
 		return resources, nil
 	}
 	if len(parts) > 2 {
-		return v1alpha1.ClusterInstallationSize{}, errors.Errorf("expected at most 2 size segments found %d", len(parts))
+		return mmv1beta1.Size{}, errors.Errorf("expected at most 2 size segments found %d", len(parts))
 	}
 	if strings.TrimSpace(parts[1]) == "" {
-		return v1alpha1.ClusterInstallationSize{}, errors.Errorf("replicas segment cannot be empty")
+		return mmv1beta1.Size{}, errors.Errorf("replicas segment cannot be empty")
 	}
 
 	replicas, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return v1alpha1.ClusterInstallationSize{}, errors.Wrap(err, "failed to parse number of replicas from custom provisioner size")
+		return mmv1beta1.Size{}, errors.Wrap(err, "failed to parse number of replicas from custom provisioner size")
 	}
 
 	resources.App.Replicas = int32(replicas)
@@ -71,8 +71,8 @@ func ParseProvisionerSize(size string) (v1alpha1.ClusterInstallationSize, error)
 
 // SizeProvisionerXLResources specifies resources for Installation size.
 // Size value = 25000users with 4 Replicas
-var SizeProvisionerXLResources = v1alpha1.ClusterInstallationSize{
-	App: v1alpha1.ComponentSize{
+var SizeProvisionerXLResources = mmv1beta1.Size{
+	App: mmv1beta1.ComponentSize{
 		Replicas: 4,
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
@@ -82,24 +82,6 @@ var SizeProvisionerXLResources = v1alpha1.ClusterInstallationSize{
 			Limits: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("4000m"),
 				corev1.ResourceMemory: resource.MustParse("16Gi"),
-			},
-		},
-	},
-	Minio: v1alpha1.ComponentSize{
-		Replicas: 4,
-		Resources: corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("300m"),
-				corev1.ResourceMemory: resource.MustParse("500Mi"),
-			},
-		},
-	},
-	Database: v1alpha1.ComponentSize{
-		Replicas: 3,
-		Resources: corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("500m"),
-				corev1.ResourceMemory: resource.MustParse("1Gi"),
 			},
 		},
 	},

@@ -4,7 +4,7 @@
 
 package model
 
-import mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+import mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 
 const (
 	// InstallationStateStable is an installation in a stable state and undergoing no changes.
@@ -90,7 +90,7 @@ const (
 
 const (
 	// InstallationDefaultSize is the default size for an installation.
-	InstallationDefaultSize = mmv1alpha1.Size100String
+	InstallationDefaultSize = mmv1beta1.Size100String
 )
 
 // AllInstallationStates is a list of all states an installation can be in.

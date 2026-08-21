@@ -1,4 +1,5 @@
 # Docs: https://golangci-lint.run/usage/configuration/#config-file
+version: "2"
 
 run:
   timeout: 5m
@@ -6,22 +7,10 @@ run:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-dirs:
-    - internal/mocks
-
-linters-settings:
-  gofmt:
-    simplify: true
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
 
 linters:
-  disable-all: true
+  default: none
   enable:
-    - gofmt
-    - gosimple
     - govet
     - ineffassign
     - predeclared
@@ -29,3 +18,18 @@ linters:
     - staticcheck
     - unconvert
     - unused
+  exclusions:
+    paths:
+      - internal/mocks
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+
+formatters:
+  enable:
+    - gofmt
+  settings:
+    gofmt:
+      simplify: true

@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	cloud "github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,7 +59,7 @@ func init() {
 	blastCommand.PersistentFlags().Int("total", 20, "Number of Installations to provision")
 	blastCommand.PersistentFlags().String("database", cloud.InstallationDatabaseMultiTenantRDSPostgres, "Specify the type of database with which to create Installations")
 	blastCommand.PersistentFlags().String("filestore", cloud.InstallationFilestoreMultiTenantAwsS3, "Specify the filestore type with which to create Installations")
-	blastCommand.PersistentFlags().String("size", mmv1alpha1.Size1000String, "Specify the size of the created Installations")
+	blastCommand.PersistentFlags().String("size", mmv1beta1.Size1000String, "Specify the size of the created Installations")
 }
 
 // Type returns ErrorReportType for errorReport objects
@@ -396,7 +396,7 @@ func (b *Blaster) createInstallation() (*cloud.Installation, error) {
 			Filestore:       b.filestore,
 			Size:            b.installSize,
 			Affinity:        cloud.InstallationAffinityMultiTenant,
-			DNS:             fmt.Sprintf("%s-%s.loadtest.dev.cloud.mattermost.com", b.testID, cloud.NewID()[:6]),
+			DNSNames:        []string{fmt.Sprintf("%s-%s.loadtest.dev.cloud.mattermost.com", b.testID, cloud.NewID()[:6])},
 			APISecurityLock: false,
 		})
 	if err != nil {
@@ -414,7 +414,7 @@ func isValidInput(database, filestore, installSize string) error {
 		return errors.Errorf("invalid filestore requested: unknown filestore type %s", filestore)
 	}
 
-	_, err := mmv1alpha1.GetClusterSize(installSize)
+	_, err := mmv1beta1.GetClusterSize(installSize)
 	if err != nil {
 		return errors.Wrapf(err, "%s", installSize)
 	}

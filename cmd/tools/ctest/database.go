@@ -76,7 +76,7 @@ func runDatabaseTests(command *cobra.Command, c chan *model.WebhookPayload) []st
 
 		request := &model.CreateInstallationRequest{
 			OwnerID:   "ctest-database-tests",
-			DNS:       fmt.Sprintf("ctest-%s.%s", databaseType, installationDomain),
+			DNSNames: []string{fmt.Sprintf("ctest-%s.%s", databaseType, installationDomain)},
 			Version:   version,
 			License:   license,
 			Affinity:  model.InstallationAffinityMultiTenant,

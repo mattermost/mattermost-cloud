@@ -7,7 +7,7 @@ package model
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +21,7 @@ func TestParseProvisionerSize(t *testing.T) {
 	for _, testCase := range []struct {
 		description  string
 		size         string
-		expectedSize v1alpha1.ClusterInstallationSize
+		expectedSize mmv1beta1.Size
 		error        string
 	}{
 		{
