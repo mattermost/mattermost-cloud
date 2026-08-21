@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/logger"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,6 +45,6 @@ func NewMockedFieldLogger(ctrl *gomock.Controller) *MockedFieldLogger {
 }
 
 // NewLoggerEntry returns a new logger entry instance.
-func NewLoggerEntry() *logrus.Entry {
-	return logrus.NewEntry(logrus.New())
+func NewLoggerEntry() *log.Entry {
+	return log.NewEntry(log.New())
 }

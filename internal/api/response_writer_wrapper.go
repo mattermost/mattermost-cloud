@@ -52,7 +52,7 @@ func (rw *ResponseWriterWrapper) Write(data []byte) (int, error) {
 // Hijack calls the underlying writer's Hijack output.
 func (rw *ResponseWriterWrapper) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if rw.hijacker == nil {
-		return nil, nil, errors.New("Hijacker interface not supported by the wrapped ResponseWriter")
+		return nil, nil, errors.New("hijacker interface not supported by the wrapped ResponseWriter")
 	}
 	return rw.hijacker.Hijack()
 }

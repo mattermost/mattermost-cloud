@@ -466,7 +466,7 @@ func TestCreateInstallation(t *testing.T) {
 		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:     "owner",
 			Version:     "version",
-			DNSNames: []string{"dns.example.com"},
+			DNSNames:    []string{"dns.example.com"},
 			Affinity:    model.InstallationAffinityIsolated,
 			Annotations: []string{"my invalid annotation"},
 		})
@@ -480,7 +480,7 @@ func TestCreateInstallation(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:     "owner",
 			Version:     "version",
-			DNSNames: []string{"useddns.example.com"},
+			DNSNames:    []string{"useddns.example.com"},
 			Affinity:    model.InstallationAffinityIsolated,
 			Annotations: []string{"my-annotation"},
 			PriorityEnv: envs,
@@ -503,7 +503,7 @@ func TestCreateInstallation(t *testing.T) {
 		_, err = client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:     "owner",
 			Version:     "version",
-			DNSNames: []string{"useddns.example.com"},
+			DNSNames:    []string{"useddns.example.com"},
 			Affinity:    model.InstallationAffinityIsolated,
 			Annotations: []string{"my-annotation"},
 			PriorityEnv: envs,
@@ -521,7 +521,7 @@ func TestCreateInstallation(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:     "owner",
 			Version:     "version",
-			DNSNames: []string{"dns.example.com"},
+			DNSNames:    []string{"dns.example.com"},
 			Affinity:    model.InstallationAffinityIsolated,
 			Annotations: []string{"my-annotation"},
 			PriorityEnv: envs,
@@ -629,7 +629,7 @@ func TestCreateInstallation(t *testing.T) {
 			installation, errTest := client.CreateInstallation(&model.CreateInstallationRequest{
 				OwnerID:                   "owner",
 				GroupID:                   group.ID,
-				DNSNames: []string{"dns-g1.example.com"},
+				DNSNames:                  []string{"dns-g1.example.com"},
 				GroupSelectionAnnotations: []string{"not-matching-annotation"},
 			})
 			require.NoError(t, errTest)
@@ -639,7 +639,7 @@ func TestCreateInstallation(t *testing.T) {
 		t.Run("error when annotation does not exist", func(t *testing.T) {
 			_, errTest := client.CreateInstallation(&model.CreateInstallationRequest{
 				OwnerID:                   "owner",
-				DNSNames: []string{"dns-g2.example.com"},
+				DNSNames:                  []string{"dns-g2.example.com"},
 				GroupSelectionAnnotations: []string{"not-matching-annotation"},
 			})
 			require.Error(t, errTest)
@@ -654,7 +654,7 @@ func TestCreateInstallation(t *testing.T) {
 
 			_, errTest = client.CreateInstallation(&model.CreateInstallationRequest{
 				OwnerID:                   "owner",
-				DNSNames: []string{"dns-g3.example.com"},
+				DNSNames:                  []string{"dns-g3.example.com"},
 				GroupSelectionAnnotations: []string{"group-annotation1"},
 			})
 			require.Error(t, errTest)
@@ -662,7 +662,7 @@ func TestCreateInstallation(t *testing.T) {
 
 			_, errTest = client.CreateInstallation(&model.CreateInstallationRequest{
 				OwnerID:                   "owner",
-				DNSNames: []string{"dns-g3.example.com"},
+				DNSNames:                  []string{"dns-g3.example.com"},
 				GroupSelectionAnnotations: []string{"group-annotation1", "group-ann1"},
 			})
 			require.Error(t, errTest)
@@ -672,7 +672,7 @@ func TestCreateInstallation(t *testing.T) {
 		t.Run("select group based on annotations", func(t *testing.T) {
 			installation, errTest := client.CreateInstallation(&model.CreateInstallationRequest{
 				OwnerID:                   "owner",
-				DNSNames: []string{"dns-g4.example.com"},
+				DNSNames:                  []string{"dns-g4.example.com"},
 				GroupSelectionAnnotations: []string{"group-ann1", "group-ann2"},
 			})
 			require.NoError(t, errTest)
@@ -691,7 +691,7 @@ func TestCreateInstallation(t *testing.T) {
 			// Create an annotation based installation
 			installation, errTest := client.CreateInstallation(&model.CreateInstallationRequest{
 				OwnerID:                   "owner",
-				DNSNames: []string{"dns-g5.example.com"},
+				DNSNames:                  []string{"dns-g5.example.com"},
 				GroupSelectionAnnotations: []string{"group-ann1", "group-ann2"},
 			})
 
@@ -724,7 +724,7 @@ func TestCreateInstallation(t *testing.T) {
 				installation, errTest := client.CreateInstallation(&model.CreateInstallationRequest{
 					OwnerID:     "owner1",
 					Version:     "version",
-					DNSNames: []string{fmt.Sprintf("dns-annotation%d.example.com", i)},
+					DNSNames:    []string{fmt.Sprintf("dns-annotation%d.example.com", i)},
 					Annotations: testCase.annotations,
 				})
 				require.NoError(t, errTest)
@@ -744,7 +744,7 @@ func TestCreateInstallation(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:                    "owner1",
 			Version:                    "version",
-			DNSNames: []string{"dns-db-config.example.com"},
+			DNSNames:                   []string{"dns-db-config.example.com"},
 			SingleTenantDatabaseConfig: dbConfigRequest,
 			Database:                   model.InstallationDatabaseSingleTenantRDSPostgres,
 		})
@@ -764,7 +764,7 @@ func TestCreateInstallation(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:                    "owner1",
 			Version:                    "version",
-			DNSNames: []string{"dns-db-config2.example.com"},
+			DNSNames:                   []string{"dns-db-config2.example.com"},
 			SingleTenantDatabaseConfig: dbConfigRequest,
 			Database:                   model.InstallationDatabaseMultiTenantRDSPostgres,
 		})
@@ -776,7 +776,7 @@ func TestCreateInstallation(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:                    "owner1",
 			Version:                    "version",
-			DNSNames: []string{"dns-db-config3.example.com"},
+			DNSNames:                   []string{"dns-db-config3.example.com"},
 			SingleTenantDatabaseConfig: dbConfigRequest,
 			Database:                   model.InstallationDatabaseSingleTenantRDSMySQL,
 		})
@@ -790,7 +790,7 @@ func TestCreateInstallation(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:                "owner1",
 			Version:                "version",
-			DNSNames: []string{"external1.test.com"},
+			DNSNames:               []string{"external1.test.com"},
 			ExternalDatabaseConfig: model.ExternalDatabaseRequest{SecretName: "test-secret"},
 			Database:               model.InstallationDatabaseExternal,
 		})
@@ -803,7 +803,7 @@ func TestCreateInstallation(t *testing.T) {
 		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:                "owner1",
 			Version:                "version",
-			DNSNames: []string{"external2.test.com"},
+			DNSNames:               []string{"external2.test.com"},
 			ExternalDatabaseConfig: model.ExternalDatabaseRequest{},
 			Database:               model.InstallationDatabaseExternal,
 		})
@@ -814,7 +814,7 @@ func TestCreateInstallation(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:                "owner1",
 			Version:                "version",
-			DNSNames: []string{"external3.test.com"},
+			DNSNames:               []string{"external3.test.com"},
 			ExternalDatabaseConfig: model.ExternalDatabaseRequest{SecretName: "test-secret"},
 			Database:               model.InstallationDatabaseMultiTenantRDSPostgres,
 		})
@@ -844,7 +844,7 @@ func TestRetryCreateInstallation(t *testing.T) {
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:     "owner",
 		Version:     "version",
-		DNSNames: []string{"dns.example.com"},
+		DNSNames:    []string{"dns.example.com"},
 		Affinity:    model.InstallationAffinityIsolated,
 		Annotations: []string{"my-annotation"},
 	})
@@ -933,7 +933,7 @@ func TestUpdateInstallation(t *testing.T) {
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:     "owner",
 		Version:     "version",
-		DNSNames: []string{"dns.example.com"},
+		DNSNames:    []string{"dns.example.com"},
 		Affinity:    model.InstallationAffinityIsolated,
 		Annotations: []string{"my-annotation"},
 	})
@@ -1436,7 +1436,7 @@ func TestWakeUpInstallation(t *testing.T) {
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:     "owner",
 		Version:     "version",
-		DNSNames: []string{"dns.example.com"},
+		DNSNames:    []string{"dns.example.com"},
 		Affinity:    model.InstallationAffinityIsolated,
 		Annotations: []string{"my-annotation"},
 	})
@@ -1694,7 +1694,7 @@ func TestConfigPriority(t *testing.T) {
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:       "owner",
 		Version:       "version",
-		DNSNames: []string{"dns.example.com"},
+		DNSNames:      []string{"dns.example.com"},
 		GroupID:       group1.ID,
 		MattermostEnv: mmEnv,
 		Affinity:      model.InstallationAffinityIsolated,
@@ -2181,7 +2181,7 @@ func TestInstallationVolumes(t *testing.T) {
 	installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:   "owner",
 		Version:   "version",
-		DNSNames: []string{"dns.example.com"},
+		DNSNames:  []string{"dns.example.com"},
 		Affinity:  model.InstallationAffinityIsolated,
 		Database:  model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer,
 		Filestore: model.InstallationFilestoreBifrost,

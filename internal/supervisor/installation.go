@@ -590,10 +590,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	podPercent := clusterResources.CalculatePodCountPercentUsed(installationPodCountRequirement)
 
 	// Determine if a resource check should be performed.
-	performResourceCheck := true
-	if cluster.IsExternallyManaged() && s.scheduling.AlwaysScheduleExternalClusters {
-		performResourceCheck = false
-	}
+	performResourceCheck := !cluster.IsExternallyManaged() || !s.scheduling.AlwaysScheduleExternalClusters
 
 	resourcesOverThreshold := cpuPercent > s.scheduling.ClusterResourceThresholdCPU ||
 		memoryPercent > s.scheduling.ClusterResourceThresholdMemory ||
@@ -602,9 +599,10 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	if performResourceCheck && resourcesOverThreshold {
 
 		var provisionerMetadata model.ProvisionerMetadata
-		if cluster.Provisioner == model.ProvisionerKops {
+		switch cluster.Provisioner {
+		case model.ProvisionerKops:
 			provisionerMetadata = cluster.ProvisionerMetadataKops.GetCommonMetadata()
-		} else if cluster.Provisioner == model.ProvisionerEKS {
+		case model.ProvisionerEKS:
 			provisionerMetadata = cluster.ProvisionerMetadataEKS.GetCommonMetadata()
 		}
 
@@ -635,11 +633,12 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		}
 
 		cluster.State = model.ClusterStateResizeRequested
-		if cluster.Provisioner == model.ProvisionerKops {
+		switch cluster.Provisioner {
+		case model.ProvisionerKops:
 			cluster.ProvisionerMetadataKops.ChangeRequest = &model.KopsMetadataRequestedState{
 				NodeMinCount: newWorkerCount,
 			}
-		} else if cluster.Provisioner == model.ProvisionerEKS {
+		case model.ProvisionerEKS:
 			cluster.ProvisionerMetadataEKS.ChangeRequest = &model.EKSMetadataRequestedState{
 				NodeGroups: map[string]model.NodeGroupMetadata{
 					model.NodeGroupWorker: {

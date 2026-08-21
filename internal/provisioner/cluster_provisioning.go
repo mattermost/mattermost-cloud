@@ -385,9 +385,10 @@ func provisionCluster(
 	logger.Info("pgbouncer configmap updated successfully")
 
 	var clusterName string
-	if cluster.Provisioner == model.ProvisionerKops {
+	switch cluster.Provisioner {
+	case model.ProvisionerKops:
 		clusterName = cluster.ProvisionerMetadataKops.Name
-	} else if cluster.Provisioner == model.ProvisionerEKS {
+	case model.ProvisionerEKS:
 		clusterName = cluster.ProvisionerMetadataEKS.Name
 	}
 
