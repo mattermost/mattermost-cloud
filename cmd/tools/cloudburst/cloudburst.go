@@ -414,7 +414,7 @@ func isValidInput(database, filestore, installSize string) error {
 		return errors.Errorf("invalid filestore requested: unknown filestore type %s", filestore)
 	}
 
-	_, err := mmv1beta1.GetClusterSize(installSize)
+	_, err := mmv1beta1.GetMattermostSize(installSize)
 	if err != nil {
 		return errors.Wrapf(err, "%s", installSize)
 	}

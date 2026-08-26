@@ -24,7 +24,7 @@ const SizeProvisionerXL = "provisionerXL"
 func GetInstallationSize(size string) (mmv1beta1.Size, error) {
 	// We check first if it is one of Operator sizes, if not we expect custom
 	// provisioner size.
-	mmSize, err := mmv1beta1.GetClusterSize(size)
+	mmSize, err := mmv1beta1.GetMattermostSize(size)
 	if err == nil {
 		return mmSize, nil
 	}
