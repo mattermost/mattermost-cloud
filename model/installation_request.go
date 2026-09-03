@@ -81,9 +81,11 @@ func (request *CreateInstallationRequest) SetDefaults() {
 		request.DNSNames[i] = strings.ToLower(request.DNSNames[i])
 	}
 
-	// For backwards compatibility set Name based on DNS
+	// Derive Name from DNS or the first DNSNames entry if not explicitly set.
 	if request.Name == "" && request.DNS != "" {
 		request.Name = strings.Split(request.DNS, ".")[0]
+	} else if request.Name == "" && len(request.DNSNames) > 0 {
+		request.Name = strings.Split(request.DNSNames[0], ".")[0]
 	}
 	request.Name = strings.ToLower(request.Name)
 	if request.Version == "" {

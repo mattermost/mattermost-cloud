@@ -245,8 +245,8 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			},
 		},
 		{
-			"new DNS format without",
-			true,
+			"new DNS format without explicit Name",
+			false,
 			&model.CreateInstallationRequest{
 				OwnerID:  "owner1",
 				DNSNames: []string{"my-installation.example.com"},
