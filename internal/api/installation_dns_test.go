@@ -76,8 +76,8 @@ func Test_AddInstallationDNS(t *testing.T) {
 
 	// Create installation using old API.
 	oldAPIInstallation := &model.CreateInstallationRequest{
-		DNSNames: []string{"old-api-dns.example.com"},
-		OwnerID:  "test",
+		DNS:     "old-api-dns.example.com", //nolint:staticcheck
+		OwnerID: "test",
 	}
 	installation2, err := client.CreateInstallation(oldAPIInstallation)
 	require.NoError(t, err)
