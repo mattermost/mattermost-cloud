@@ -32,6 +32,7 @@ func init() {
 			"Installation.DeletionPendingExpiry", "APISecurityLock", "LockAcquiredBy",
 			"LockAcquiredAt", "CRVersion", "Installation.DeletionLocked",
 			"AllowedIPRanges", "Volumes", "ScheduledDeletionTime", "PodProbeOverrides",
+			"IngressType", "GatewayConfig",
 		).From(installationTable)
 }
 
@@ -502,6 +503,8 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"Volumes":               installation.Volumes,
 		"PodProbeOverrides":     installation.PodProbeOverrides,
 		"Command":               installation.Command,
+		"IngressType":           installation.IngressType,
+		"GatewayConfig":         installation.GatewayConfig,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -581,6 +584,8 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"Volumes":               installation.Volumes,
 			"PodProbeOverrides":     installation.PodProbeOverrides,
 			"Command":               installation.Command,
+			"IngressType":           installation.IngressType,
+			"GatewayConfig":         installation.GatewayConfig,
 		}).
 		Where("ID = ?", installation.ID),
 	)

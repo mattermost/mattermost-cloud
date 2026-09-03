@@ -65,6 +65,10 @@ type CreateInstallationRequest struct {
 	ExternalDatabaseConfig ExternalDatabaseRequest
 	PodProbeOverrides      *PodProbeOverrides
 	Command                *Commmand
+	// IngressType selects the routing resource: "ingress" (default) or "httproute".
+	IngressType string
+	// GatewayConfig is required when IngressType is "httproute".
+	GatewayConfig *GatewayConfig
 }
 
 // https://man7.org/linux/man-pages/man7/hostname.7.html
@@ -106,6 +110,9 @@ func (request *CreateInstallationRequest) SetDefaults() {
 	if request.Filestore == "" {
 		request.Filestore = InstallationFilestoreMinioOperator
 	}
+	if request.IngressType == "" {
+		request.IngressType = InstallationIngressIngress
+	}
 	if IsSingleTenantRDS(request.Database) {
 		request.SingleTenantDatabaseConfig.SetDefaults()
 	}
@@ -141,6 +148,14 @@ func (request *CreateInstallationRequest) Validate() error {
 	}
 	if !IsSupportedFilestore(request.Filestore) {
 		return errors.Errorf("unsupported filestore %s", request.Filestore)
+	}
+	if !IsSupportedIngressType(request.IngressType) {
+		return errors.Errorf("unsupported ingress type %s", request.IngressType)
+	}
+	if request.IngressType == InstallationIngressHTTPRoute {
+		if request.GatewayConfig == nil || request.GatewayConfig.Name == "" {
+			return errors.New("gatewayConfig.name is required when ingressType is httproute")
+		}
 	}
 	err = request.MattermostEnv.Validate()
 	if err != nil {
@@ -356,6 +371,8 @@ type PatchInstallationRequest struct {
 	MattermostEnv     EnvVarMap
 	PodProbeOverrides *PodProbeOverrides
 	Command           *Commmand
+	IngressType       *string
+	GatewayConfig     *GatewayConfig
 }
 
 // Validate validates the values of a installation patch request.
@@ -373,6 +390,16 @@ func (p *PatchInstallationRequest) Validate() error {
 		_, err := GetInstallationSize(*p.Size)
 		if err != nil {
 			return errors.Wrap(err, "invalid size")
+		}
+	}
+	if p.IngressType != nil {
+		if !IsSupportedIngressType(*p.IngressType) {
+			return errors.Errorf("unsupported ingress type %s", *p.IngressType)
+		}
+		if *p.IngressType == InstallationIngressHTTPRoute {
+			if p.GatewayConfig == nil || p.GatewayConfig.Name == "" {
+				return errors.New("gatewayConfig.name is required when ingressType is httproute")
+			}
 		}
 	}
 	// EnvVarMap validation is skipped as all configurations of this now imply
@@ -442,6 +469,16 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 
 	if p.Command != nil {
 		installation.Command = p.Command
+		applied = true
+	}
+
+	if p.IngressType != nil && *p.IngressType != installation.IngressType {
+		installation.IngressType = *p.IngressType
+		applied = true
+	}
+
+	if p.GatewayConfig != nil {
+		installation.GatewayConfig = p.GatewayConfig
 		applied = true
 	}
 

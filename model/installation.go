@@ -63,6 +63,8 @@ type Installation struct {
 	GroupOverrides             map[string]string  `json:"GroupOverrides,omitempty"`
 	PodProbeOverrides          *PodProbeOverrides `json:"PodProbeOverrides,omitempty"`
 	Scheduling                 *Scheduling        `json:"Scheduling,omitempty"`
+	IngressType                string
+	GatewayConfig              *GatewayConfig     `json:"GatewayConfig,omitempty"`
 
 	// configconfigMergedWithGroup is set when the installation configuration
 	// has been overridden with group configuration. This value can then be
@@ -352,6 +354,11 @@ func (i *Installation) GetDatabaseWeight() float64 {
 // filestore that are externally managed or not.
 func (i *Installation) RequiresAWSInfrasctructure() bool {
 	return !i.ExternalDatabase() || !i.ExternalFilestore()
+}
+
+// IngressHTTPRoute returns true if the installation uses Gateway API HTTPRoute routing.
+func (i *Installation) IngressHTTPRoute() bool {
+	return i.IngressType == InstallationIngressHTTPRoute
 }
 
 // InternalDatabase returns true if the installation's database is internal

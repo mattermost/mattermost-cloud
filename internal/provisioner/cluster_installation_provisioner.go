@@ -202,7 +202,8 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 			Version:       translateMattermostVersion(installation.Version),
 			Image:         installation.Image,
 			MattermostEnv: mattermostEnv.ToEnvList(),
-			Ingress:       makeIngressSpec(installationDNS, getIngressAnnotations()),
+			Ingress:       makeIngressSpecForInstallation(installation, installationDNS),
+			HTTPRoute:     makeHTTPRouteSpecForInstallation(installation, installationDNS),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation, cluster),
 			Scheduling:     mmv1beta1.Scheduling{},
@@ -499,7 +500,13 @@ func (provisioner Provisioner) updateClusterInstallation(
 	mattermost.Spec.IngressAnnotations = nil
 	annotations := getIngressAnnotations()
 	addSourceRangeWhitelistToAnnotations(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
-	mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
+	if installation.IngressHTTPRoute() {
+		mattermost.Spec.Ingress = &mmv1beta1.Ingress{Enabled: false}
+		mattermost.Spec.HTTPRoute = makeHTTPRouteSpecForInstallation(installation, installationDNS)
+	} else {
+		mattermost.Spec.Ingress = makeIngressSpec(installationDNS, annotations)
+		mattermost.Spec.HTTPRoute = nil
+	}
 
 	provisioner.ensurePodProbeOverrides(mattermost, installation)
 
@@ -997,13 +1004,32 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, insta
 	// TODO: enhance hibernation to include database and/or filestore.
 	mattermost.Spec.Replicas = int32Ptr(0)
 	mattermost.Spec.Size = ""
-	if mattermost.Spec.Ingress != nil { // In case Installation was not yet updated and still uses old Ingress spec.
+	if installation.IngressHTTPRoute() {
+		if mattermost.Spec.HTTPRoute != nil {
+			mattermost.Spec.HTTPRoute.Annotations = getHibernatingIngressAnnotations().ToMap()
+		}
+	} else if mattermost.Spec.Ingress != nil {
 		mattermost.Spec.Ingress.Annotations = getHibernatingIngressAnnotations().ToMap()
 	} else {
+		// Legacy installations not yet updated to Spec.Ingress.
 		mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations().ToMap()
 	}
 
 	mattermost.Spec.ResourceLabels = clusterInstallationHibernatedLabels(installation, clusterInstallation, cluster)
+}
+
+func makeIngressSpecForInstallation(installation *model.Installation, installationDNS []*model.InstallationDNS) *mmv1beta1.Ingress {
+	if installation.IngressHTTPRoute() {
+		return &mmv1beta1.Ingress{Enabled: false}
+	}
+	return makeIngressSpec(installationDNS, getIngressAnnotations())
+}
+
+func makeHTTPRouteSpecForInstallation(installation *model.Installation, installationDNS []*model.InstallationDNS) *mmv1beta1.HTTPRouteSpec {
+	if !installation.IngressHTTPRoute() || installation.GatewayConfig == nil {
+		return nil
+	}
+	return makeHTTPRouteSpec(installationDNS, installation.GatewayConfig)
 }
 
 func makeIngressSpec(installationDNS []*model.InstallationDNS, annotations *model.IngressAnnotations) *mmv1beta1.Ingress {
@@ -1023,6 +1049,35 @@ func makeIngressSpec(installationDNS []*model.InstallationDNS, annotations *mode
 		Annotations:  annotations.ToMap(),
 		IngressClass: &ingressClass,
 	}
+}
+
+func makeHTTPRouteSpec(installationDNS []*model.InstallationDNS, gw *model.GatewayConfig) *mmv1beta1.HTTPRouteSpec {
+	primaryRecord := installationDNS[0]
+	for _, rec := range installationDNS {
+		if rec.IsPrimary {
+			primaryRecord = rec
+			break
+		}
+	}
+
+	hosts := make([]mmv1beta1.IngressHost, 0, len(installationDNS))
+	for _, dns := range installationDNS {
+		hosts = append(hosts, mmv1beta1.IngressHost{HostName: dns.DomainName})
+	}
+
+	spec := &mmv1beta1.HTTPRouteSpec{
+		Enabled: true,
+		Host:    primaryRecord.DomainName,
+		Hosts:   hosts,
+		GatewayRef: mmv1beta1.GatewayReference{
+			Name:      gw.Name,
+			Namespace: gw.Namespace,
+		},
+	}
+	if gw.SectionName != "" {
+		spec.GatewayRef.SectionName = gw.SectionName
+	}
+	return spec
 }
 
 func mapDomains(installationDNS []*model.InstallationDNS) []mmv1beta1.IngressHost {
