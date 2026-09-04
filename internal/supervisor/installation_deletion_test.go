@@ -14,7 +14,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/stretchr/testify/require"
 )
 
@@ -195,7 +195,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 			OwnerID:  "blah",
 			Version:  "version",
 			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			State:    "badstate",
 		}
@@ -220,7 +220,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 			OwnerID:  "blah",
 			Version:  "version",
 			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateDeletionPending,
 		}
@@ -265,7 +265,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 			OwnerID:  "blah",
 			Version:  "version",
 			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateDeletionPending,
 		}
@@ -310,7 +310,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 			OwnerID:  "blah",
 			Version:  "version",
 			Name:     "i1",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateUpdateInProgress,
 		}
@@ -324,7 +324,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 			OwnerID:  "blah",
 			Version:  "version",
 			Name:     "i2",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateDeletionPending,
 		}
@@ -374,7 +374,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 			OwnerID:  "blah",
 			Version:  "version",
 			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateDeletionPending,
 		}
@@ -407,7 +407,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 			OwnerID:  "blah",
 			Version:  "version",
 			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateDeletionPending,
 		}
@@ -440,7 +440,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 			OwnerID:               "blah",
 			Version:               "version",
 			Name:                  "dns",
-			Size:                  mmv1alpha1.Size100String,
+			Size:                  mmv1beta1.Size100String,
 			Affinity:              model.InstallationAffinityIsolated,
 			State:                 model.InstallationStateStable,
 			ScheduledDeletionTime: model.GetMillisAtTime(time.Now().Add(time.Hour)),
@@ -468,7 +468,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 			OwnerID:               "blah",
 			Version:               "version",
 			Name:                  "dns",
-			Size:                  mmv1alpha1.Size100String,
+			Size:                  mmv1beta1.Size100String,
 			Affinity:              model.InstallationAffinityIsolated,
 			State:                 model.InstallationStateStable,
 			ScheduledDeletionTime: model.GetMillis() - 1,

@@ -386,9 +386,10 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 	oldState := clusterDTO.State
 
 	var isUpgradeApplied bool
-	if clusterDTO.Provisioner == model.ProvisionerKops {
+	switch clusterDTO.Provisioner {
+	case model.ProvisionerKops:
 		isUpgradeApplied = clusterDTO.ProvisionerMetadataKops.ApplyUpgradePatch(upgradeClusterRequest)
-	} else if clusterDTO.Provisioner == model.ProvisionerEKS {
+	case model.ProvisionerEKS:
 		isUpgradeApplied = clusterDTO.ProvisionerMetadataEKS.ApplyUpgradePatch(upgradeClusterRequest)
 	}
 
@@ -440,14 +441,15 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
-	if clusterDTO.Provisioner == model.ProvisionerEKS {
+	switch clusterDTO.Provisioner {
+	case model.ProvisionerEKS:
 		err = clusterDTO.ProvisionerMetadataEKS.ValidateClusterSizePatch(resizeClusterRequest)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to validate cluster size patch")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-	} else if clusterDTO.Provisioner == model.ProvisionerKops {
+	case model.ProvisionerKops:
 		err = clusterDTO.ProvisionerMetadataKops.ValidateClusterSizePatch(resizeClusterRequest)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to validate cluster size patch")
@@ -459,9 +461,10 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	oldState := clusterDTO.State
 
 	var isResizeApplied bool
-	if clusterDTO.Provisioner == model.ProvisionerKops {
+	switch clusterDTO.Provisioner {
+	case model.ProvisionerKops:
 		isResizeApplied = clusterDTO.ProvisionerMetadataKops.ApplyClusterSizePatch(resizeClusterRequest)
-	} else if clusterDTO.Provisioner == model.ProvisionerEKS {
+	case model.ProvisionerEKS:
 		isResizeApplied = clusterDTO.ProvisionerMetadataEKS.ApplyClusterSizePatch(resizeClusterRequest)
 	}
 

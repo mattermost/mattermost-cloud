@@ -74,7 +74,7 @@ func runFilestoreTests(command *cobra.Command, c chan *model.WebhookPayload) []s
 
 		request := &model.CreateInstallationRequest{
 			OwnerID:   "ctest-filestore-tests",
-			DNS:       fmt.Sprintf("ctest-%s.%s", filestoreType, installationDomain),
+			DNSNames:  []string{fmt.Sprintf("ctest-%s.%s", filestoreType, installationDomain)},
 			Version:   version,
 			License:   license,
 			Affinity:  model.InstallationAffinityMultiTenant,
