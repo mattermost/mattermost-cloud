@@ -388,15 +388,17 @@ func (b *Blaster) createInstallations(total, batchSize int) map[string]*cloud.In
 // createInstallation requests creation of a single installation and
 // returns an error if the API does. It does not block or retry.
 func (b *Blaster) createInstallation() (*cloud.Installation, error) {
+	installationName := fmt.Sprintf("%s-%s", b.testID, cloud.NewID()[:6])
 	installationDTO, err := b.client.CreateInstallation(
 		&cloud.CreateInstallationRequest{
+			Name:            installationName,
 			OwnerID:         b.testID,
 			GroupID:         b.group.ID,
 			Database:        b.database,
 			Filestore:       b.filestore,
 			Size:            b.installSize,
 			Affinity:        cloud.InstallationAffinityMultiTenant,
-			DNSNames:        []string{fmt.Sprintf("%s-%s.loadtest.dev.cloud.mattermost.com", b.testID, cloud.NewID()[:6])},
+			DNSNames:        []string{fmt.Sprintf("%s.loadtest.dev.cloud.mattermost.com", installationName)},
 			APISecurityLock: false,
 		})
 	if err != nil {
