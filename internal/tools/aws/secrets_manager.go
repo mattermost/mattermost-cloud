@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	iamTypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -65,8 +64,7 @@ func (a *Client) SecretsManagerRestoreSecret(secretName string, logger log.Field
 			SecretId: aws.String(secretName),
 		})
 	if err != nil {
-		var awsErr *types.ResourceNotFoundException
-		if errors.As(err, &awsErr) {
+		if IsErrorResourceNotFound(err) {
 			logger.WithField("secret-name", secretName).Warn("Secret Manager secret could not be found; assuming fully deleted")
 			return nil
 		}
@@ -282,8 +280,7 @@ func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, force bool
 		})
 
 	if err != nil {
-		var awsErr *types.ResourceNotFoundException
-		if errors.As(err, &awsErr) {
+		if IsErrorResourceNotFound(err) {
 			logger.WithField("secret-name", secretName).Warn("Secret Manager secret not found; assuming already deleted")
 			return nil
 		}
