@@ -268,6 +268,8 @@ github.com/aws/aws-sdk-go-v2/service/kms v1.21.1 h1:Q03Jqh1enA8keCiGZpLetpk58Ll9
 github.com/aws/aws-sdk-go-v2/service/kms v1.21.1/go.mod h1:EEfb4gfSphdVpRo5sGf2W3KvJbelYUno5VaXR5MJ3z4=
 github.com/aws/aws-sdk-go-v2/service/rds v1.44.1 h1:9nhtGFhgKBBqcsbHXCVxrFKZgb4EmVF30hG3s2WEdD8=
 github.com/aws/aws-sdk-go-v2/service/rds v1.44.1/go.mod h1:rS6T0DrjdZ5LDr8ZC/J9iZdD1oSbie5reWWzqv5zLOw=
+github.com/aws/aws-sdk-go-v2/service/rds v1.128.0 h1:keaCViwAriS0OADwo19JlyYj69E89dVdBHUovcVYmXk=
+github.com/aws/aws-sdk-go-v2/service/rds v1.128.0/go.mod h1:UjDrUggtVvjoG/JmU9SvzE+eKjnCKvn7JDsETFe4R4M=
 github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.14.11 h1:V0qTr5u2XiWYEhncMjQ2eoRzFXwgWTVAuIC1fAZ1I9E=
 github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.14.11/go.mod h1:i/CXT+v8caoM60a7brYlrVG64srBa1Op0Q5Nl6askyo=
 github.com/aws/aws-sdk-go-v2/service/route53 v1.69.0 h1:Z714Jtt3Ivtf6b0g8wl2YW3Bb2hNRJu1iJCgQzV91D0=

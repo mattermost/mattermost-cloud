@@ -244,7 +244,7 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 			ctx,
 			&rds.DeleteDBInstanceInput{
 				DBInstanceIdentifier: instance.DBInstanceIdentifier,
-				SkipFinalSnapshot:    true,
+				SkipFinalSnapshot:    aws.Bool(true),
 			})
 		if err != nil {
 			return errors.Wrap(err, "unable to delete DB cluster instance")
@@ -256,7 +256,7 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 		ctx,
 		&rds.DeleteDBClusterInput{
 			DBClusterIdentifier: aws.String(awsID),
-			SkipFinalSnapshot:   true,
+			SkipFinalSnapshot:   aws.Bool(true),
 		})
 	if err != nil {
 		return errors.Wrap(err, "unable to delete DB cluster")
