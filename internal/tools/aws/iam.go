@@ -43,8 +43,7 @@ func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*ty
 		return getResult.User, nil
 	}
 
-	var awsErr *types.NoSuchEntityException
-	if !errors.As(err, &awsErr) {
+	if !IsErrorCode(err, "NoSuchEntity") {
 		return nil, err
 	}
 
@@ -70,8 +69,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 			UserName: aws.String(awsID),
 		})
 	if err != nil {
-		var awsErr *types.NoSuchEntityException
-		if errors.As(err, &awsErr) {
+		if IsErrorCode(err, "NoSuchEntity") {
 			logger.WithField("iam-user-name", awsID).Warn("AWS IAM user could not be found; assuming already deleted")
 			return nil
 		}
@@ -171,8 +169,7 @@ func (a *Client) iamEnsureS3PolicyCreated(awsID, policyARN, bucketName, permitte
 		return getResult.Policy, nil
 	}
 
-	var awsErr *types.NoSuchEntityException
-	if !errors.As(err, &awsErr) {
+	if !IsErrorCode(err, "NoSuchEntity") {
 		return nil, err
 	}
 
@@ -334,8 +331,7 @@ func (a *Client) DetachPolicyFromRole(roleName, policyName string, logger log.Fi
 			PolicyArn: aws.String(policyARN),
 			RoleName:  aws.String(roleName),
 		})
-	var awsErr *types.NoSuchEntityException
-	if errors.As(err, &awsErr) {
+	if IsErrorCode(err, "NoSuchEntity") {
 		logger.WithField("iam-policy", policyARN).Warn("IAM policy could not be detached; assuming already detached")
 		return nil
 	}

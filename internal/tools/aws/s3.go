@@ -250,8 +250,7 @@ func (a *Client) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger
 			Bucket: aws.String(bucketName),
 		})
 	if err != nil {
-		var awsNotFound *types.NotFound
-		if errors.As(err, &awsNotFound) {
+		if IsErrorCode(err, "NotFound") {
 			logger.WithField("s3-bucket-name", bucketName).Warn("AWS S3 bucket could not be found; assuming already deleted")
 			return nil
 		}
