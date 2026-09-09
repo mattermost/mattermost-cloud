@@ -49,10 +49,10 @@ func (a *Client) s3EnsureBucketCreated(bucketName string, enableVersioning bool)
 		&s3.PutPublicAccessBlockInput{
 			Bucket: aws.String(bucketName),
 			PublicAccessBlockConfiguration: &types.PublicAccessBlockConfiguration{
-				BlockPublicAcls:       true,
-				BlockPublicPolicy:     true,
-				IgnorePublicAcls:      true,
-				RestrictPublicBuckets: true,
+				BlockPublicAcls:       aws.Bool(true),
+				BlockPublicPolicy:     aws.Bool(true),
+				IgnorePublicAcls:      aws.Bool(true),
+				RestrictPublicBuckets: aws.Bool(true),
 			},
 		})
 	if err != nil {
@@ -94,7 +94,7 @@ func (a *Client) S3BatchDeleteVersions(bucketName string, prefix *string) error 
 		a.service.s3,
 		&s3.ListObjectVersionsInput{
 			Bucket:  aws.String(bucketName),
-			MaxKeys: 1000, // The maximum number of objects we can retrieve on a single request
+			MaxKeys: aws.Int32(1000), // The maximum number of objects we can retrieve on a single request
 			Prefix:  prefix,
 		},
 	)
@@ -147,7 +147,7 @@ func (a *Client) S3BatchDelete(bucketName string, prefix *string) error {
 		a.service.s3,
 		&s3.ListObjectsV2Input{
 			Bucket:  &bucketName,
-			MaxKeys: 1000, // The maximum number of objects we can retrieve on a single request
+			MaxKeys: aws.Int32(1000), // The maximum number of objects we can retrieve on a single request
 			Prefix:  prefix,
 		},
 	)
@@ -250,8 +250,7 @@ func (a *Client) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger
 			Bucket: aws.String(bucketName),
 		})
 	if err != nil {
-		var awsNotFound *types.NotFound
-		if errors.As(err, &awsNotFound) {
+		if IsErrorCode(err, "NotFound") {
 			logger.WithField("s3-bucket-name", bucketName).Warn("AWS S3 bucket could not be found; assuming already deleted")
 			return nil
 		}
@@ -325,7 +324,7 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 		return errors.Wrapf(err, "failed to get object metadata for %s/%s", *srcBucketName, *srcBucketKey)
 	}
 
-	objectSize := objectMetadata.ContentLength
+	objectSize := aws.ToInt64(objectMetadata.ContentLength)
 	var (
 		partSize     int64 = 256 * 1024 * 1024 // 256 MB parts
 		bytePosition int64 = 0
@@ -357,21 +356,21 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 				CopySource:      &copySource,
 				CopySourceRange: &bytesRange,
 				Key:             destBucketKey,
-				PartNumber:      partNum,
+				PartNumber:      &partNum,
 				UploadId:        uploadID,
 			})
 		if err != nil {
 			return errors.Wrapf(err, "failed to upload part %d", partNum)
 		}
 		bytePosition += partSize
-		partNumber := partNum // copy this because AWS wants a pointer
+		partNumber := partNum // copy to get a stable pointer for this part
 
 		// for some reason the ETag comes back from AWS surrounded with quotes???
 		etag := strings.TrimPrefix(strings.TrimSuffix(*resp.CopyPartResult.ETag, "\""), "\"")
 		completedParts = append(completedParts,
 			types.CompletedPart{
 				ETag:       &etag,
-				PartNumber: partNumber,
+				PartNumber: &partNumber,
 			})
 	}
 

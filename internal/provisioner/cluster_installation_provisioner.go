@@ -20,7 +20,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/mattermost/mattermost-operator/pkg/utils"
 	"github.com/pkg/errors"
@@ -1084,13 +1083,11 @@ func setMMInstanceSize(installation *model.Installation, mattermost *mmv1beta1.M
 
 // This function is adapted from Mattermost Operator, we can make it public
 // there to avoid copying.
-func overrideReplicasAndResourcesFromSize(size mmv1alpha1.ClusterInstallationSize, mm *mmv1beta1.Mattermost) {
+func overrideReplicasAndResourcesFromSize(size mmv1beta1.Size, mm *mmv1beta1.Mattermost) {
 	mm.Spec.Size = ""
 
 	mm.Spec.Replicas = utils.NewInt32(size.App.Replicas)
-	mm.Spec.Scheduling.Resources = size.App.Resources
-	mm.Spec.FileStore.OverrideReplicasAndResourcesFromSize(size)
-	mm.Spec.Database.OverrideReplicasAndResourcesFromSize(size)
+	mm.Spec.Scheduling.Resources = *size.App.Resources.DeepCopy()
 }
 
 func prepareCILicenseSecret(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {
@@ -1228,7 +1225,7 @@ func deletePodDisruptionBudget(clusterInstallation *model.ClusterInstallation, k
 // shouldCreatePodDisruptionBudget returns true if a PodDisruptionBudget should be created
 // for the given installation. PDBs are created for all sizes except miniSingleton.
 func shouldCreatePodDisruptionBudget(installation *model.Installation) bool {
-	return installation.Size != mmv1alpha1.SizeMiniSingletonString
+	return installation.Size != mmv1beta1.SizeMiniSingletonString
 }
 
 // generatePodDisruptionBudget creates a PodDisruptionBudget for a Mattermost installation

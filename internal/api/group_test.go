@@ -442,7 +442,7 @@ func TestDeleteGroup(t *testing.T) {
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner",
 		Version:  "version",
-		DNS:      "dns.example.com",
+		DNSNames: []string{"dns.example.com"},
 		Affinity: model.InstallationAffinityIsolated,
 	})
 	require.NoError(t, err)
@@ -530,7 +530,7 @@ func TestGroupStatus(t *testing.T) {
 		createRequest := &model.CreateInstallationRequest{
 			OwnerID:  "owner",
 			Version:  "version",
-			DNS:      fmt.Sprintf("dns%d.example.com", installationsCreated),
+			DNSNames: []string{fmt.Sprintf("dns%d.example.com", installationsCreated)},
 			Affinity: model.InstallationAffinityIsolated,
 		}
 		if groupId != nil {
@@ -648,7 +648,7 @@ func TestGroupsStatus(t *testing.T) {
 		createRequest := &model.CreateInstallationRequest{
 			OwnerID:  "owner",
 			Version:  "version",
-			DNS:      fmt.Sprintf("dns%d.example.com", installationsCreated),
+			DNSNames: []string{fmt.Sprintf("dns%d.example.com", installationsCreated)},
 			Affinity: model.InstallationAffinityIsolated,
 		}
 		if groupId != nil {
@@ -745,9 +745,10 @@ func TestGroupsStatus(t *testing.T) {
 		require.NotNil(t, groupsStatus)
 		assert.Len(t, groupsStatus, 2)
 		for _, gs := range groupsStatus {
-			if gs.ID == group.ID {
+			switch gs.ID {
+			case group.ID:
 				assert.Equal(t, expectedStatusGroup1, gs)
-			} else if gs.ID == group2.ID {
+			case group2.ID:
 				assert.Equal(t, expectedStatusGroup2, gs)
 			}
 		}

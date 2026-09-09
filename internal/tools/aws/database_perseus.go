@@ -476,11 +476,8 @@ func (d *PerseusDatabase) ensurePerseusDatabaseUserSecretIsCreated(rdsClusterID,
 	perseusUserSecretName := PerseusDatabaseUserSecretName(*rdsClusterID)
 
 	secret, err := d.client.secretsManagerGetRDSSecret(perseusUserSecretName)
-	if err != nil {
-		var awsErr *smTypes.ResourceNotFoundException
-		if !errors.As(err, &awsErr) {
-			return nil, errors.Wrapf(err, "failed to get perseus database user secret %s", perseusUserSecretName)
-		}
+	if err != nil && !IsErrorResourceNotFound(err) {
+		return nil, errors.Wrapf(err, "failed to get perseus database user secret %s", perseusUserSecretName)
 	}
 
 	if secret == nil {
@@ -509,11 +506,8 @@ func (d *PerseusDatabase) ensurePGBouncerAuthUserSecretIsCreated(rdsClusterID, V
 	authUserSecretName := PGBouncerAuthUserSecretName(*VpcID)
 
 	secret, err := d.client.secretsManagerGetRDSSecret(authUserSecretName)
-	if err != nil {
-		var awsErr *smTypes.ResourceNotFoundException
-		if !errors.As(err, &awsErr) {
-			return nil, errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
-		}
+	if err != nil && !IsErrorResourceNotFound(err) {
+		return nil, errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
 	}
 
 	if secret == nil {
@@ -749,8 +743,7 @@ func (d *PerseusDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClusterID,
 	installationSecretName := PerseusInstallationSecretName(d.installationID)
 
 	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName)
-	var awsErr *smTypes.ResourceNotFoundException
-	if err != nil && !errors.As(err, &awsErr) {
+	if err != nil && !IsErrorResourceNotFound(err) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
 	}
 	if installationSecret != nil {
@@ -1110,11 +1103,8 @@ func ensurePerseusAuthUserSecretIsCreated(a *Client, rdsClusterID, VpcID *string
 	authUserSecretName := PerseusAuthUserSecretName(*VpcID)
 
 	secret, err := a.secretsManagerGetRDSSecret(authUserSecretName)
-	if err != nil {
-		var awsErr *smTypes.ResourceNotFoundException
-		if !errors.As(err, &awsErr) {
-			return nil, errors.Wrapf(err, "failed to get perseus auth user secret %s", authUserSecretName)
-		}
+	if err != nil && !IsErrorResourceNotFound(err) {
+		return nil, errors.Wrapf(err, "failed to get perseus auth user secret %s", authUserSecretName)
 	}
 
 	if secret == nil {

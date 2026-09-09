@@ -60,9 +60,9 @@ func Test_AddInstallationDNS(t *testing.T) {
 
 	t.Run("cannot create Installation with name not matching DNS", func(t *testing.T) {
 		_, err = client.CreateInstallation(&model.CreateInstallationRequest{
-			Name:    "test",
-			DNS:     "not-test.dns.com",
-			OwnerID: "test",
+			Name:     "test",
+			DNSNames: []string{"not-test.dns.com"},
+			OwnerID:  "test",
 		})
 		require.Error(t, err)
 	})
@@ -76,7 +76,7 @@ func Test_AddInstallationDNS(t *testing.T) {
 
 	// Create installation using old API.
 	oldAPIInstallation := &model.CreateInstallationRequest{
-		DNS:     "old-api-dns.example.com",
+		DNS:     "old-api-dns.example.com", //nolint:staticcheck
 		OwnerID: "test",
 	}
 	installation2, err := client.CreateInstallation(oldAPIInstallation)

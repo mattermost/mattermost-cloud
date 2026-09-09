@@ -13,7 +13,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/stretchr/testify/require"
 )
 
@@ -199,7 +199,7 @@ func TestGroupSupervisor(t *testing.T) {
 			OwnerID:  model.NewID(),
 			Version:  "version",
 			Name:     "dns1",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
@@ -234,7 +234,7 @@ func TestGroupSupervisor(t *testing.T) {
 			OwnerID:  model.NewID(),
 			Version:  "version",
 			Name:     "dns1",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
@@ -247,7 +247,7 @@ func TestGroupSupervisor(t *testing.T) {
 			OwnerID:  model.NewID(),
 			Version:  "version",
 			Name:     "dns2",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
@@ -260,7 +260,7 @@ func TestGroupSupervisor(t *testing.T) {
 			OwnerID:  model.NewID(),
 			Version:  "version",
 			Name:     "dns3",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
@@ -294,7 +294,7 @@ func TestGroupSupervisor(t *testing.T) {
 			OwnerID:  model.NewID(),
 			Version:  "version",
 			Name:     "dns1",
-			Size:     mmv1alpha1.Size100String,
+			Size:     mmv1beta1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateDeletionRequested,
@@ -329,7 +329,7 @@ func TestGroupSupervisor(t *testing.T) {
 				OwnerID:  model.NewID(),
 				Version:  "version",
 				Name:     "dns1",
-				Size:     mmv1alpha1.Size100String,
+				Size:     mmv1beta1.Size100String,
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateStable,
@@ -342,7 +342,7 @@ func TestGroupSupervisor(t *testing.T) {
 				OwnerID:  model.NewID(),
 				Version:  "version",
 				Name:     "dns2",
-				Size:     mmv1alpha1.Size100String,
+				Size:     mmv1beta1.Size100String,
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateStable,
@@ -378,7 +378,7 @@ func TestGroupSupervisor(t *testing.T) {
 				OwnerID:  model.NewID(),
 				Version:  "version",
 				Name:     "dns1",
-				Size:     mmv1alpha1.Size100String,
+				Size:     mmv1beta1.Size100String,
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateStable,
@@ -391,7 +391,7 @@ func TestGroupSupervisor(t *testing.T) {
 				OwnerID:  model.NewID(),
 				Version:  "version",
 				Name:     "dns2",
-				Size:     mmv1alpha1.Size100String,
+				Size:     mmv1beta1.Size100String,
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateDeletionInProgress,

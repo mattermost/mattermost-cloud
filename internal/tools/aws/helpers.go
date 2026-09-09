@@ -219,8 +219,7 @@ func getMultitenantBucketNameForVPC(vpcID string, client *Client) (string, error
 			Bucket: aws.String(bucketName),
 		})
 	if err != nil {
-		var awsErr *s3Types.NoSuchBucket
-		if errors.As(err, &awsErr) {
+		if IsErrorCode(err, "NoSuchBucket") {
 			return "", errors.Wrapf(err, "failed to find bucket %s", bucketName)
 		}
 		return "", errors.Wrap(err, "failed to get bucket tags")

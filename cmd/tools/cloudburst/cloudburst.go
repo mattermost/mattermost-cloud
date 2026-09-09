@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	cloud "github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,7 +59,7 @@ func init() {
 	blastCommand.PersistentFlags().Int("total", 20, "Number of Installations to provision")
 	blastCommand.PersistentFlags().String("database", cloud.InstallationDatabaseMultiTenantRDSPostgres, "Specify the type of database with which to create Installations")
 	blastCommand.PersistentFlags().String("filestore", cloud.InstallationFilestoreMultiTenantAwsS3, "Specify the filestore type with which to create Installations")
-	blastCommand.PersistentFlags().String("size", mmv1alpha1.Size1000String, "Specify the size of the created Installations")
+	blastCommand.PersistentFlags().String("size", mmv1beta1.Size1000String, "Specify the size of the created Installations")
 }
 
 // Type returns ErrorReportType for errorReport objects
@@ -388,15 +388,17 @@ func (b *Blaster) createInstallations(total, batchSize int) map[string]*cloud.In
 // createInstallation requests creation of a single installation and
 // returns an error if the API does. It does not block or retry.
 func (b *Blaster) createInstallation() (*cloud.Installation, error) {
+	installationName := fmt.Sprintf("%s-%s", b.testID, cloud.NewID()[:6])
 	installationDTO, err := b.client.CreateInstallation(
 		&cloud.CreateInstallationRequest{
+			Name:            installationName,
 			OwnerID:         b.testID,
 			GroupID:         b.group.ID,
 			Database:        b.database,
 			Filestore:       b.filestore,
 			Size:            b.installSize,
 			Affinity:        cloud.InstallationAffinityMultiTenant,
-			DNS:             fmt.Sprintf("%s-%s.loadtest.dev.cloud.mattermost.com", b.testID, cloud.NewID()[:6]),
+			DNSNames:        []string{fmt.Sprintf("%s.loadtest.dev.cloud.mattermost.com", installationName)},
 			APISecurityLock: false,
 		})
 	if err != nil {
@@ -414,7 +416,7 @@ func isValidInput(database, filestore, installSize string) error {
 		return errors.Errorf("invalid filestore requested: unknown filestore type %s", filestore)
 	}
 
-	_, err := mmv1alpha1.GetClusterSize(installSize)
+	_, err := mmv1beta1.GetMattermostSize(installSize)
 	if err != nil {
 		return errors.Wrapf(err, "%s", installSize)
 	}

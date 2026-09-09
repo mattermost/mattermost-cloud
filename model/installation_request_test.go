@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	"github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/mattermost/mattermost-cloud/internal/util"
@@ -162,7 +162,7 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			&model.CreateInstallationRequest{
 				OwnerID: "owner1",
 				DNS:     "domain4321.com",
-				Size:    v1alpha1.Size5000String,
+				Size:    v1beta1.Size5000String,
 			},
 		},
 		{
@@ -245,8 +245,8 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			},
 		},
 		{
-			"new DNS format without",
-			true,
+			"new DNS format without explicit Name",
+			false,
 			&model.CreateInstallationRequest{
 				OwnerID:  "owner1",
 				DNSNames: []string{"my-installation.example.com"},
@@ -479,7 +479,7 @@ func TestPatchInstallationRequestValid(t *testing.T) {
 			"valid Operator size",
 			false,
 			&model.PatchInstallationRequest{
-				Size: util.SToP(v1alpha1.Size5000String),
+				Size: util.SToP(v1beta1.Size5000String),
 			},
 		},
 		{

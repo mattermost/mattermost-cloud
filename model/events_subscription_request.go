@@ -76,7 +76,7 @@ func (request *ListSubscriptionsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("owner", request.Owner)
 	q.Add("event_type", string(request.EventType))
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }

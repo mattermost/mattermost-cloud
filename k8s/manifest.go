@@ -11,8 +11,6 @@ import (
 	"path"
 	"reflect"
 
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
-	mattermostscheme "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned/scheme"
 	monitoringV1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringscheme "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/scheme"
 	log "github.com/sirupsen/logrus"
@@ -72,7 +70,6 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile, installationName string)
 
 	install.Install(scheme.Scheme)
 	apixv1beta1scheme.AddToScheme(scheme.Scheme)
-	mattermostscheme.AddToScheme(scheme.Scheme)
 	monitoringscheme.AddToScheme(scheme.Scheme)
 
 	logger := kc.logger.WithFields(log.Fields{
@@ -145,8 +142,6 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 		return kc.createOrUpdateCustomResourceDefinitionBetaV1(obj.(*apixv1beta1.CustomResourceDefinition))
 	case *apixv1.CustomResourceDefinition:
 		return kc.createOrUpdateCustomResourceDefinitionV1(obj.(*apixv1.CustomResourceDefinition))
-	case *mmv1alpha1.ClusterInstallation:
-		return kc.createOrUpdateClusterInstallation(deployNamespace, obj.(*mmv1alpha1.ClusterInstallation))
 	case *monitoringV1.PodMonitor:
 		return kc.createOrUpdatePodMonitor(deployNamespace, obj.(*monitoringV1.PodMonitor))
 	case *apiv1.Secret:

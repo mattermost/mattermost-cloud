@@ -45,7 +45,7 @@ func TestSanitizeParams(t *testing.T) {
 				SecretBinary: []byte("secret bytes"),
 				SecretString: aws.String("super secret"),
 			},
-			expected: `{"AddReplicaRegions":null,"ClientRequestToken":null,"Description":null,"ForceOverwriteReplicaSecret":false,"KmsKeyId":null,"Name":"name","SecretBinary":"*****","SecretString":"*****","Tags":null}`,
+			expected: `{"AddReplicaRegions":null,"ClientRequestToken":null,"Description":null,"ForceOverwriteReplicaSecret":false,"KmsKeyId":null,"Name":"name","SecretBinary":"*****","SecretString":"*****","Tags":null,"Type":null}`,
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {

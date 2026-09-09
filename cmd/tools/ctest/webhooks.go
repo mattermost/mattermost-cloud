@@ -10,11 +10,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
 )
 
-func webhookHandler(w http.ResponseWriter, r *http.Request, c chan *model.WebhookPayload) {
+func webhookHandler(w http.ResponseWriter, r *http.Request, c chan *cloud.WebhookPayload) {
 	webhook, err := cloud.WebhookPayloadFromReader(r.Body)
 	if err != nil {
 		logger.WithError(err).Error("Faled to parse webhook")
@@ -41,7 +40,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request, c chan *model.Webhoo
 	w.WriteHeader(http.StatusOK)
 }
 
-func startWebhookListener(port string, c chan *model.WebhookPayload) func() {
+func startWebhookListener(port string, c chan *cloud.WebhookPayload) func() {
 	logger.Infof("Starting cloud webhook listener on port %s", port)
 
 	srv := &http.Server{Addr: fmt.Sprintf(":%s", port)}

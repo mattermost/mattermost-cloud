@@ -10,7 +10,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +48,7 @@ func TestInstallationDTOs(t *testing.T) {
 		Version:                    "version",
 		Database:                   model.InstallationDatabaseMysqlOperator,
 		Filestore:                  model.InstallationFilestoreMinioOperator,
-		Size:                       mmv1alpha1.Size100String,
+		Size:                       mmv1beta1.Size100String,
 		Affinity:                   model.InstallationAffinityIsolated,
 		GroupID:                    &groupID1,
 		State:                      model.InstallationStateCreationRequested,
@@ -62,7 +62,7 @@ func TestInstallationDTOs(t *testing.T) {
 		Image:     "custom-image",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
+		Size:      mmv1beta1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID1,
 		State:     model.InstallationStateStable,

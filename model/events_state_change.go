@@ -117,7 +117,7 @@ func (request *ListStateChangeEventsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("resource_type", string(request.ResourceType))
 	q.Add("resource_id", request.ResourceID)
-	request.Paging.AddToQuery(q)
+	request.AddToQuery(q)
 
 	u.RawQuery = q.Encode()
 }

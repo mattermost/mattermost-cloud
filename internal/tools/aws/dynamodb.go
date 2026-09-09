@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -24,8 +23,7 @@ func (a *Client) DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLo
 		})
 
 	if err != nil {
-		var awsErr *types.ResourceNotFoundException
-		if errors.As(err, &awsErr) {
+		if IsErrorResourceNotFound(err) {
 			logger.WithField("dynamodb-table", tableName).Warn("DynamoDB table could not be found; assuming already deleted")
 			return nil
 		}
