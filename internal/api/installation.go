@@ -385,6 +385,13 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	oldState := installationDTO.State
 
 	if patchInstallationRequest.Apply(installationDTO.Installation) {
+		if installationDTO.IngressType == model.InstallationIngressHTTPRoute &&
+			installationDTO.AllowedIPRanges != nil && len(*installationDTO.AllowedIPRanges) > 0 {
+			c.Logger.Error("allowedIPRanges is not supported with httproute ingress type")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		installationDTO.State = newState
 
 		err = c.Store.UpdateInstallation(installationDTO.Installation)
