@@ -128,43 +128,43 @@ func (s *ImportSupervisor) Do() error {
 	}
 
 	defer func() {
-		err = s.awatClient.ReleaseLockOnImport(work.ID)
-		if err != nil {
-			s.logger.WithError(err).Warnf("Failed to release lock on Import %s", work.ID)
+		releaseErr := s.awatClient.ReleaseLockOnImport(work.ID)
+		if releaseErr != nil {
+			s.logger.WithError(releaseErr).Warnf("Failed to release lock on Import %s", work.ID)
 		}
 	}()
 
-	err = s.importTranslation(work)
-	if err != nil {
-		s.logger.WithError(err).Errorf("Failed to perform work on Import %s", work.ID)
-		workError := err.Error()
+	importErr := s.importTranslation(work)
+	if importErr != nil {
+		s.logger.WithError(importErr).Errorf("Failed to perform work on Import %s", work.ID)
+		workError := importErr.Error()
 
 		go func() {
 			completeAt := model.GetMillis()
 			attempts := 0
 
 			expBackoff := utils.NewExponentialBackoff(time.Second*5, time.Minute*10, time.Minute*30)
-			err = expBackoff.Retry(func() error {
+			retryErr := expBackoff.Retry(func() error {
 				attempts++
-				err = s.awatClient.CompleteImport(
+				completeErr := s.awatClient.CompleteImport(
 					&awat.ImportCompletedWorkRequest{
 						ID:         work.ID,
 						CompleteAt: completeAt,
 						Error:      workError,
 					})
-				if err != nil {
-					s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s at %d attempt(s)", work.ID, attempts)
+				if completeErr != nil {
+					s.logger.WithError(completeErr).Errorf("failed to report error to AWAT for Import %s at %d attempt(s)", work.ID, attempts)
 				}
-				return err
+				return completeErr
 			})
 
-			if err != nil {
-				s.logger.WithError(err).Errorf("failed retry to report error to AWAT for Import %s after %d attempts", work.ID, attempts)
+			if retryErr != nil {
+				s.logger.WithError(retryErr).Errorf("failed retry to report error to AWAT for Import %s after %d attempts", work.ID, attempts)
 			}
 		}()
 	}
 
-	return err
+	return importErr
 }
 
 // Shutdown is called when the ImportSupervisor is stopped.
