@@ -501,6 +501,9 @@ func (provisioner Provisioner) updateClusterInstallation(
 	annotations := getIngressAnnotations()
 	addSourceRangeWhitelistToAnnotations(annotations, installation.AllowedIPRanges, provisioner.params.InternalIPRanges)
 	if installation.IngressHTTPRoute() {
+		if !installation.AllowedIPRanges.AllRulesAreDisabled() {
+			logger.Warn("Installation has AllowedIPRanges set but uses HTTPRoute; IP filtering is not enforced — AllowedIPRanges are ignored for HTTPRoute installations")
+		}
 		mattermost.Spec.Ingress = &mmv1beta1.Ingress{Enabled: false}
 		mattermost.Spec.HTTPRoute = makeHTTPRouteSpecForInstallation(installation, installationDNS)
 	} else {
