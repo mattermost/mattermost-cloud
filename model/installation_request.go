@@ -400,7 +400,13 @@ func (p *PatchInstallationRequest) Validate() error {
 			if p.GatewayConfig == nil || p.GatewayConfig.Name == "" {
 				return errors.New("gatewayConfig.name is required when ingressType is httproute")
 			}
+			if p.AllowedIPRanges != nil && len(*p.AllowedIPRanges) > 0 {
+				return errors.New("allowedIPRanges is not supported with httproute ingress type")
+			}
 		}
+	}
+	if p.GatewayConfig != nil && p.GatewayConfig.Name == "" {
+		return errors.New("gatewayConfig.name must not be empty")
 	}
 	// EnvVarMap validation is skipped as all configurations of this now imply
 	// a specific patch action should be taken.
