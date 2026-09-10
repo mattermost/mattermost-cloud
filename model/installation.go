@@ -64,7 +64,7 @@ type Installation struct {
 	PodProbeOverrides          *PodProbeOverrides `json:"PodProbeOverrides,omitempty"`
 	Scheduling                 *Scheduling        `json:"Scheduling,omitempty"`
 	IngressType                string
-	GatewayConfig              *GatewayConfig     `json:"GatewayConfig,omitempty"`
+	GatewayConfig              *GatewayConfig `json:"GatewayConfig,omitempty"`
 
 	// configconfigMergedWithGroup is set when the installation configuration
 	// has been overridden with group configuration. This value can then be
