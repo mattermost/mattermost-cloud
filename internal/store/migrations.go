@@ -2295,4 +2295,17 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.54.0"), semver.MustParse("0.55.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN IngressType TEXT NOT NULL DEFAULT 'ingress';`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create IngressType column")
+		}
+
+		_, err = e.Exec(`ALTER TABLE Installation ADD COLUMN GatewayConfig JSON DEFAULT NULL;`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create GatewayConfig column")
+		}
+
+		return nil
+	}},
 }
