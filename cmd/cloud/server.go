@@ -100,6 +100,8 @@ func executeServerCmd(flags serverFlags) error {
 	}
 
 	model.SetRequireAnnotatedInstallations(flags.requireAnnotatedInstallations)
+	model.SetDefaultIngressType(flags.defaultIngressType)
+	model.SetDefaultGatewayConfig(flags.defaultGatewayName, flags.defaultGatewayNamespace, flags.defaultGatewaySectionName)
 
 	if len(flags.allowListCIDRRange) == 0 {
 		return errors.New("allow-list-cidr-range must have at least one value")

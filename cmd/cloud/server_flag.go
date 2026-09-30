@@ -205,6 +205,10 @@ type installationOptions struct {
 	utilitiesGitPath              string
 	enableS3Versioning            bool
 	internalIPRanges              []string
+	defaultIngressType            string
+	defaultGatewayName            string
+	defaultGatewayNamespace       string
+	defaultGatewaySectionName     string
 }
 
 func (flags *installationOptions) addFlags(command *cobra.Command) {
@@ -219,6 +223,10 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.utilitiesGitPath, "utilities-git-path", "", "The git path to use for utilities. For example /gitops/gitops.git")
 	command.Flags().BoolVar(&flags.enableS3Versioning, "enable-s3-versioning", false, "Whether to enable S3 versioning for the installation bucket or not")
 	command.Flags().StringSliceVar(&flags.internalIPRanges, "internal-ip-ranges", []string{}, "Some ranges that needed to be allowed for operational reasons")
+	command.Flags().StringVar(&flags.defaultIngressType, "default-ingress-type", "", "Default ingress type for new installations when not specified (\"ingress\" or \"httproute\"). Defaults to \"ingress\" when unset.")
+	command.Flags().StringVar(&flags.defaultGatewayName, "default-gateway-name", "", "Default Gateway name for HTTPRoute installations when not specified in the request.")
+	command.Flags().StringVar(&flags.defaultGatewayNamespace, "default-gateway-namespace", "", "Default Gateway namespace for HTTPRoute installations when not specified in the request.")
+	command.Flags().StringVar(&flags.defaultGatewaySectionName, "default-gateway-section-name", "", "Default Gateway section name for HTTPRoute installations when not specified in the request.")
 }
 
 type dbUtilizationSettings struct {

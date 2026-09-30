@@ -25,6 +25,31 @@ func SetRequireAnnotatedInstallations(val bool) {
 	requireAnnotatedInstallations = val
 }
 
+// defaultIngressType is the server-configured default for new installations when IngressType is not specified.
+var defaultIngressType string
+
+// defaultGatewayConfig is the server-configured default GatewayConfig for HTTPRoute installations.
+var defaultGatewayConfig *GatewayConfig
+
+// SetDefaultIngressType sets the server-level default ingress type for new installations.
+func SetDefaultIngressType(ingressType string) {
+	defaultIngressType = ingressType
+}
+
+// SetDefaultGatewayConfig sets the server-level default GatewayConfig applied when IngressType is httproute
+// and no GatewayConfig is provided in the request.
+func SetDefaultGatewayConfig(name, namespace, sectionName string) {
+	if name == "" {
+		defaultGatewayConfig = nil
+		return
+	}
+	defaultGatewayConfig = &GatewayConfig{
+		Name:        name,
+		Namespace:   namespace,
+		SectionName: sectionName,
+	}
+}
+
 // deployMySQLOperator if set, MySQL operator will be deployed
 var deployMySQLOperator bool
 
@@ -111,7 +136,14 @@ func (request *CreateInstallationRequest) SetDefaults() {
 		request.Filestore = InstallationFilestoreMinioOperator
 	}
 	if request.IngressType == "" {
-		request.IngressType = InstallationIngressIngress
+		if defaultIngressType != "" {
+			request.IngressType = defaultIngressType
+		} else {
+			request.IngressType = InstallationIngressIngress
+		}
+	}
+	if request.IngressType == InstallationIngressHTTPRoute && request.GatewayConfig == nil && defaultGatewayConfig != nil {
+		request.GatewayConfig = defaultGatewayConfig
 	}
 	if IsSingleTenantRDS(request.Database) {
 		request.SingleTenantDatabaseConfig.SetDefaults()
