@@ -549,6 +549,31 @@ func TestCreateInstallation(t *testing.T) {
 		assert.Equal(t, installation, fetched)
 	})
 
+	t.Run("httproute without gateway config", func(t *testing.T) {
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:     "owner",
+			Version:     "version",
+			DNSNames:    []string{"httproute-nogw.example.com"},
+			Affinity:    model.InstallationAffinityIsolated,
+			IngressType: model.InstallationIngressHTTPRoute,
+		})
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
+	t.Run("httproute with empty gateway name", func(t *testing.T) {
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:     "owner",
+			Version:     "version",
+			DNSNames:    []string{"httproute-emptygw.example.com"},
+			Affinity:    model.InstallationAffinityIsolated,
+			IngressType: model.InstallationIngressHTTPRoute,
+			GatewayConfig: &model.GatewayConfig{
+				Name: "",
+			},
+		})
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
 	t.Run("valid with httproute ingress type", func(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:     "owner",
