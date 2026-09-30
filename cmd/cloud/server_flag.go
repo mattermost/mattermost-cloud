@@ -84,6 +84,7 @@ type provisioningParams struct {
 	deployMinioOperator       bool
 	mattermostOperatorHelmDir string
 	ndotsDefaultValue         string
+	cni                       string
 
 	backupJobTTL           int32
 	backupRestoreToolImage string
@@ -115,6 +116,7 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.deployMinioOperator, "deploy-minio-operator", false, "Whether to deploy the minio operator.")
 	command.Flags().StringVar(&flags.mattermostOperatorHelmDir, "mattermost-operator-helm-dir", "", "Provide a directory location where a local mattermost operator helm chart will be deployed instead of from the standard repo")
 	command.Flags().StringVar(&flags.ndotsDefaultValue, "ndots-value", "5", "The default ndots value for installations.")
+	command.Flags().StringVar(&flags.cni, "cni", "", "The CNI plugin in use on target clusters (e.g. \"cilium\"). When set to \"cilium\", Cilium-specific network policies are applied instead of standard Kubernetes NetworkPolicies where needed.")
 
 	command.Flags().Int32Var(&flags.backupJobTTL, "backup-job-ttl-seconds", 3600, "Number of seconds after which finished backup jobs will be cleaned up. Set to negative value to not cleanup or 0 to cleanup immediately.")
 	command.Flags().StringVar(&flags.backupRestoreToolImage, "backup-restore-tool-image", "mattermost/backup-restore-tool:latest", "Image of Backup Restore Tool to use.")

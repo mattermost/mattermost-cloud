@@ -186,7 +186,7 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
-	installationName, err := prepareClusterInstallationEnv(clusterInstallation, installation, k8sClient)
+	installationName, err := prepareClusterInstallationEnv(clusterInstallation, installation, provisioner.params.CNI, k8sClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare cluster installation env")
 	}
@@ -415,7 +415,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
-	installationName, err := prepareClusterInstallationEnv(clusterInstallation, installation, k8sClient)
+	installationName, err := prepareClusterInstallationEnv(clusterInstallation, installation, provisioner.params.CNI, k8sClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare cluster installation env")
 	}
@@ -935,7 +935,7 @@ func prepareClusterUtilities(
 	return nil
 }
 
-func prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallation, installation *model.Installation, k8sClient *k8s.KubeClient) (string, error) {
+func prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallation, installation *model.Installation, cni string, k8sClient *k8s.KubeClient) (string, error) {
 	_, err := k8sClient.CreateOrUpdateNamespace(clusterInstallation.Namespace)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
@@ -959,6 +959,13 @@ func prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallatio
 			if err != nil {
 				return "", errors.Wrapf(err, "failed to update network policy %s for httproute", policyName)
 			}
+		}
+	}
+
+	if cni == CNICilium {
+		err = k8sClient.ApplyCiliumMetadataDenyPolicy(clusterInstallation.Namespace)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to apply cilium metadata deny policy")
 		}
 	}
 

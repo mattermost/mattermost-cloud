@@ -32,6 +32,8 @@ func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supe
 }
 
 // ProvisioningParams represent configuration used during various provisioning operations.
+const CNICilium = "cilium"
+
 type ProvisioningParams struct {
 	S3StateStore              string
 	AllowCIDRRangeList        []string
@@ -47,6 +49,7 @@ type ProvisioningParams struct {
 	SLOEnterpriseGroups       []string
 	EtcdManagerEnv            map[string]string
 	PodProbeOverrides         model.PodProbeOverrides
+	CNI                       string
 }
 
 type Provisioner struct {
