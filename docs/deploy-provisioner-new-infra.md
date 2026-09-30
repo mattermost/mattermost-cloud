@@ -277,13 +277,11 @@ aws s3api create-bucket \
 
 ---
 
-## 12. Granting PgBouncer Auth User Permissions Per Logical Database
+## 12. Troubleshooting: PgBouncer `bouncer config error (08P01)`
 
-This is a known gap in the provisioner's automated setup. When the provisioner creates a logical database (`cloud_<id>`), it sets up the `pgbouncer` schema, `pgbouncer_users` table, and `get_auth` function — but does **not** grant the `pgbouncer` auth user access to them in that logical database.
+For **new** logical databases, `ensurePGBouncerDatabasePrep` creates the `pgbouncer` schema with the auth role as owner and `get_auth` as `SECURITY DEFINER`, so access is set up automatically.
 
-Without these grants, PgBouncer cannot authenticate clients and returns `bouncer config error (08P01)`.
-
-After each logical database is created (or if you see this error), connect as the master user to the logical database and run:
+If you see `bouncer config error (08P01)` on a **legacy or manually-created** logical database where the `pgbouncer` user lacks schema access, connect as the master user and run:
 
 ```sql
 GRANT USAGE ON SCHEMA pgbouncer TO pgbouncer;
@@ -291,7 +289,7 @@ GRANT SELECT ON TABLE pgbouncer.pgbouncer_users TO pgbouncer;
 GRANT EXECUTE ON FUNCTION pgbouncer.get_auth(text) TO pgbouncer;
 ```
 
-You can verify permissions before granting:
+Verify the grants are working:
 
 ```bash
 # Connect as the pgbouncer user to the logical database
@@ -300,7 +298,7 @@ psql -h <rds-endpoint> -U pgbouncer -d cloud_<logical-db-id>
 
 ```sql
 SELECT * FROM pgbouncer.get_auth('id_<installation-id>');
--- Should return a row; "permission denied for schema pgbouncer" means grants are missing
+-- Should return a row; "permission denied for schema pgbouncer" means grants are still missing
 ```
 
 After granting, restart PgBouncer pods to reload config:

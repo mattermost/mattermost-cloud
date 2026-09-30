@@ -819,6 +819,9 @@ func (s *InstallationSupervisor) getPublicLBEndpoint(installation *model.Install
 		namespace := "nginx"
 		if installation.IngressHTTPRoute() && installation.GatewayConfig != nil {
 			namespace = installation.GatewayConfig.Namespace
+			if namespace == "" {
+				namespace = clusterInstallation.Namespace
+			}
 		}
 		endpoint, err := s.provisioner.GetPublicLoadBalancerEndpoint(cluster, namespace)
 		if err != nil {

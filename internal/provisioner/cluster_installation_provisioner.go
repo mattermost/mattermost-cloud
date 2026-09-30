@@ -953,9 +953,13 @@ func prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallatio
 	}
 
 	if installation.IngressHTTPRoute() && installation.GatewayConfig != nil {
+		gatewayNamespace := installation.GatewayConfig.Namespace
+		if gatewayNamespace == "" {
+			gatewayNamespace = clusterInstallation.Namespace
+		}
 		for _, policyName := range []string{k8s.AllowMMExternal, k8s.AllowMMExternalBeta} {
 			err = k8sClient.UpdateNetworkPolicyIngressNamespaceSelector(
-				clusterInstallation.Namespace, policyName, installation.GatewayConfig.Namespace)
+				clusterInstallation.Namespace, policyName, gatewayNamespace)
 			if err != nil {
 				return "", errors.Wrapf(err, "failed to update network policy %s for httproute", policyName)
 			}

@@ -49,7 +49,7 @@ func (kc *KubeClient) ApplyCiliumMetadataDenyPolicy(namespace string) error {
 	ctx := context.TODO()
 	client := kc.DynamicClient.Resource(ciliumNetworkPolicyGVR).Namespace(namespace)
 
-	_, err := client.Get(ctx, "deny-metadata-access", metav1.GetOptions{})
+	existing, err := client.Get(ctx, "deny-metadata-access", metav1.GetOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
 		_, err = client.Create(ctx, policy, metav1.CreateOptions{})
 		return err
@@ -58,6 +58,7 @@ func (kc *KubeClient) ApplyCiliumMetadataDenyPolicy(namespace string) error {
 		return err
 	}
 
+	policy.SetResourceVersion(existing.GetResourceVersion())
 	_, err = client.Update(ctx, policy, metav1.UpdateOptions{})
 	return err
 }
