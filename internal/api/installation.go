@@ -245,6 +245,8 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		ExternalDatabaseConfig:     createInstallationRequest.ExternalDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
 		PodProbeOverrides:          createInstallationRequest.PodProbeOverrides,
 		Command:                    createInstallationRequest.Command,
+		IngressType:                createInstallationRequest.IngressType,
+		GatewayConfig:              createInstallationRequest.GatewayConfig,
 		CRVersion:                  model.DefaultCRVersion,
 		State:                      model.InstallationStateCreationRequested,
 	}

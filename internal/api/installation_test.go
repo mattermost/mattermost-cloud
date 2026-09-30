@@ -549,6 +549,31 @@ func TestCreateInstallation(t *testing.T) {
 		assert.Equal(t, installation, fetched)
 	})
 
+	t.Run("valid with httproute ingress type", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:     "owner",
+			Version:     "version",
+			DNSNames:    []string{"httproute.example.com"},
+			Affinity:    model.InstallationAffinityIsolated,
+			IngressType: model.InstallationIngressHTTPRoute,
+			GatewayConfig: &model.GatewayConfig{
+				Name:        "my-gateway",
+				Namespace:   "kube-system",
+				SectionName: "https",
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationIngressHTTPRoute, installation.IngressType)
+		require.NotNil(t, installation.GatewayConfig)
+		require.Equal(t, "my-gateway", installation.GatewayConfig.Name)
+		require.Equal(t, "kube-system", installation.GatewayConfig.Namespace)
+		require.Equal(t, "https", installation.GatewayConfig.SectionName)
+
+		fetched, err := client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, installation, fetched)
+	})
+
 	t.Run("valid with custom image and capital letters in DNS", func(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  "owner1",
