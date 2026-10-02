@@ -186,7 +186,7 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
-	installationName, err := prepareClusterInstallationEnv(clusterInstallation, k8sClient)
+	installationName, err := prepareClusterInstallationEnv(clusterInstallation, installation, provisioner.params.CNI, k8sClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare cluster installation env")
 	}
@@ -415,7 +415,7 @@ func (provisioner Provisioner) updateClusterInstallation(
 		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
-	installationName, err := prepareClusterInstallationEnv(clusterInstallation, k8sClient)
+	installationName, err := prepareClusterInstallationEnv(clusterInstallation, installation, provisioner.params.CNI, k8sClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare cluster installation env")
 	}
@@ -935,7 +935,7 @@ func prepareClusterUtilities(
 	return nil
 }
 
-func prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {
+func prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallation, installation *model.Installation, cni string, k8sClient *k8s.KubeClient) (string, error) {
 	_, err := k8sClient.CreateOrUpdateNamespace(clusterInstallation.Namespace)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
@@ -950,6 +950,34 @@ func prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallatio
 	err = k8sClient.CreateFromFile(file, installationName)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to create network policy %s", clusterInstallation.Namespace)
+	}
+
+	if installation.IngressHTTPRoute() && installation.GatewayConfig != nil {
+		gatewayNamespace := installation.GatewayConfig.Namespace
+		if gatewayNamespace == "" {
+			gatewayNamespace = clusterInstallation.Namespace
+		}
+		for _, policyName := range []string{k8s.AllowMMExternal, k8s.AllowMMExternalBeta} {
+			err = k8sClient.UpdateNetworkPolicyIngressNamespaceSelector(
+				clusterInstallation.Namespace, policyName, gatewayNamespace)
+			if err != nil {
+				return "", errors.Wrapf(err, "failed to update network policy %s for httproute", policyName)
+			}
+		}
+	}
+
+	if cni == CNICilium {
+		// The standard deny-metadata-access NetworkPolicy has policyTypes:[Egress],
+		// which causes Cilium to enforce egress on Mattermost pods and breaks DNS
+		// and in-cluster connectivity. Delete it and use the CiliumNetworkPolicy instead.
+		err = k8sClient.DeleteNetworkPolicy(clusterInstallation.Namespace, "deny-metadata-access")
+		if err != nil {
+			return "", errors.Wrap(err, "failed to delete standard metadata deny network policy for cilium")
+		}
+		err = k8sClient.ApplyCiliumMetadataDenyPolicy(clusterInstallation.Namespace)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to apply cilium metadata deny policy")
+		}
 	}
 
 	return installationName, nil

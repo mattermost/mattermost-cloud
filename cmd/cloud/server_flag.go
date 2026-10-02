@@ -84,6 +84,7 @@ type provisioningParams struct {
 	deployMinioOperator       bool
 	mattermostOperatorHelmDir string
 	ndotsDefaultValue         string
+	cni                       string
 
 	backupJobTTL           int32
 	backupRestoreToolImage string
@@ -115,6 +116,7 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.deployMinioOperator, "deploy-minio-operator", false, "Whether to deploy the minio operator.")
 	command.Flags().StringVar(&flags.mattermostOperatorHelmDir, "mattermost-operator-helm-dir", "", "Provide a directory location where a local mattermost operator helm chart will be deployed instead of from the standard repo")
 	command.Flags().StringVar(&flags.ndotsDefaultValue, "ndots-value", "5", "The default ndots value for installations.")
+	command.Flags().StringVar(&flags.cni, "cni", "", "The CNI plugin in use on target clusters (e.g. \"cilium\"). When set to \"cilium\", Cilium-specific network policies are applied instead of standard Kubernetes NetworkPolicies where needed.")
 
 	command.Flags().Int32Var(&flags.backupJobTTL, "backup-job-ttl-seconds", 3600, "Number of seconds after which finished backup jobs will be cleaned up. Set to negative value to not cleanup or 0 to cleanup immediately.")
 	command.Flags().StringVar(&flags.backupRestoreToolImage, "backup-restore-tool-image", "mattermost/backup-restore-tool:latest", "Image of Backup Restore Tool to use.")
@@ -205,6 +207,10 @@ type installationOptions struct {
 	utilitiesGitPath              string
 	enableS3Versioning            bool
 	internalIPRanges              []string
+	defaultIngressType            string
+	defaultGatewayName            string
+	defaultGatewayNamespace       string
+	defaultGatewaySectionName     string
 }
 
 func (flags *installationOptions) addFlags(command *cobra.Command) {
@@ -219,6 +225,10 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.utilitiesGitPath, "utilities-git-path", "", "The git path to use for utilities. For example /gitops/gitops.git")
 	command.Flags().BoolVar(&flags.enableS3Versioning, "enable-s3-versioning", false, "Whether to enable S3 versioning for the installation bucket or not")
 	command.Flags().StringSliceVar(&flags.internalIPRanges, "internal-ip-ranges", []string{}, "Some ranges that needed to be allowed for operational reasons")
+	command.Flags().StringVar(&flags.defaultIngressType, "default-ingress-type", "", "Default ingress type for new installations when not specified (\"ingress\" or \"httproute\"). Defaults to \"ingress\" when unset.")
+	command.Flags().StringVar(&flags.defaultGatewayName, "default-gateway-name", "", "Default Gateway name for HTTPRoute installations when not specified in the request.")
+	command.Flags().StringVar(&flags.defaultGatewayNamespace, "default-gateway-namespace", "", "Default Gateway namespace for HTTPRoute installations when not specified in the request.")
+	command.Flags().StringVar(&flags.defaultGatewaySectionName, "default-gateway-section-name", "", "Default Gateway section name for HTTPRoute installations when not specified in the request.")
 }
 
 type dbUtilizationSettings struct {

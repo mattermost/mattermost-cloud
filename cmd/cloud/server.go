@@ -100,6 +100,8 @@ func executeServerCmd(flags serverFlags) error {
 	}
 
 	model.SetRequireAnnotatedInstallations(flags.requireAnnotatedInstallations)
+	model.SetDefaultIngressType(flags.defaultIngressType)
+	model.SetDefaultGatewayConfig(flags.defaultGatewayName, flags.defaultGatewayNamespace, flags.defaultGatewaySectionName)
 
 	if len(flags.allowListCIDRRange) == 0 {
 		return errors.New("allow-list-cidr-range must have at least one value")
@@ -276,6 +278,7 @@ func executeServerCmd(flags serverFlags) error {
 		SLOEnterpriseGroups:       flags.sloEnterpriseGroups,
 		EtcdManagerEnv:            etcdManagerEnv,
 		PodProbeOverrides:         flags.generateProbeOverrides(),
+		CNI:                       flags.cni,
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck, flags.enableS3Versioning)

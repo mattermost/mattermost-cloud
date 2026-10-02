@@ -11,6 +11,7 @@ import (
 	monitoringclientV1 "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	slothclientV1 "github.com/slok/sloth/pkg/kubernetes/gen/clientset/versioned"
 	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -21,6 +22,7 @@ import (
 type KubeClient struct {
 	config                    *rest.Config
 	Clientset                 kubernetes.Interface
+	DynamicClient             dynamic.Interface
 	ApixClientset             apixclient.Interface
 	MattermostClientsetV1Beta mmclientv1beta1.Interface
 	MonitoringClientsetV1     monitoringclientV1.Interface
@@ -46,6 +48,11 @@ func NewFromFile(configLocation string, logger log.FieldLogger) (*KubeClient, er
 
 func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient, error) {
 	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +84,7 @@ func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient,
 	return &KubeClient{
 			config:                    config,
 			Clientset:                 clientset,
+			DynamicClient:             dynamicClient,
 			MattermostClientsetV1Beta: mattermostV1BetaClientset,
 			MonitoringClientsetV1:     monitoringV1Clientset,
 			SlothClientsetV1:          slothV1Clientset,

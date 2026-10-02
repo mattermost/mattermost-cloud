@@ -816,9 +816,16 @@ func (s *InstallationSupervisor) getPublicLBEndpoint(installation *model.Install
 			return nil, errors.Wrapf(err, "failed to find cluster %s", clusterInstallation.ClusterID)
 		}
 
-		endpoint, err := s.provisioner.GetPublicLoadBalancerEndpoint(cluster, "nginx")
+		namespace := "nginx"
+		if installation.IngressHTTPRoute() && installation.GatewayConfig != nil {
+			namespace = installation.GatewayConfig.Namespace
+			if namespace == "" {
+				namespace = clusterInstallation.Namespace
+			}
+		}
+		endpoint, err := s.provisioner.GetPublicLoadBalancerEndpoint(cluster, namespace)
 		if err != nil {
-			return nil, errors.Wrap(err, "Couldn't get the load balancer endpoint (nginx) for Cluster Installation")
+			return nil, errors.Wrapf(err, "Couldn't get the load balancer endpoint (%s) for Cluster Installation", namespace)
 		}
 
 		endpoints = append(endpoints, endpoint)
@@ -975,7 +982,7 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 	dnsNames := model.DNSNamesFromRecords(dnsRecords)
 	endpoints, err := s.getPublicLBEndpoint(installation)
 	if err != nil {
-		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
+		logger.WithError(err).Warn("Failed to find load balancer endpoint for Cluster Installation")
 		return model.InstallationStateUpdateFailed
 	}
 
@@ -1559,7 +1566,7 @@ func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installa
 func (s *InstallationSupervisor) configureDNS(installation *model.Installation, logger log.FieldLogger) error {
 	endpoints, err := s.getPublicLBEndpoint(installation)
 	if err != nil {
-		return errors.Wrap(err, "failed to find load balancer endpoint (nginx) for Cluster Installation")
+		return errors.Wrap(err, "failed to find load balancer endpoint for Cluster Installation")
 	}
 
 	dnsRecords, err := s.store.GetDNSRecordsForInstallation(installation.ID)

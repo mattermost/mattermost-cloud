@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	allowMMExternal     = "external-mm-allow"
-	allowMMExternalBeta = "external-mm-v1beta-allow"
+	AllowMMExternal     = "external-mm-allow"
+	AllowMMExternalBeta = "external-mm-v1beta-allow"
 )
 
 func (kc *KubeClient) createOrUpdateNetworkPolicyV1(namespace string, networkPolicy *networkingv1.NetworkPolicy) (metav1.Object, error) {
@@ -32,18 +32,51 @@ func (kc *KubeClient) createOrUpdateNetworkPolicyV1(namespace string, networkPol
 }
 
 func (kc *KubeClient) updateLabelsNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy, installationName string) {
-	if networkPolicy.GetName() == allowMMExternal {
+	if networkPolicy.GetName() == AllowMMExternal {
 		networkPolicy.Spec.PodSelector.MatchLabels = map[string]string{
 			"v1alpha1.mattermost.com/installation": installationName,
 			"app":                                  "mattermost",
 		}
 		return
 	}
-	if networkPolicy.GetName() == allowMMExternalBeta {
+	if networkPolicy.GetName() == AllowMMExternalBeta {
 		networkPolicy.Spec.PodSelector.MatchLabels = map[string]string{
 			"installation.mattermost.com/installation": installationName,
 			"app": "mattermost",
 		}
 		return
 	}
+}
+
+// DeleteNetworkPolicy deletes a NetworkPolicy by name, ignoring not-found errors.
+func (kc *KubeClient) DeleteNetworkPolicy(namespace, name string) error {
+	ctx := context.TODO()
+	err := kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
+// UpdateNetworkPolicyIngressNamespaceSelector updates the namespace selector in all ingress
+// rules of the named NetworkPolicy to allow traffic from sourceNamespace.
+func (kc *KubeClient) UpdateNetworkPolicyIngressNamespaceSelector(namespace, policyName, sourceNamespace string) error {
+	ctx := context.TODO()
+	policy, err := kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, policyName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	for i := range policy.Spec.Ingress {
+		for j := range policy.Spec.Ingress[i].From {
+			if policy.Spec.Ingress[i].From[j].NamespaceSelector != nil {
+				policy.Spec.Ingress[i].From[j].NamespaceSelector.MatchLabels = map[string]string{
+					"kubernetes.io/metadata.name": sourceNamespace,
+				}
+			}
+		}
+	}
+
+	_, err = kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Update(ctx, policy, metav1.UpdateOptions{})
+	return err
 }
