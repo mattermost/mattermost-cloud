@@ -37,6 +37,15 @@ func (kc *KubeClient) ApplyCiliumMetadataDenyPolicy(namespace string) error {
 						"app": "mattermost",
 					},
 				},
+				// Allow all egress so Cilium does not default-deny in-cluster
+				// traffic (DNS, PgBouncer, etc.) when this policy is applied.
+				"egress": []interface{}{
+					map[string]interface{}{
+						"toEntities": []interface{}{"all"},
+					},
+				},
+				// Explicitly deny the AWS instance metadata service.
+				// egressDeny takes precedence over egress allow rules in Cilium.
 				"egressDeny": []interface{}{
 					map[string]interface{}{
 						"toCIDR": []interface{}{"169.254.169.254/32"},
