@@ -978,13 +978,6 @@ func prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallatio
 		if err != nil {
 			return "", errors.Wrap(err, "failed to apply cilium metadata deny policy")
 		}
-		// The Cilium Gateway API envoy runs with hostNetwork:true and appears as the
-		// "host" identity. Standard NetworkPolicy namespace selectors never match it,
-		// so gateway traffic is blocked by deny-from-other-namespaces. Allow it explicitly.
-		err = k8sClient.ApplyCiliumGatewayIngressPolicy(clusterInstallation.Namespace)
-		if err != nil {
-			return "", errors.Wrap(err, "failed to apply cilium gateway ingress policy")
-		}
 	}
 
 	return installationName, nil
