@@ -48,6 +48,16 @@ func (kc *KubeClient) updateLabelsNetworkPolicy(networkPolicy *networkingv1.Netw
 	}
 }
 
+// DeleteNetworkPolicy deletes a NetworkPolicy by name, ignoring not-found errors.
+func (kc *KubeClient) DeleteNetworkPolicy(namespace, name string) error {
+	ctx := context.TODO()
+	err := kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
 // UpdateNetworkPolicyIngressNamespaceSelector updates the namespace selector in all ingress
 // rules of the named NetworkPolicy to allow traffic from sourceNamespace.
 func (kc *KubeClient) UpdateNetworkPolicyIngressNamespaceSelector(namespace, policyName, sourceNamespace string) error {
