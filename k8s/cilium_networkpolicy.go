@@ -37,6 +37,27 @@ func (kc *KubeClient) ApplyCiliumMetadataDenyPolicy(namespace string) error {
 						"app": "mattermost",
 					},
 				},
+				// Cilium changes enforcement mode for an endpoint when any
+				// CiliumNetworkPolicy applies to it, even egress-only ones.
+				// Explicitly allow ingress from cluster (host + remote-node +
+				// all pods) on port 8065 so the Cilium Gateway — which runs as
+				// the built-in Cilium agent Envoy and appears as host/remote-node
+				// rather than a kube-system pod — can reach Mattermost.
+				"ingress": []interface{}{
+					map[string]interface{}{
+						"fromEntities": []interface{}{"cluster"},
+						"toPorts": []interface{}{
+							map[string]interface{}{
+								"ports": []interface{}{
+									map[string]interface{}{
+										"port":     "8065",
+										"protocol": "TCP",
+									},
+								},
+							},
+						},
+					},
+				},
 				// Allow all egress so Cilium does not default-deny in-cluster
 				// traffic (DNS, PgBouncer, etc.) when this policy is applied.
 				"egress": []interface{}{
