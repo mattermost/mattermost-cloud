@@ -47,3 +47,25 @@ func (provisioner Provisioner) GetPublicLoadBalancerEndpoint(cluster *model.Clus
 
 	return getPublicLoadBalancerEndpoint(configLocation, namespace, logger)
 }
+
+// GetGatewayLoadBalancerEndpoint returns the public load balancer hostname published
+// in the status of the given Gateway.
+func (provisioner Provisioner) GetGatewayLoadBalancerEndpoint(cluster *model.Cluster, namespace, name string) (string, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":           cluster.ID,
+		"gateway-namespace": namespace,
+		"gateway":           name,
+	})
+
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get kube config path")
+	}
+
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	return k8sClient.GetGatewayHostname(namespace, name)
+}

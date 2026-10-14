@@ -44,6 +44,22 @@ Key server flags relevant to a new infra deployment:
 - `--always-schedule-external-clusters=true` — required when using external clusters
 - `--max-installations-rds-postgres-pgbouncer` — max installations per PgBouncer RDS cluster
 
+### Gateway API (HTTPRoute) with Cilium
+
+To route new installations through a Cilium Gateway instead of ingress-nginx, set:
+- `--cni=cilium` — replaces the standard `deny-metadata-access` NetworkPolicy with a CiliumNetworkPolicy that blocks the metadata service and allows the Gateway to reach Mattermost on port 8065
+- `--default-ingress-type=httproute` — used when an installation request does not set `IngressType`
+- `--default-gateway-name`, `--default-gateway-namespace`, `--default-gateway-section-name` — the Gateway that HTTPRoutes attach to when a request does not set `GatewayConfig` (e.g. `cilium-gateway`, `kube-system`, `https`)
+
+The server refuses to start if `--default-ingress-type=httproute` is set without `--cni=cilium` and `--default-gateway-name`.
+
+Installation DNS records point at the hostname in the Gateway's `status.addresses`, so the Gateway's load balancer must publish a hostname:
+
+```bash
+kubectl get gateway <gateway-name> -n <gateway-namespace> -o jsonpath='{.status.addresses}'
+# Expect an entry with "type":"Hostname"
+```
+
 ---
 
 ## 3. Tag AWS Resources
@@ -333,4 +349,6 @@ Without this, the provisioner will time out when trying to provision logical dat
 | `ResourceNotFoundException` for pgbouncer auth user secret | Secret name missing `vpc-` prefix | Secret must be named `rds-multitenant-pgbouncer-authuser-vpc-<id>` |
 | `net/url: invalid userinfo` | Master RDS secret is JSON, not plain password | Store only the password string in the secret, not a JSON object |
 | `bouncer config error (08P01)` | `pgbouncer` user lacks schema permissions in logical DB | Grant `USAGE`, `SELECT`, `EXECUTE` on pgbouncer schema objects to `pgbouncer` user |
+| `gateway <ns>/<name> has no Hostname address in its status` | Gateway load balancer not provisioned yet, or it only publishes IPs | Check the Gateway's backing Service has a load balancer hostname and that `status.addresses` contains a `Hostname` entry |
+| `invalid ingress configuration` at startup | `--default-ingress-type=httproute` set without `--cni=cilium` or `--default-gateway-name` | Set both flags |
 | Installation stuck in `deletion-final-cleanup` | Logical database or pgbouncer objects missing | Create stub database and pgbouncer schema objects manually, then retry deletion |

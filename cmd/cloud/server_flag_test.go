@@ -238,3 +238,38 @@ func TestGenerateProbeOverrides(t *testing.T) {
 		assert.Equal(t, expected, result.ReadinessProbeOverride)
 	})
 }
+
+func TestValidateIngressOptions(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		cni         string
+		ingressType string
+		gatewayName string
+		expectError bool
+	}{
+		{name: "defaults", expectError: false},
+		{name: "cilium without default ingress type", cni: "cilium", expectError: false},
+		{name: "unknown cni", cni: "calico", expectError: true},
+		{name: "ingress default", ingressType: "ingress", expectError: false},
+		{name: "unknown ingress type", ingressType: "gateway", expectError: true},
+		{name: "httproute with cilium and gateway", cni: "cilium", ingressType: "httproute", gatewayName: "cilium-gateway", expectError: false},
+		{name: "httproute without cni", ingressType: "httproute", gatewayName: "cilium-gateway", expectError: true},
+		{name: "httproute without gateway name", cni: "cilium", ingressType: "httproute", expectError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			flags := &serverFlags{
+				provisioningParams: provisioningParams{cni: tc.cni},
+				installationOptions: installationOptions{
+					defaultIngressType: tc.ingressType,
+					defaultGatewayName: tc.gatewayName,
+				},
+			}
+			err := flags.validateIngressOptions()
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

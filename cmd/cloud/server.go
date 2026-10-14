@@ -100,6 +100,9 @@ func executeServerCmd(flags serverFlags) error {
 	}
 
 	model.SetRequireAnnotatedInstallations(flags.requireAnnotatedInstallations)
+	if err := flags.validateIngressOptions(); err != nil {
+		return errors.Wrap(err, "invalid ingress configuration")
+	}
 	model.SetDefaultIngressType(flags.defaultIngressType)
 	model.SetDefaultGatewayConfig(flags.defaultGatewayName, flags.defaultGatewayNamespace, flags.defaultGatewaySectionName)
 

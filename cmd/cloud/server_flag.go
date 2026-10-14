@@ -7,8 +7,10 @@ package main
 import (
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -135,6 +137,34 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().Int32Var(&flags.probeReadinessInitialDelaySeconds, "probe-readiness-initial-delay-seconds", 30, "An optional override for the readiness probe initial delay seconds.")
 	command.Flags().Int32Var(&flags.probeReadinessPeriodSeconds, "probe-readiness-period-seconds", 10, "An optional override for the readiness probe period seconds.")
 	command.Flags().Int32Var(&flags.probeReadinessTimeoutSeconds, "probe-readiness-timeout-seconds", 5, "An optional override for the readiness probe timeout seconds.")
+}
+
+// validateIngressOptions checks that the CNI and default ingress flags form a
+// supported combination.
+func (flags *serverFlags) validateIngressOptions() error {
+	if flags.cni != "" && flags.cni != provisioner.CNICilium {
+		return errors.Errorf("unsupported cni %q: must be empty or %q", flags.cni, provisioner.CNICilium)
+	}
+
+	if flags.defaultIngressType == "" {
+		return nil
+	}
+	if !model.IsSupportedIngressType(flags.defaultIngressType) {
+		return errors.Errorf("unsupported default-ingress-type %q", flags.defaultIngressType)
+	}
+	if flags.defaultIngressType == model.InstallationIngressHTTPRoute {
+		if flags.defaultGatewayName == "" {
+			return errors.New("default-gateway-name must be set when default-ingress-type is httproute")
+		}
+		// Cilium Gateway traffic does not originate from a pod in the Gateway
+		// namespace, so the standard NetworkPolicies drop it. Only the
+		// CiliumNetworkPolicy applied with --cni=cilium lets it through.
+		if flags.cni != provisioner.CNICilium {
+			return errors.Errorf("cni must be %q when default-ingress-type is httproute", provisioner.CNICilium)
+		}
+	}
+
+	return nil
 }
 
 func (flags *serverFlags) generateProbeOverrides() model.PodProbeOverrides {

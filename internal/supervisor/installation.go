@@ -134,6 +134,7 @@ type InstallationProvisioner interface {
 	ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner
 	GetClusterResources(cluster *model.Cluster, canSchedule bool, logger log.FieldLogger) (*k8s.ClusterResources, error)
 	GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
+	GetGatewayLoadBalancerEndpoint(cluster *model.Cluster, namespace, name string) (string, error)
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
@@ -816,16 +817,21 @@ func (s *InstallationSupervisor) getPublicLBEndpoint(installation *model.Install
 			return nil, errors.Wrapf(err, "failed to find cluster %s", clusterInstallation.ClusterID)
 		}
 
-		namespace := "nginx"
+		var endpoint string
 		if installation.IngressHTTPRoute() && installation.GatewayConfig != nil {
-			namespace = installation.GatewayConfig.Namespace
-			if namespace == "" {
-				namespace = clusterInstallation.Namespace
+			gatewayNamespace := installation.GatewayConfig.Namespace
+			if gatewayNamespace == "" {
+				gatewayNamespace = clusterInstallation.Namespace
 			}
-		}
-		endpoint, err := s.provisioner.GetPublicLoadBalancerEndpoint(cluster, namespace)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Couldn't get the load balancer endpoint (%s) for Cluster Installation", namespace)
+			endpoint, err = s.provisioner.GetGatewayLoadBalancerEndpoint(cluster, gatewayNamespace, installation.GatewayConfig.Name)
+			if err != nil {
+				return nil, errors.Wrapf(err, "Couldn't get the load balancer endpoint of gateway %s/%s for Cluster Installation", gatewayNamespace, installation.GatewayConfig.Name)
+			}
+		} else {
+			endpoint, err = s.provisioner.GetPublicLoadBalancerEndpoint(cluster, "nginx")
+			if err != nil {
+				return nil, errors.Wrap(err, "Couldn't get the load balancer endpoint (nginx) for Cluster Installation")
+			}
 		}
 
 		endpoints = append(endpoints, endpoint)

@@ -256,7 +256,7 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 				return errors.Wrap(err, "failed to create installation SLI")
 			}
 		}
-		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) {
+		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) && !installation.IngressHTTPRoute() {
 			logger.Debug("Installation belongs in the approved enterprise installation group list. Adding Nginx SLI")
 			serviceName := makeClusterInstallationName(clusterInstallation)
 			err = prometheus.CreateOrUpdateNginxSLI(clusterInstallation, k8sClient, serviceName, logger)
@@ -532,7 +532,9 @@ func (provisioner Provisioner) updateClusterInstallation(
 		}
 	}
 
-	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) {
+	// The Nginx SLI is built from ingress-nginx metrics, which do not exist for
+	// installations routed through a Gateway API HTTPRoute.
+	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) && !installation.IngressHTTPRoute() {
 		logger.Debug("Creating or updating Mattermost Enterprise Nginx SLI")
 		serviceName := makeClusterInstallationName(clusterInstallation)
 		if err = prometheus.CreateOrUpdateNginxSLI(clusterInstallation, k8sClient, serviceName, logger); err != nil {
