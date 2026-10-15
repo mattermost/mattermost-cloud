@@ -31,6 +31,9 @@ func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supe
 	return c.kopsProvisioner
 }
 
+// CNICilium is the CNI value that enables Cilium-specific network policies.
+const CNICilium = "cilium"
+
 // ProvisioningParams represent configuration used during various provisioning operations.
 type ProvisioningParams struct {
 	S3StateStore              string
@@ -47,6 +50,7 @@ type ProvisioningParams struct {
 	SLOEnterpriseGroups       []string
 	EtcdManagerEnv            map[string]string
 	PodProbeOverrides         model.PodProbeOverrides
+	CNI                       string
 }
 
 type Provisioner struct {
