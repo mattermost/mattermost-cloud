@@ -50,6 +50,40 @@ func SetDefaultGatewayConfig(name, namespace, sectionName string) {
 	}
 }
 
+// httpRouteSupported if set, installations may use the httproute ingress type.
+var httpRouteSupported bool
+
+// SetHTTPRouteSupported is called with a value based on the configured CNI.
+// HTTPRoute installations are only reachable on clusters where the provisioner
+// applies the Cilium network policies that admit Gateway traffic.
+func SetHTTPRouteSupported(val bool) {
+	httpRouteSupported = val
+}
+
+// applyGatewayDefaults returns the GatewayConfig to use for an HTTPRoute
+// installation. A nil config gets a copy of the server default. A config
+// naming the default Gateway gets its empty Namespace and SectionName filled
+// from the default, since an empty Namespace would otherwise point at a Gateway
+// in the installation namespace. A config naming another Gateway is kept as is.
+func applyGatewayDefaults(gatewayConfig *GatewayConfig) *GatewayConfig {
+	if defaultGatewayConfig == nil {
+		return gatewayConfig
+	}
+	if gatewayConfig == nil {
+		defaults := *defaultGatewayConfig
+		return &defaults
+	}
+	if gatewayConfig.Name == defaultGatewayConfig.Name {
+		if gatewayConfig.Namespace == "" {
+			gatewayConfig.Namespace = defaultGatewayConfig.Namespace
+		}
+		if gatewayConfig.SectionName == "" {
+			gatewayConfig.SectionName = defaultGatewayConfig.SectionName
+		}
+	}
+	return gatewayConfig
+}
+
 // deployMySQLOperator if set, MySQL operator will be deployed
 var deployMySQLOperator bool
 
@@ -142,8 +176,8 @@ func (request *CreateInstallationRequest) SetDefaults() {
 			request.IngressType = InstallationIngressIngress
 		}
 	}
-	if request.IngressType == InstallationIngressHTTPRoute && request.GatewayConfig == nil && defaultGatewayConfig != nil {
-		request.GatewayConfig = defaultGatewayConfig
+	if request.IngressType == InstallationIngressHTTPRoute {
+		request.GatewayConfig = applyGatewayDefaults(request.GatewayConfig)
 	}
 	if IsSingleTenantRDS(request.Database) {
 		request.SingleTenantDatabaseConfig.SetDefaults()
@@ -185,6 +219,9 @@ func (request *CreateInstallationRequest) Validate() error {
 		return errors.Errorf("unsupported ingress type %s", request.IngressType)
 	}
 	if request.IngressType == InstallationIngressHTTPRoute {
+		if !httpRouteSupported {
+			return errors.New("httproute ingress type is not supported by this provisioner")
+		}
 		if request.GatewayConfig == nil || request.GatewayConfig.Name == "" {
 			return errors.New("gatewayConfig.name is required when ingressType is httproute")
 		}
@@ -407,6 +444,14 @@ type PatchInstallationRequest struct {
 	GatewayConfig     *GatewayConfig
 }
 
+// SetDefaults fills in server-configured Gateway defaults for a patch that
+// switches to, or updates, an HTTPRoute configuration.
+func (p *PatchInstallationRequest) SetDefaults() {
+	if p.GatewayConfig != nil || (p.IngressType != nil && *p.IngressType == InstallationIngressHTTPRoute) {
+		p.GatewayConfig = applyGatewayDefaults(p.GatewayConfig)
+	}
+}
+
 // Validate validates the values of a installation patch request.
 func (p *PatchInstallationRequest) Validate() error {
 	if p.Version != nil && len(*p.Version) == 0 {
@@ -429,6 +474,9 @@ func (p *PatchInstallationRequest) Validate() error {
 			return errors.Errorf("unsupported ingress type %s", *p.IngressType)
 		}
 		if *p.IngressType == InstallationIngressHTTPRoute {
+			if !httpRouteSupported {
+				return errors.New("httproute ingress type is not supported by this provisioner")
+			}
 			if p.GatewayConfig == nil || p.GatewayConfig.Name == "" {
 				return errors.New("gatewayConfig.name is required when ingressType is httproute")
 			}
@@ -531,6 +579,7 @@ func NewPatchInstallationRequestFromReader(reader io.Reader) (*PatchInstallation
 		return nil, errors.Wrap(err, "failed to decode patch installation request")
 	}
 
+	patchInstallationRequest.SetDefaults()
 	err = patchInstallationRequest.Validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid patch installation request")

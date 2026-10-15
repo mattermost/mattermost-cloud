@@ -103,6 +103,7 @@ func executeServerCmd(flags serverFlags) error {
 	if err := flags.validateIngressOptions(); err != nil {
 		return errors.Wrap(err, "invalid ingress configuration")
 	}
+	model.SetHTTPRouteSupported(flags.cni == provisioner.CNICilium)
 	model.SetDefaultIngressType(flags.defaultIngressType)
 	model.SetDefaultGatewayConfig(flags.defaultGatewayName, flags.defaultGatewayNamespace, flags.defaultGatewaySectionName)
 

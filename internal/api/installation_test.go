@@ -549,6 +549,21 @@ func TestCreateInstallation(t *testing.T) {
 		assert.Equal(t, installation, fetched)
 	})
 
+	t.Run("httproute not supported by provisioner", func(t *testing.T) {
+		model.SetHTTPRouteSupported(false)
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:     "owner",
+			Version:     "version",
+			DNSNames:    []string{"httproute-unsupported.example.com"},
+			Affinity:    model.InstallationAffinityIsolated,
+			IngressType: model.InstallationIngressHTTPRoute,
+			GatewayConfig: &model.GatewayConfig{
+				Name: "my-gateway",
+			},
+		})
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
 	t.Run("httproute without gateway config", func(t *testing.T) {
 		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:     "owner",
@@ -575,6 +590,8 @@ func TestCreateInstallation(t *testing.T) {
 	})
 
 	t.Run("valid with httproute ingress type", func(t *testing.T) {
+		model.SetHTTPRouteSupported(true)
+		defer model.SetHTTPRouteSupported(false)
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:     "owner",
 			Version:     "version",
