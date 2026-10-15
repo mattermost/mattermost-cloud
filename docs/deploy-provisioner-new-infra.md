@@ -51,7 +51,7 @@ To route new installations through a Cilium Gateway instead of ingress-nginx, se
 - `--default-ingress-type=httproute` — used when an installation request does not set `IngressType`
 - `--default-gateway-name`, `--default-gateway-namespace`, `--default-gateway-section-name` — the Gateway that HTTPRoutes attach to when a request does not set `GatewayConfig` (e.g. `cilium-gateway`, `kube-system`, `https`)
 
-The server refuses to start if `--default-ingress-type=httproute` is set without `--cni=cilium` and `--default-gateway-name`. Without `--cni=cilium`, create and update requests that ask for `httproute` are rejected.
+The server refuses to start if `--default-ingress-type=httproute` is set unless both `--cni=cilium` and `--default-gateway-name` are set. Without `--cni=cilium`, create and update requests that ask for `httproute` are rejected.
 
 A request whose `GatewayConfig` names the default Gateway but leaves `Namespace` or `SectionName` empty gets those fields from the defaults. A request naming a different Gateway is used as sent.
 

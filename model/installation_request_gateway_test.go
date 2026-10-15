@@ -110,7 +110,32 @@ func TestPatchInstallationRequestHTTPRoute(t *testing.T) {
 		patch, err := model.NewPatchInstallationRequestFromReader(bytes.NewReader([]byte(
 			`{"IngressType":"httproute"}`)))
 		require.NoError(t, err)
-		require.Equal(t, &model.GatewayConfig{Name: "cilium-gateway", Namespace: "kube-system", SectionName: "https"}, patch.GatewayConfig)
+
+		installation := &model.Installation{IngressType: model.InstallationIngressIngress}
+		require.True(t, patch.Apply(installation))
+		require.Equal(t, model.InstallationIngressHTTPRoute, installation.IngressType)
+		require.Equal(t, &model.GatewayConfig{Name: "cilium-gateway", Namespace: "kube-system", SectionName: "https"}, installation.GatewayConfig)
+	})
+
+	t.Run("httproute patch keeps the stored gateway", func(t *testing.T) {
+		model.SetHTTPRouteSupported(true)
+		patch, err := model.NewPatchInstallationRequestFromReader(bytes.NewReader([]byte(
+			`{"IngressType":"httproute"}`)))
+		require.NoError(t, err)
+
+		custom := &model.GatewayConfig{Name: "custom-gateway", Namespace: "gateways", SectionName: "web"}
+		installation := &model.Installation{IngressType: model.InstallationIngressHTTPRoute, GatewayConfig: custom}
+		require.False(t, patch.Apply(installation))
+		require.Equal(t, &model.GatewayConfig{Name: "custom-gateway", Namespace: "gateways", SectionName: "web"}, installation.GatewayConfig)
+	})
+
+	t.Run("switch to httproute without any default gateway", func(t *testing.T) {
+		model.SetHTTPRouteSupported(true)
+		model.SetDefaultGatewayConfig("", "", "")
+		defer model.SetDefaultGatewayConfig("cilium-gateway", "kube-system", "https")
+		_, err := model.NewPatchInstallationRequestFromReader(bytes.NewReader([]byte(
+			`{"IngressType":"httproute"}`)))
+		require.Error(t, err)
 	})
 
 	t.Run("partial default gateway is filled", func(t *testing.T) {

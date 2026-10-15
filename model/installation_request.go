@@ -444,10 +444,12 @@ type PatchInstallationRequest struct {
 	GatewayConfig     *GatewayConfig
 }
 
-// SetDefaults fills in server-configured Gateway defaults for a patch that
-// switches to, or updates, an HTTPRoute configuration.
+// SetDefaults fills in server-configured Gateway defaults for a partial
+// GatewayConfig in the patch. A patch without a GatewayConfig gets the default
+// Gateway in Apply, and only when it switches the installation to HTTPRoute,
+// so an existing HTTPRoute installation keeps its stored Gateway.
 func (p *PatchInstallationRequest) SetDefaults() {
-	if p.GatewayConfig != nil || (p.IngressType != nil && *p.IngressType == InstallationIngressHTTPRoute) {
+	if p.GatewayConfig != nil {
 		p.GatewayConfig = applyGatewayDefaults(p.GatewayConfig)
 	}
 }
@@ -477,7 +479,7 @@ func (p *PatchInstallationRequest) Validate() error {
 			if !httpRouteSupported {
 				return errors.New("httproute ingress type is not supported by this provisioner")
 			}
-			if p.GatewayConfig == nil || p.GatewayConfig.Name == "" {
+			if p.GatewayConfig == nil && defaultGatewayConfig == nil {
 				return errors.New("gatewayConfig.name is required when ingressType is httproute")
 			}
 			if p.AllowedIPRanges != nil && len(*p.AllowedIPRanges) > 0 {
@@ -559,6 +561,9 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 	}
 
 	if p.IngressType != nil && *p.IngressType != installation.IngressType {
+		if *p.IngressType == InstallationIngressHTTPRoute && p.GatewayConfig == nil {
+			installation.GatewayConfig = applyGatewayDefaults(nil)
+		}
 		installation.IngressType = *p.IngressType
 		applied = true
 	}
