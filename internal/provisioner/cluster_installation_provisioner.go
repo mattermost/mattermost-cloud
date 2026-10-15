@@ -971,14 +971,25 @@ func prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallatio
 	if cni == CNICilium {
 		// The standard deny-metadata-access NetworkPolicy has policyTypes:[Egress],
 		// which causes Cilium to enforce egress on Mattermost pods and breaks DNS
-		// and in-cluster connectivity. Delete it and use the CiliumNetworkPolicy instead.
-		err = k8sClient.DeleteNetworkPolicy(clusterInstallation.Namespace, "deny-metadata-access")
-		if err != nil {
-			return "", errors.Wrap(err, "failed to delete standard metadata deny network policy for cilium")
-		}
+		// and in-cluster connectivity, so Cilium clusters use a CiliumNetworkPolicy
+		// instead. Apply it before removing any standard policy left from earlier
+		// provisioning so the metadata service stays blocked throughout.
 		err = k8sClient.ApplyCiliumMetadataDenyPolicy(clusterInstallation.Namespace)
 		if err != nil {
 			return "", errors.Wrap(err, "failed to apply cilium metadata deny policy")
+		}
+		err = k8sClient.DeleteNetworkPolicy(clusterInstallation.Namespace, k8s.DenyMetadataAccess)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to delete standard metadata deny network policy for cilium")
+		}
+	} else {
+		file := k8s.ManifestFile{
+			Path:            "manifests/network-policies/mm-installation-netpol-metadata.yaml",
+			DeployNamespace: clusterInstallation.Namespace,
+		}
+		err = k8sClient.CreateFromFile(file, installationName)
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to create metadata deny network policy %s", clusterInstallation.Namespace)
 		}
 	}
 

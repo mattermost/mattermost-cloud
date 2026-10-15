@@ -146,6 +146,10 @@ func (flags *serverFlags) validateIngressOptions() error {
 		return errors.Errorf("unsupported cni %q: must be empty or %q", flags.cni, provisioner.CNICilium)
 	}
 
+	if flags.defaultGatewayName == "" && (flags.defaultGatewayNamespace != "" || flags.defaultGatewaySectionName != "") {
+		return errors.New("default-gateway-name must be set when default-gateway-namespace or default-gateway-section-name is set")
+	}
+
 	if flags.defaultIngressType == "" {
 		return nil
 	}

@@ -28,7 +28,7 @@ func (kc *KubeClient) ApplyCiliumMetadataDenyPolicy(namespace string) error {
 			"apiVersion": "cilium.io/v2",
 			"kind":       "CiliumNetworkPolicy",
 			"metadata": map[string]interface{}{
-				"name":      "deny-metadata-access",
+				"name":      DenyMetadataAccess,
 				"namespace": namespace,
 			},
 			"spec": map[string]interface{}{
@@ -39,13 +39,16 @@ func (kc *KubeClient) ApplyCiliumMetadataDenyPolicy(namespace string) error {
 				},
 				// Cilium changes enforcement mode for an endpoint when any
 				// CiliumNetworkPolicy applies to it, even egress-only ones.
-				// Explicitly allow ingress from cluster (host + remote-node +
-				// all pods) on port 8065 so the Cilium Gateway — which runs as
-				// the built-in Cilium agent Envoy and appears as host/remote-node
-				// rather than a kube-system pod — can reach Mattermost.
+				// Explicitly allow the Cilium Gateway to reach Mattermost on port
+				// 8065. Gateway traffic is proxied by the Cilium agent's Envoy and
+				// carries the reserved "ingress" identity rather than a pod
+				// identity. Allowing only that entity keeps other workloads from
+				// connecting to Mattermost directly; Cilium adds allow rules
+				// together, so a wider entity such as "cluster" would bypass the
+				// namespace isolation in the standard NetworkPolicies.
 				"ingress": []interface{}{
 					map[string]interface{}{
-						"fromEntities": []interface{}{"cluster"},
+						"fromEntities": []interface{}{"ingress"},
 						"toPorts": []interface{}{
 							map[string]interface{}{
 								"ports": []interface{}{
@@ -79,7 +82,7 @@ func (kc *KubeClient) ApplyCiliumMetadataDenyPolicy(namespace string) error {
 	ctx := context.TODO()
 	client := kc.DynamicClient.Resource(ciliumNetworkPolicyGVR).Namespace(namespace)
 
-	existing, err := client.Get(ctx, "deny-metadata-access", metav1.GetOptions{})
+	existing, err := client.Get(ctx, DenyMetadataAccess, metav1.GetOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
 		_, err = client.Create(ctx, policy, metav1.CreateOptions{})
 		return err

@@ -15,6 +15,8 @@ import (
 const (
 	AllowMMExternal     = "external-mm-allow"
 	AllowMMExternalBeta = "external-mm-v1beta-allow"
+	// DenyMetadataAccess is the name of the policy blocking the instance metadata service.
+	DenyMetadataAccess = "deny-metadata-access"
 )
 
 func (kc *KubeClient) createOrUpdateNetworkPolicyV1(namespace string, networkPolicy *networkingv1.NetworkPolicy) (metav1.Object, error) {
