@@ -7,8 +7,10 @@ package main
 import (
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -84,6 +86,7 @@ type provisioningParams struct {
 	deployMinioOperator       bool
 	mattermostOperatorHelmDir string
 	ndotsDefaultValue         string
+	cni                       string
 
 	backupJobTTL           int32
 	backupRestoreToolImage string
@@ -115,6 +118,7 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.deployMinioOperator, "deploy-minio-operator", false, "Whether to deploy the minio operator.")
 	command.Flags().StringVar(&flags.mattermostOperatorHelmDir, "mattermost-operator-helm-dir", "", "Provide a directory location where a local mattermost operator helm chart will be deployed instead of from the standard repo")
 	command.Flags().StringVar(&flags.ndotsDefaultValue, "ndots-value", "5", "The default ndots value for installations.")
+	command.Flags().StringVar(&flags.cni, "cni", "", "The CNI plugin in use on target clusters (e.g. \"cilium\"). When set to \"cilium\", Cilium-specific network policies are applied instead of standard Kubernetes NetworkPolicies where needed.")
 
 	command.Flags().Int32Var(&flags.backupJobTTL, "backup-job-ttl-seconds", 3600, "Number of seconds after which finished backup jobs will be cleaned up. Set to negative value to not cleanup or 0 to cleanup immediately.")
 	command.Flags().StringVar(&flags.backupRestoreToolImage, "backup-restore-tool-image", "mattermost/backup-restore-tool:latest", "Image of Backup Restore Tool to use.")
@@ -133,6 +137,38 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().Int32Var(&flags.probeReadinessInitialDelaySeconds, "probe-readiness-initial-delay-seconds", 30, "An optional override for the readiness probe initial delay seconds.")
 	command.Flags().Int32Var(&flags.probeReadinessPeriodSeconds, "probe-readiness-period-seconds", 10, "An optional override for the readiness probe period seconds.")
 	command.Flags().Int32Var(&flags.probeReadinessTimeoutSeconds, "probe-readiness-timeout-seconds", 5, "An optional override for the readiness probe timeout seconds.")
+}
+
+// validateIngressOptions checks that the CNI and default ingress flags form a
+// supported combination.
+func (flags *serverFlags) validateIngressOptions() error {
+	if flags.cni != "" && flags.cni != provisioner.CNICilium {
+		return errors.Errorf("unsupported cni %q: must be empty or %q", flags.cni, provisioner.CNICilium)
+	}
+
+	if flags.defaultGatewayName == "" && (flags.defaultGatewayNamespace != "" || flags.defaultGatewaySectionName != "") {
+		return errors.New("default-gateway-name must be set when default-gateway-namespace or default-gateway-section-name is set")
+	}
+
+	if flags.defaultIngressType == "" {
+		return nil
+	}
+	if !model.IsSupportedIngressType(flags.defaultIngressType) {
+		return errors.Errorf("unsupported default-ingress-type %q", flags.defaultIngressType)
+	}
+	if flags.defaultIngressType == model.InstallationIngressHTTPRoute {
+		if flags.defaultGatewayName == "" {
+			return errors.New("default-gateway-name must be set when default-ingress-type is httproute")
+		}
+		// Cilium Gateway traffic does not originate from a pod in the Gateway
+		// namespace, so the standard NetworkPolicies drop it. Only the
+		// CiliumNetworkPolicy applied with --cni=cilium lets it through.
+		if flags.cni != provisioner.CNICilium {
+			return errors.Errorf("cni must be %q when default-ingress-type is httproute", provisioner.CNICilium)
+		}
+	}
+
+	return nil
 }
 
 func (flags *serverFlags) generateProbeOverrides() model.PodProbeOverrides {
@@ -205,6 +241,10 @@ type installationOptions struct {
 	utilitiesGitPath              string
 	enableS3Versioning            bool
 	internalIPRanges              []string
+	defaultIngressType            string
+	defaultGatewayName            string
+	defaultGatewayNamespace       string
+	defaultGatewaySectionName     string
 }
 
 func (flags *installationOptions) addFlags(command *cobra.Command) {
@@ -219,6 +259,10 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.utilitiesGitPath, "utilities-git-path", "", "The git path to use for utilities. For example /gitops/gitops.git")
 	command.Flags().BoolVar(&flags.enableS3Versioning, "enable-s3-versioning", false, "Whether to enable S3 versioning for the installation bucket or not")
 	command.Flags().StringSliceVar(&flags.internalIPRanges, "internal-ip-ranges", []string{}, "Some ranges that needed to be allowed for operational reasons")
+	command.Flags().StringVar(&flags.defaultIngressType, "default-ingress-type", "", "Default ingress type for new installations when not specified (\"ingress\" or \"httproute\"). Defaults to \"ingress\" when unset.")
+	command.Flags().StringVar(&flags.defaultGatewayName, "default-gateway-name", "", "Default Gateway name for HTTPRoute installations when not specified in the request.")
+	command.Flags().StringVar(&flags.defaultGatewayNamespace, "default-gateway-namespace", "", "Default Gateway namespace for HTTPRoute installations when not specified in the request.")
+	command.Flags().StringVar(&flags.defaultGatewaySectionName, "default-gateway-section-name", "", "Default Gateway section name for HTTPRoute installations when not specified in the request.")
 }
 
 type dbUtilizationSettings struct {

@@ -410,6 +410,10 @@ func (p *mockInstallationProvisioner) GetPublicLoadBalancerEndpoint(cluster *mod
 	return "example.elb.us-east-1.amazonaws.com", nil
 }
 
+func (p *mockInstallationProvisioner) GetGatewayLoadBalancerEndpoint(cluster *model.Cluster, namespace, name string) (string, error) {
+	return "gateway.elb.us-east-1.amazonaws.com", nil
+}
+
 func (p *mockInstallationProvisioner) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	return nil
 }
